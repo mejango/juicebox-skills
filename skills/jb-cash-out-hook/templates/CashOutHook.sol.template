@@ -1,0 +1,128 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {IJBCashOutHook} from "@bananapus/core/src/interfaces/IJBCashOutHook.sol";
+import {IJBRulesetDataHook} from "@bananapus/core/src/interfaces/IJBRulesetDataHook.sol";
+import {IJBDirectory} from "@bananapus/core/src/interfaces/IJBDirectory.sol";
+import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
+import {JBAfterCashOutRecordedContext} from "@bananapus/core/src/structs/JBAfterCashOutRecordedContext.sol";
+import {JBBeforePayRecordedContext} from "@bananapus/core/src/structs/JBBeforePayRecordedContext.sol";
+import {JBBeforeCashOutRecordedContext} from "@bananapus/core/src/structs/JBBeforeCashOutRecordedContext.sol";
+import {JBPayHookSpecification} from "@bananapus/core/src/structs/JBPayHookSpecification.sol";
+import {JBCashOutHookSpecification} from "@bananapus/core/src/structs/JBCashOutHookSpecification.sol";
+
+/// @title {{CONTRACT_NAME}}
+/// @notice {{CONTRACT_DESCRIPTION}}
+contract {{CONTRACT_NAME}} is IJBRulesetDataHook, IJBCashOutHook, ERC165 {
+    //*********************************************************************//
+    // --------------------------- custom errors ------------------------- //
+    //*********************************************************************//
+
+    /// @notice Thrown when the caller is not an authorized terminal.
+    error UNAUTHORIZED_TERMINAL();
+
+    //*********************************************************************//
+    // --------------- public immutable stored properties ---------------- //
+    //*********************************************************************//
+
+    /// @notice The directory of terminals and controllers for projects.
+    IJBDirectory public immutable DIRECTORY;
+
+    /// @notice The project ID this hook is associated with.
+    uint256 public immutable PROJECT_ID;
+
+    //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
+    /// @param directory The directory of terminals and controllers.
+    /// @param projectId The project ID this hook serves.
+    constructor(IJBDirectory directory, uint256 projectId) {
+        DIRECTORY = directory;
+        PROJECT_ID = projectId;
+    }
+
+    //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
+
+    /// @notice Indicates if this contract adheres to the specified interface.
+    /// @param interfaceId The ID of the interface to check for adherence to.
+    /// @return A flag indicating if the provided interface ID is supported.
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return interfaceId == type(IJBRulesetDataHook).interfaceId
+            || interfaceId == type(IJBCashOutHook).interfaceId
+            || super.supportsInterface(interfaceId);
+    }
+
+    /// @notice Pass through payment context unchanged.
+    /// @param context The payment context.
+    function beforePayRecordedWith(JBBeforePayRecordedContext calldata context)
+        external
+        view
+        virtual
+        override
+        returns (uint256 weight, JBPayHookSpecification[] memory hookSpecifications)
+    {
+        return (context.weight, new JBPayHookSpecification[](0));
+    }
+
+    /// @notice Determines the cash out parameters and hook specifications.
+    /// @param context The cash out context.
+    /// @return cashOutTaxRate The tax rate to apply.
+    /// @return cashOutCount The number of tokens to cash out.
+    /// @return totalSupply The total supply for ratio calculations.
+    /// @return hookSpecifications The cash out hooks to call after recording.
+    function beforeCashOutRecordedWith(JBBeforeCashOutRecordedContext calldata context)
+        external
+        view
+        virtual
+        override
+        returns (
+            uint256 cashOutTaxRate,
+            uint256 cashOutCount,
+            uint256 totalSupply,
+            JBCashOutHookSpecification[] memory hookSpecifications
+        )
+    {
+        // {{BEFORE_CASH_OUT_LOGIC}}
+
+        // Default: return original values and specify this contract as hook
+        hookSpecifications = new JBCashOutHookSpecification[](1);
+        hookSpecifications[0] = JBCashOutHookSpecification({
+            hook: IJBCashOutHook(address(this)),
+            amount: 0, // Amount to forward to hook
+            metadata: bytes("")
+        });
+
+        return (
+            context.ruleset.metadata.cashOutTaxRate,
+            context.cashOutCount,
+            context.totalSupply,
+            hookSpecifications
+        );
+    }
+
+    /// @notice Whether this hook has mint permission for a project.
+    /// @return False - this hook does not mint tokens directly.
+    function hasMintPermissionFor(uint256) external pure virtual override returns (bool) {
+        return false;
+    }
+
+    //*********************************************************************//
+    // ---------------------- external transactions ---------------------- //
+    //*********************************************************************//
+
+    /// @notice Called after a cash out is recorded.
+    /// @param context The cash out context.
+    function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external payable virtual override {
+        // Ensure caller is a terminal of the project
+        if (!DIRECTORY.isTerminalOf(context.projectId, IJBTerminal(msg.sender))) {
+            revert UNAUTHORIZED_TERMINAL();
+        }
+
+        // {{AFTER_CASH_OUT_LOGIC}}
+    }
+}

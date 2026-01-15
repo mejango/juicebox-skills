@@ -1,0 +1,87 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {IJBSplitHook} from "@bananapus/core/src/interfaces/IJBSplitHook.sol";
+import {JBSplitHookContext} from "@bananapus/core/src/structs/JBSplitHookContext.sol";
+
+/// @title {{CONTRACT_NAME}}
+/// @notice {{CONTRACT_DESCRIPTION}}
+contract {{CONTRACT_NAME}} is IJBSplitHook, ERC165 {
+    using SafeERC20 for IERC20;
+
+    //*********************************************************************//
+    // --------------------------- custom errors ------------------------- //
+    //*********************************************************************//
+
+    /// @notice Thrown when a transfer fails.
+    error TRANSFER_FAILED();
+
+    //*********************************************************************//
+    // --------------- public immutable stored properties ---------------- //
+    //*********************************************************************//
+
+    /// @notice The beneficiary that receives processed funds.
+    address payable public immutable BENEFICIARY;
+
+    //*********************************************************************//
+    // -------------------------- constructor ---------------------------- //
+    //*********************************************************************//
+
+    /// @param beneficiary The address to receive processed funds.
+    constructor(address payable beneficiary) {
+        BENEFICIARY = beneficiary;
+    }
+
+    //*********************************************************************//
+    // ------------------------- external views -------------------------- //
+    //*********************************************************************//
+
+    /// @notice Indicates if this contract adheres to the specified interface.
+    /// @param interfaceId The ID of the interface to check for adherence to.
+    /// @return A flag indicating if the provided interface ID is supported.
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
+        return interfaceId == type(IJBSplitHook).interfaceId || super.supportsInterface(interfaceId);
+    }
+
+    //*********************************************************************//
+    // ---------------------- external transactions ---------------------- //
+    //*********************************************************************//
+
+    /// @notice Process a split with custom logic.
+    /// @dev Funds are optimistically transferred to this contract before calling.
+    /// @param context The split context including token, amount, and split configuration.
+    function processSplitWith(JBSplitHookContext calldata context) external payable virtual override {
+        // Handle native currency (ETH)
+        if (context.token == address(0)) {
+            uint256 amount = address(this).balance;
+            if (amount > 0) {
+                // {{NATIVE_LOGIC}}
+
+                // Default: forward to beneficiary
+                (bool success,) = BENEFICIARY.call{value: amount}("");
+                if (!success) revert TRANSFER_FAILED();
+            }
+        }
+        // Handle ERC20 tokens
+        else {
+            uint256 amount = IERC20(context.token).balanceOf(address(this));
+            if (amount > 0) {
+                // {{ERC20_LOGIC}}
+
+                // Default: forward to beneficiary
+                IERC20(context.token).safeTransfer(BENEFICIARY, amount);
+            }
+        }
+    }
+
+    //*********************************************************************//
+    // ---------------------- internal transactions ---------------------- //
+    //*********************************************************************//
+
+    /// @notice Allows the contract to receive native currency.
+    receive() external payable {}
+}
