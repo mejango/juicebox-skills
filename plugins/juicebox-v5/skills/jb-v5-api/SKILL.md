@@ -1,11 +1,13 @@
 ---
 name: jb-v5-api
-description: Comprehensive Juicebox V5 protocol API reference covering all contracts across nana-core, suckers, hooks, terminals, permissions, revnets, and croptop. Explains exact workings of all functions and the full breadth of protocol capabilities.
+description: Juicebox V5 protocol API reference. Function signatures, parameters, and return values for all contracts. Use for "what functions exist?" and "what are the signatures?" questions. For internal mechanics and tradeoffs, use /jb-v5-impl instead.
 ---
 
-# Juicebox V5 Complete API Reference
+# Juicebox V5 API Reference
 
-This skill provides comprehensive documentation of the entire Juicebox V5 protocol ecosystem.
+Function signatures, parameters, and return values for the entire Juicebox V5 protocol ecosystem.
+
+> **Note**: For deep implementation details, edge cases, and tradeoffs, use `/jb-v5-impl` instead.
 
 ## Protocol Architecture Overview
 

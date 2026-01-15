@@ -1,6 +1,11 @@
+---
+name: jb-v5-impl
+description: Deep implementation knowledge for Juicebox V5 protocol. Covers internal mechanics, edge cases, tradeoffs, gas considerations, and critical integration patterns. Use when reasoning about how things work internally.
+---
+
 # Juicebox V5 Implementation Deep Dive
 
-This document provides deep implementation knowledge for integrators, covering internal mechanics, edge cases, tradeoffs, and critical considerations.
+This skill provides deep implementation knowledge for integrators, covering internal mechanics, edge cases, tradeoffs, and critical considerations.
 
 ---
 
