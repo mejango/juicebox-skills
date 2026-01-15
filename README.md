@@ -4,17 +4,16 @@ A comprehensive Claude Code skills library for Juicebox V5 protocol development.
 
 ## Installation
 
-Install as a Claude Code plugin:
+**Step 1:** Add the Juicebox marketplace:
 
-```bash
-claude /plugin install https://github.com/YOUR_USERNAME/juicebox-skills
+```
+/plugin marketplace add mejango/juicebox-skills
 ```
 
-Or clone locally:
+**Step 2:** Install the plugin:
 
-```bash
-git clone https://github.com/YOUR_USERNAME/juicebox-skills
-claude /plugin install ./juicebox-skills
+```
+/plugin install juicebox-v5@juicebox
 ```
 
 ## Available Skills
@@ -103,20 +102,24 @@ Skills reference these canonical V5 examples:
 ```
 juicebox-skills/
 ├── .claude-plugin/
-│   └── config.json
-├── skills/
-│   ├── jb-pay-hook/
-│   ├── jb-cash-out-hook/
-│   ├── jb-split-hook/
-│   ├── jb-project/
-│   ├── jb-ruleset/
-│   ├── jb-query/
-│   ├── jb-decode/
-│   └── jb-docs/
-├── references/
-│   ├── v5-interfaces.md
-│   ├── v5-structs.md
-│   └── v5-addresses.md
+│   └── marketplace.json           # Marketplace configuration
+├── plugins/
+│   └── juicebox-v5/               # Main plugin
+│       ├── .claude-plugin/
+│       │   └── plugin.json        # Plugin manifest
+│       ├── skills/
+│       │   ├── jb-pay-hook/
+│       │   ├── jb-cash-out-hook/
+│       │   ├── jb-split-hook/
+│       │   ├── jb-project/
+│       │   ├── jb-ruleset/
+│       │   ├── jb-query/
+│       │   ├── jb-decode/
+│       │   └── jb-docs/
+│       └── references/
+│           ├── v5-interfaces.md
+│           ├── v5-structs.md
+│           └── v5-addresses.md
 ├── README.md
 └── LICENSE
 ```

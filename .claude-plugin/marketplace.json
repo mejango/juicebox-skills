@@ -1,0 +1,18 @@
+{
+  "name": "juicebox",
+  "owner": {
+    "name": "Juicebox",
+    "email": "contact@juicebox.money"
+  },
+  "plugins": [
+    {
+      "name": "juicebox-v5",
+      "source": "./plugins/juicebox-v5",
+      "description": "Comprehensive Juicebox V5 protocol development skills for creating projects, rulesets, and custom hooks",
+      "version": "1.0.0",
+      "author": {
+        "name": "Juicebox"
+      }
+    }
+  ]
+}

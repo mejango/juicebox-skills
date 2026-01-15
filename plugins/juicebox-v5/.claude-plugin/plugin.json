@@ -1,0 +1,23 @@
+{
+  "name": "juicebox-v5",
+  "description": "Comprehensive Juicebox V5 protocol development skills for creating projects, rulesets, and custom hooks (pay, cash out, split)",
+  "version": "1.0.0",
+  "author": {
+    "name": "Juicebox",
+    "email": "contact@juicebox.money"
+  },
+  "homepage": "https://github.com/mejango/juicebox-skills",
+  "repository": "https://github.com/mejango/juicebox-skills",
+  "license": "MIT",
+  "keywords": [
+    "juicebox",
+    "ethereum",
+    "solidity",
+    "smart-contracts",
+    "web3",
+    "defi",
+    "treasury",
+    "hooks",
+    "foundry"
+  ]
+}
