@@ -77,7 +77,40 @@ Every level of abstraction you can avoid:
 
 ---
 
-### 5. Do You Need a Custom Contract at All?
+### 5. Do You Need Custom NFT Logic?
+
+| What You Want | Simpler Solution |
+|---------------|------------------|
+| NFT minting on payment | Use `nana-721-hook-v5` directly |
+| Different prices per tier | Configure tiers in 721 hook |
+| Static artwork per tier | Use `encodedIPFSUri` in tier config |
+| Dynamic/generative art | Implement `IJB721TokenUriResolver` only |
+| Composable/layered NFTs | Implement `IJB721TokenUriResolver` only |
+| On-chain SVG | Implement `IJB721TokenUriResolver` only |
+| Custom minting logic | This might need a custom hook |
+
+**Only write a custom pay/data hook if**: You need to change how the 721 hook processes payments. For custom content, use the resolver interface.
+
+**Reference**: [banny-retail-v5](https://github.com/mejango/banny-retail-v5) shows composable NFTs using only a custom resolver.
+
+---
+
+### 5b. When DO You Need to Extend 721-Hook?
+
+Extending the 721-hook (not just resolver) is necessary when you need to change **treasury mechanics**, not just content:
+
+| What You Want | Why You Need Custom Delegate |
+|---------------|------------------------------|
+| Dynamic cash out weights | Redemption value changes based on outcomes |
+| First-owner tracking | Rewards go to original minter, not current holder |
+| Phase-based restrictions | Different rules during different game phases |
+| On-chain governance for outcomes | Scorecard voting determines payouts |
+
+**Reference**: [defifa-collection-deployer-v5](https://github.com/BallKidz/defifa-collection-deployer-v5) shows prediction games with dynamic weights.
+
+---
+
+### 6. Do You Need a Custom Contract at All?
 
 | What You Want | Simpler Solution |
 |---------------|------------------|
@@ -118,6 +151,18 @@ Ask these questions in order. Stop at the first "yes":
 3. Is it conditional on external events? → **Consider approval hook**
 4. → Consider custom logic
 
+### For NFT Content
+1. Is artwork static per tier? → **Use encodedIPFSUri in tier config**
+2. Need dynamic/generative art? → **Implement IJB721TokenUriResolver**
+3. Need composable NFTs? → **Implement IJB721TokenUriResolver**
+4. Need to change minting logic? → Consider wrapping 721 hook
+
+### For Games/Predictions
+1. Fixed redemption values per tier? → **Use standard 721-hook**
+2. Outcome determines payout distribution? → **Extend 721-hook (Defifa pattern)**
+3. Need on-chain outcome voting? → **Add Governor contract**
+4. Rewards to original minter only? → **Track first-owner in delegate**
+
 ---
 
 ## Common Over-Engineering Mistakes
@@ -157,6 +202,13 @@ Ask these questions in order. Stop at the first "yes":
 ✅ RIGHT: cashOutTaxRate: 0 gives linear redemption natively
 ```
 
+### Mistake 6: Custom Hook for NFT Artwork
+
+```
+❌ WRONG: Write custom pay hook to generate dynamic NFT metadata
+✅ RIGHT: Use 721 hook + custom IJB721TokenUriResolver for content only
+```
+
 ---
 
 ## Complexity Cost Table
@@ -165,10 +217,24 @@ Ask these questions in order. Stop at the first "yes":
 |----------|----------|------------|------------|
 | Native config only | Lowest | Lowest | Full |
 | Off-the-shelf hooks | Low | Low | Full |
+| Custom token URI resolver | Low | Low | Full |
 | Custom split hook | Medium | Medium | Partial |
 | Custom pay hook | Medium | Medium | Partial |
+| Extended 721-hook delegate | Medium-High | Medium-High | Custom UI needed |
 | Custom cash out hook | High | High | Limited |
 | Full custom system | Highest | Highest | None |
+
+### When Higher Complexity Is Justified
+
+Not all complexity is bad. These patterns justify extending hooks:
+
+| Pattern | Justification |
+|---------|---------------|
+| Prediction games (Defifa) | Dynamic weights can't be done any other way |
+| Composable NFTs (Banny) | Resolver-only keeps treasury mechanics standard |
+| Phase-based games | Rulesets + custom delegate is cleaner than alternatives |
+
+**Key insight**: Extend hooks for **treasury mechanics**, use resolvers for **content only**.
 
 ---
 
@@ -183,6 +249,7 @@ Before finalizing your design, verify:
 - [ ] No custom vesting where payout limits work
 - [ ] No custom treasury where surplus allowance works
 - [ ] No custom redemption where native cash out works
+- [ ] No custom pay hook where IJB721TokenUriResolver handles content needs
 
 If all boxes are checked and you still need custom code, proceed with confidence that it's actually necessary.
 

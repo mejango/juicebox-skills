@@ -1033,6 +1033,185 @@ bytes memory metadata = abi.encode(
 
 ---
 
+## Extending 721-Hook: Dynamic Cash Out Weights
+
+When building prediction games or outcome-based systems, you need to extend the 721-hook to change treasury mechanics. This section covers the key implementation patterns from Defifa.
+
+### Why Extend vs. Use Resolver Only
+
+| Need | Resolver | Extended Hook |
+|------|----------|---------------|
+| Custom artwork/metadata | ✅ | ✅ |
+| Dynamic cash out weights | ❌ | ✅ |
+| First-owner tracking | ❌ | ✅ |
+| Phase-based restrictions | ❌ | ✅ |
+| Governor integration | ❌ | ✅ |
+
+**Rule of thumb**: If you need to change how money flows, extend the hook. If you only need to change how tokens look, use a resolver.
+
+### Dynamic Cash Out Weight Implementation
+
+Standard 721-hook uses fixed weights based on tier price:
+```solidity
+// Standard: weight = tier.price
+function cashOutWeightOf(uint256[] tokenIds) returns (uint256 weight) {
+    for (uint256 i; i < tokenIds.length; i++) {
+        weight += STORE.tierOfTokenId(tokenIds[i]).price;
+    }
+}
+```
+
+For dynamic weights (e.g., prediction games), override with configurable weights:
+```solidity
+// Extended: weight = configurable per tier
+uint256 constant TOTAL_CASH_OUT_WEIGHT = 1e18; // 100% distributed among tiers
+
+mapping(uint256 tierId => uint256) public tierCashOutWeight;
+
+function cashOutWeightOf(uint256[] tokenIds) returns (uint256 weight) {
+    for (uint256 i; i < tokenIds.length; i++) {
+        uint256 tierId = STORE.tierIdOfToken(tokenIds[i]);
+        weight += tierCashOutWeight[tierId];
+    }
+}
+
+// Called by governor after outcome is known
+function setTierCashOutWeightsTo(DefifaTierCashOutWeight[] calldata weights) external {
+    // Verify caller is authorized (governor)
+    // Verify total weights sum to TOTAL_CASH_OUT_WEIGHT
+    for (uint256 i; i < weights.length; i++) {
+        tierCashOutWeight[weights[i].id] = weights[i].cashOutWeight;
+    }
+}
+```
+
+### First-Owner Tracking
+
+For games where rewards should go to original minters (not secondary buyers):
+
+```solidity
+// Track original minter
+mapping(uint256 tokenId => address) public firstOwnerOf;
+
+// In _processPayment() after minting:
+function _processPayment(JBAfterPayRecordedContext calldata context) internal override {
+    // ... mint logic ...
+
+    // Record first owner
+    for (uint256 i; i < mintedTokenIds.length; i++) {
+        firstOwnerOf[mintedTokenIds[i]] = context.beneficiary;
+    }
+}
+
+// In cash out, rewards go to first owner:
+function afterCashOutRecordedWith(JBAfterCashOutRecordedContext calldata context) external {
+    // Verify current owner initiated cash out
+    // But send rewards to firstOwnerOf[tokenId]
+    address rewardRecipient = firstOwnerOf[tokenId];
+
+    // Transfer rewards to original minter
+    _transferRewards(rewardRecipient, amount);
+}
+```
+
+**Trade-off**: First-owner tracking adds storage costs but ensures fair game mechanics where secondary market purchases don't steal rewards from original participants.
+
+### Phase-Based Cash Out Logic
+
+Different phases have different cash out rules:
+
+```solidity
+enum GamePhase { COUNTDOWN, MINT, REFUND, SCORING, COMPLETE, NO_CONTEST }
+
+function beforeCashOutRecordedWith(JBBeforeCashOutRecordedContext calldata context)
+    external view override
+    returns (uint256 cashOutTaxRate, uint256 cashOutCount, uint256 totalSupply, JBCashOutHookSpecification[] memory)
+{
+    GamePhase phase = currentPhase();
+
+    if (phase == GamePhase.REFUND) {
+        // During refund: return mint cost (full refund)
+        return _refundCashOut(context);
+    }
+
+    if (phase == GamePhase.COMPLETE) {
+        // After scoring: return weighted share of pot
+        return _scoredCashOut(context);
+    }
+
+    // Other phases: no cash out allowed
+    revert CashOutNotAllowed();
+}
+```
+
+### Governor Integration Pattern
+
+The governor contract calls into the delegate to set weights:
+
+```solidity
+// In Governor contract:
+function ratifyScorecard(DefifaScorecard calldata scorecard) external {
+    // Verify quorum reached
+    require(attestationCount[scorecard.id] >= quorum(), "Quorum not reached");
+
+    // Set weights on delegate
+    IDefifaDelegate(delegate).setTierCashOutWeightsTo(scorecard.weights);
+
+    // Emit event
+    emit ScorecardRatified(scorecard.id);
+}
+
+// In Delegate contract:
+function setTierCashOutWeightsTo(DefifaTierCashOutWeight[] calldata weights) external {
+    // Only governor can set weights
+    require(msg.sender == governor, "Only governor");
+
+    // Only during SCORING phase
+    require(currentPhase() == GamePhase.SCORING, "Wrong phase");
+
+    // Verify weights sum to 100%
+    uint256 total;
+    for (uint256 i; i < weights.length; i++) {
+        tierCashOutWeight[weights[i].id] = weights[i].cashOutWeight;
+        total += weights[i].cashOutWeight;
+    }
+    require(total == TOTAL_CASH_OUT_WEIGHT, "Invalid total");
+
+    // Transition to COMPLETE phase
+    _setPhase(GamePhase.COMPLETE);
+}
+```
+
+### Voting Power Calculation
+
+NFT holders vote with power proportional to their holdings:
+
+```solidity
+// Voting power = (tokens owned in tier / total minted in tier) * MAX_POWER_PER_TIER
+function getAttestationPowerOf(address account, uint256[] calldata tierIds)
+    public view returns (uint256 power)
+{
+    for (uint256 i; i < tierIds.length; i++) {
+        uint256 tierId = tierIds[i];
+        uint256 owned = balanceOfTier(account, tierId);
+        uint256 totalMinted = STORE.tier(tierId).initialSupply - STORE.tier(tierId).remainingSupply;
+
+        if (totalMinted > 0) {
+            power += (owned * MAX_ATTESTATION_POWER_TIER) / totalMinted;
+        }
+    }
+}
+```
+
+### Reference Implementation
+
+See [defifa-collection-deployer-v5](https://github.com/BallKidz/defifa-collection-deployer-v5) for complete implementation including:
+- `DefifaDelegate.sol` - Extended 721-hook with all patterns above
+- `DefifaGovernor.sol` - On-chain voting with tier-weighted power
+- `DefifaDeployer.sol` - Factory for deploying games
+
+---
+
 ## Contract-as-Owner Pattern
 
 ### REVDeployer Architecture
