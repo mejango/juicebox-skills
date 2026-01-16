@@ -7,6 +7,19 @@ description: Create and configure Juicebox V5 projects. Generate deployment scri
 
 Create and manage Juicebox V5 projects including deployment, configuration, and ownership.
 
+## V5.1 Contract Update (Dec 2025)
+
+**Only JBRulesets has a code change** (one-line approval hook fix). Other contracts were redeployed due to dependency chains (JBTerminalStore→JBMultiTerminal, JB721TiersHook→JB721TiersHookDeployer→JBOmnichainDeployer).
+
+| Deploying... | Use These Contracts |
+|--------------|---------------------|
+| New project | **V5.1** (JBController5_1, JBMultiTerminal5_1, etc.) |
+| Revnet | **V5.0** (REVDeployer uses V5.0 JBController) |
+
+**Do not mix V5.0 and V5.1 contracts** - use one complete set or the other.
+
+See `references/v5-addresses.md` or `shared/chain-config.json` for addresses.
+
 ## Before Writing Custom Code
 
 **Always check if native mechanics can achieve your goal:**
@@ -118,9 +131,11 @@ import {JBCurrencyAmount} from "@bananapus/core/src/structs/JBCurrencyAmount.sol
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 
 contract DeployProject is Script {
-    // V5 Mainnet Addresses (see /references/v5-addresses.md for all networks)
-    IJBController constant CONTROLLER = IJBController(0x27da30646502e2f642be5281322ae8c394f7668a);
-    IJBMultiTerminal constant TERMINAL = IJBMultiTerminal(0x2db6d704058e552defe415753465df8df0361846);
+    // V5.1 Mainnet Addresses (use for new projects)
+    // See /references/v5-addresses.md for all networks
+    // NOTE: For revnets, use V5.0 addresses instead
+    IJBController constant CONTROLLER = IJBController(0xf3cc99b11bd73a2e3b8815fb85fe0381b29987e1);
+    IJBMultiTerminal constant TERMINAL = IJBMultiTerminal(0x52869db3d61dde1e391967f2ce5039ad0ecd371c);
 
     function run() external {
         vm.startBroadcast();

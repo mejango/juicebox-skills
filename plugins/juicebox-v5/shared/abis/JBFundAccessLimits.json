@@ -1,0 +1,363 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "contract IJBDirectory",
+        "name": "directory",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "DIRECTORY",
+    "outputs": [
+      {
+        "internalType": "contract IJBDirectory",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rulesetId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "payoutLimitOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "payoutLimit",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rulesetId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "payoutLimitsOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint224",
+            "name": "amount",
+            "type": "uint224"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBCurrencyAmount[]",
+        "name": "payoutLimits",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rulesetId",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "terminal",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint224",
+                "name": "amount",
+                "type": "uint224"
+              },
+              {
+                "internalType": "uint32",
+                "name": "currency",
+                "type": "uint32"
+              }
+            ],
+            "internalType": "struct JBCurrencyAmount[]",
+            "name": "payoutLimits",
+            "type": "tuple[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint224",
+                "name": "amount",
+                "type": "uint224"
+              },
+              {
+                "internalType": "uint32",
+                "name": "currency",
+                "type": "uint32"
+              }
+            ],
+            "internalType": "struct JBCurrencyAmount[]",
+            "name": "surplusAllowances",
+            "type": "tuple[]"
+          }
+        ],
+        "internalType": "struct JBFundAccessLimitGroup[]",
+        "name": "fundAccessLimitGroups",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "setFundAccessLimitsFor",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rulesetId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "surplusAllowanceOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "surplusAllowance",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rulesetId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "surplusAllowancesOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint224",
+            "name": "amount",
+            "type": "uint224"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBCurrencyAmount[]",
+        "name": "surplusAllowances",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "rulesetId",
+        "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "terminal",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint224",
+                "name": "amount",
+                "type": "uint224"
+              },
+              {
+                "internalType": "uint32",
+                "name": "currency",
+                "type": "uint32"
+              }
+            ],
+            "internalType": "struct JBCurrencyAmount[]",
+            "name": "payoutLimits",
+            "type": "tuple[]"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint224",
+                "name": "amount",
+                "type": "uint224"
+              },
+              {
+                "internalType": "uint32",
+                "name": "currency",
+                "type": "uint32"
+              }
+            ],
+            "internalType": "struct JBCurrencyAmount[]",
+            "name": "surplusAllowances",
+            "type": "tuple[]"
+          }
+        ],
+        "indexed": false,
+        "internalType": "struct JBFundAccessLimitGroup",
+        "name": "fundAccessLimitGroup",
+        "type": "tuple"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "caller",
+        "type": "address"
+      }
+    ],
+    "name": "SetFundAccessLimits",
+    "type": "event"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "controller",
+        "type": "address"
+      }
+    ],
+    "name": "JBControlled_ControllerUnauthorized",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "JBFundAccessLimits_InvalidPayoutLimitCurrencyOrdering",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "JBFundAccessLimits_InvalidSurplusAllowanceCurrencyOrdering",
+    "type": "error"
+  }
+]

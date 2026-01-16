@@ -1,0 +1,1010 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "contract IJBDirectory",
+        "name": "directory",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IJBPrices",
+        "name": "prices",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IJBRulesets",
+        "name": "rulesets",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "DIRECTORY",
+    "outputs": [
+      {
+        "internalType": "contract IJBDirectory",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "PRICES",
+    "outputs": [
+      {
+        "internalType": "contract IJBPrices",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "RULESETS",
+    "outputs": [
+      {
+        "internalType": "contract IJBRulesets",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "balanceOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cashOutCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalSupply",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "surplus",
+        "type": "uint256"
+      }
+    ],
+    "name": "currentReclaimableSurplusOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cashOutCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "contract IJBTerminal[]",
+        "name": "terminals",
+        "type": "address[]"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "decimals",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBAccountingContext[]",
+        "name": "accountingContexts",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "decimals",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "currentReclaimableSurplusOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "decimals",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBAccountingContext[]",
+        "name": "accountingContexts",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "decimals",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "currentSurplusOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "decimals",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "currentTotalSurplusOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
+    "name": "recordAddedBalanceFor",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "holder",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cashOutCount",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "decimals",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBAccountingContext",
+        "name": "accountingContext",
+        "type": "tuple"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "decimals",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBAccountingContext[]",
+        "name": "balanceAccountingContexts",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "bytes",
+        "name": "metadata",
+        "type": "bytes"
+      }
+    ],
+    "name": "recordCashOutFor",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint48",
+            "name": "cycleNumber",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "id",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "basedOnId",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "start",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint32",
+            "name": "duration",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint112",
+            "name": "weight",
+            "type": "uint112"
+          },
+          {
+            "internalType": "uint32",
+            "name": "weightCutPercent",
+            "type": "uint32"
+          },
+          {
+            "internalType": "contract IJBRulesetApprovalHook",
+            "name": "approvalHook",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "metadata",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct JBRuleset",
+        "name": "ruleset",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "reclaimAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "cashOutTaxRate",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "contract IJBCashOutHook",
+            "name": "hook",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "metadata",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct JBCashOutHookSpecification[]",
+        "name": "hookSpecifications",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "payer",
+        "type": "address"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "decimals",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "value",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct JBTokenAmount",
+        "name": "amount",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "beneficiary",
+        "type": "address"
+      },
+      {
+        "internalType": "bytes",
+        "name": "metadata",
+        "type": "bytes"
+      }
+    ],
+    "name": "recordPaymentFrom",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint48",
+            "name": "cycleNumber",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "id",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "basedOnId",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "start",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint32",
+            "name": "duration",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint112",
+            "name": "weight",
+            "type": "uint112"
+          },
+          {
+            "internalType": "uint32",
+            "name": "weightCutPercent",
+            "type": "uint32"
+          },
+          {
+            "internalType": "contract IJBRulesetApprovalHook",
+            "name": "approvalHook",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "metadata",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct JBRuleset",
+        "name": "ruleset",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "tokenCount",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "contract IJBPayHook",
+            "name": "hook",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "amount",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bytes",
+            "name": "metadata",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct JBPayHookSpecification[]",
+        "name": "hookSpecifications",
+        "type": "tuple[]"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "decimals",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBAccountingContext",
+        "name": "accountingContext",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "recordPayoutFor",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint48",
+            "name": "cycleNumber",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "id",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "basedOnId",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "start",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint32",
+            "name": "duration",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint112",
+            "name": "weight",
+            "type": "uint112"
+          },
+          {
+            "internalType": "uint32",
+            "name": "weightCutPercent",
+            "type": "uint32"
+          },
+          {
+            "internalType": "contract IJBRulesetApprovalHook",
+            "name": "approvalHook",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "metadata",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct JBRuleset",
+        "name": "ruleset",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountPaidOut",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "recordTerminalMigration",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "components": [
+          {
+            "internalType": "address",
+            "name": "token",
+            "type": "address"
+          },
+          {
+            "internalType": "uint8",
+            "name": "decimals",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "currency",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct JBAccountingContext",
+        "name": "accountingContext",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "recordUsedAllowanceOf",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "uint48",
+            "name": "cycleNumber",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "id",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "basedOnId",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint48",
+            "name": "start",
+            "type": "uint48"
+          },
+          {
+            "internalType": "uint32",
+            "name": "duration",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint112",
+            "name": "weight",
+            "type": "uint112"
+          },
+          {
+            "internalType": "uint32",
+            "name": "weightCutPercent",
+            "type": "uint32"
+          },
+          {
+            "internalType": "contract IJBRulesetApprovalHook",
+            "name": "approvalHook",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "metadata",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct JBRuleset",
+        "name": "ruleset",
+        "type": "tuple"
+      },
+      {
+        "internalType": "uint256",
+        "name": "usedAmount",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rulesetCycleNumber",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "usedPayoutLimitOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "terminal",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "projectId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "rulesetId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "currency",
+        "type": "uint256"
+      }
+    ],
+    "name": "usedSurplusAllowanceOf",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "allowance",
+        "type": "uint256"
+      }
+    ],
+    "name": "JBTerminalStore_InadequateControllerAllowance",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "limit",
+        "type": "uint256"
+      }
+    ],
+    "name": "JBTerminalStore_InadequateControllerPayoutLimit",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "balance",
+        "type": "uint256"
+      }
+    ],
+    "name": "JBTerminalStore_InadequateTerminalStoreBalance",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "count",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "totalSupply",
+        "type": "uint256"
+      }
+    ],
+    "name": "JBTerminalStore_InsufficientTokens",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "paidAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "JBTerminalStore_InvalidAmountToForwardHook",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "JBTerminalStore_RulesetNotFound",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "JBTerminalStore_RulesetPaymentPaused",
+    "type": "error"
+  },
+  {
+    "inputs": [],
+    "name": "JBTerminalStore_TerminalMigrationNotAllowed",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "x",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "y",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "denominator",
+        "type": "uint256"
+      }
+    ],
+    "name": "PRBMath_MulDiv_Overflow",
+    "type": "error"
+  }
+]

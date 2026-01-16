@@ -7,6 +7,17 @@ description: Browse and decode Juicebox project events. Filter by type, project,
 
 Browse, filter, and decode all Juicebox protocol events. See payment history, redemptions, distributions, and configuration changes.
 
+## Uses Shared Components
+
+This skill uses components from `/shared/`:
+
+| Component | Purpose |
+|-----------|---------|
+| `styles.css` | Dark theme, buttons, cards, badges |
+| `wallet-utils.js` | Chain config, formatting utilities |
+| `chain-config.json` | RPC URLs, contract addresses |
+| `abis/*.json` | Event signatures |
+
 ## Overview
 
 ```
@@ -36,197 +47,141 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Juicebox Event Explorer</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+  <link rel="stylesheet" href="/shared/styles.css">
   <style>
-    :root { --bg: #0a0a0a; --surface: #141414; --border: #2a2a2a; --text: #e0e0e0; --text-muted: #808080; --accent: #5c6bc0; --success: #4caf50; --warning: #ffb74d; --error: #ef5350; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 2rem; max-width: 1000px; margin: 0 auto; line-height: 1.6; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
-    .filters { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
-    .filter-group { display: flex; flex-direction: column; gap: 0.25rem; }
-    .filter-group label { font-size: 0.75rem; color: var(--text-muted); }
-    input, select { padding: 0.5rem 0.75rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.875rem; }
-    input:focus, select:focus { outline: none; border-color: var(--accent); }
-    button { background: var(--accent); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.875rem; cursor: pointer; }
-    button:hover { opacity: 0.9; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-secondary { background: transparent; border: 1px solid var(--border); }
-
-    .event-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; overflow: hidden; }
+    /* Event-specific styles */
+    .event-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.75rem; overflow: hidden; }
     .event-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; cursor: pointer; }
-    .event-header:hover { background: rgba(255,255,255,0.02); }
+    .event-header:hover { background: var(--bg-hover); }
     .event-type { display: flex; align-items: center; gap: 0.5rem; }
-    .event-badge { padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: 500; }
-    .event-badge.pay { background: rgba(76, 175, 80, 0.2); color: var(--success); }
-    .event-badge.cashout { background: rgba(239, 83, 80, 0.2); color: var(--error); }
-    .event-badge.distribute { background: rgba(255, 183, 77, 0.2); color: var(--warning); }
-    .event-badge.mint { background: rgba(92, 107, 192, 0.2); color: var(--accent); }
-    .event-badge.config { background: rgba(128, 128, 128, 0.2); color: var(--text-muted); }
     .event-time { font-size: 0.75rem; color: var(--text-muted); }
     .event-summary { font-size: 0.875rem; padding: 0 1rem 0.75rem; }
-    .event-details { padding: 1rem; border-top: 1px solid var(--border); display: none; }
+    .event-details { padding: 1rem; border-top: 1px solid var(--border-color); display: none; }
     .event-details.open { display: block; }
-    .detail-row { display: flex; justify-content: space-between; padding: 0.375rem 0; font-size: 0.875rem; }
-    .detail-label { color: var(--text-muted); }
-    .detail-value { font-family: monospace; text-align: right; word-break: break-all; max-width: 60%; }
-    .detail-value a { color: var(--accent); text-decoration: none; }
-    .detail-value a:hover { text-decoration: underline; }
-
-    .pagination { display: flex; justify-content: center; gap: 0.5rem; margin-top: 1rem; }
-    .page-btn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
-    .page-btn.active { background: var(--accent); }
-
-    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
-    .stat-card { background: var(--bg); border-radius: 4px; padding: 1rem; text-align: center; }
-    .stat-value { font-size: 1.5rem; font-weight: 600; }
-    .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
-
-    .loading { text-align: center; padding: 2rem; color: var(--text-muted); }
-    .empty { text-align: center; padding: 2rem; color: var(--text-muted); }
-    .hidden { display: none !important; }
-
-    .live-indicator { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; }
-    .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
   </style>
 </head>
 <body>
-  <h1>Event Explorer</h1>
-  <p class="subtitle">Browse all Juicebox project events</p>
+  <div class="container">
+    <h1>Event Explorer</h1>
+    <p class="subtitle">Browse all Juicebox project events</p>
 
-  <!-- Filters -->
-  <div class="card">
-    <div class="filters">
-      <div class="filter-group">
-        <label>Project ID</label>
-        <input type="number" id="filter-project" placeholder="All projects" style="width: 120px;">
-      </div>
+    <!-- Filters -->
+    <div class="card">
+      <div class="filters">
+        <div class="filter-group">
+          <label>Project ID</label>
+          <input type="number" id="filter-project" placeholder="All projects" style="width: 120px;">
+        </div>
 
-      <div class="filter-group">
-        <label>Chain</label>
-        <select id="filter-chain" style="width: 130px;">
-          <option value="1">Ethereum</option>
-          <option value="11155111">Sepolia</option>
-          <option value="10">Optimism</option>
-          <option value="8453">Base</option>
-          <option value="42161">Arbitrum</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label>Chain</label>
+          <select id="filter-chain" style="width: 130px;">
+            <option value="1">Ethereum</option>
+            <option value="11155111">Sepolia</option>
+            <option value="10">Optimism</option>
+            <option value="8453">Base</option>
+            <option value="42161">Arbitrum</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label>Event Type</label>
-        <select id="filter-type" style="width: 150px;">
-          <option value="">All Events</option>
-          <option value="Pay">Payments</option>
-          <option value="CashOutTokens">Cash Outs</option>
-          <option value="DistributePayouts">Distributions</option>
-          <option value="MintTokens">Token Mints</option>
-          <option value="LaunchProject">Project Launches</option>
-          <option value="QueueRulesets">Ruleset Changes</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label>Event Type</label>
+          <select id="filter-type" style="width: 150px;">
+            <option value="">All Events</option>
+            <option value="Pay">Payments</option>
+            <option value="CashOutTokens">Cash Outs</option>
+            <option value="SendPayouts">Distributions</option>
+            <option value="MintTokens">Token Mints</option>
+            <option value="LaunchProject">Project Launches</option>
+            <option value="QueueRulesets">Ruleset Changes</option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label>Time Range</label>
-        <select id="filter-time" style="width: 130px;">
-          <option value="1000">Last 1000 blocks</option>
-          <option value="5000">Last 5000 blocks</option>
-          <option value="10000">Last 10000 blocks</option>
-          <option value="50000">Last 50000 blocks</option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label>Time Range</label>
+          <select id="filter-time" style="width: 130px;">
+            <option value="1000">Last 1000 blocks</option>
+            <option value="5000">Last 5000 blocks</option>
+            <option value="10000">Last 10000 blocks</option>
+            <option value="50000">Last 50000 blocks</option>
+          </select>
+        </div>
 
-      <button onclick="loadEvents()">Search</button>
+        <button onclick="loadEvents()">Search</button>
 
-      <div style="margin-left: auto;">
-        <label class="live-indicator" style="cursor: pointer;">
-          <input type="checkbox" id="live-toggle" onchange="toggleLive()" style="display: none;">
-          <span class="live-dot" id="live-dot" style="background: var(--text-muted);"></span>
-          Live Updates
-        </label>
-      </div>
-    </div>
-  </div>
-
-  <!-- Stats -->
-  <div class="card">
-    <div class="stats">
-      <div class="stat-card">
-        <div class="stat-value" id="stat-total">-</div>
-        <div class="stat-label">Total Events</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-payments">-</div>
-        <div class="stat-label">Payments</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-volume">-</div>
-        <div class="stat-label">Volume (ETH)</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" id="stat-unique">-</div>
-        <div class="stat-label">Unique Addresses</div>
+        <div style="margin-left: auto;">
+          <label class="live-indicator" style="cursor: pointer;">
+            <input type="checkbox" id="live-toggle" onchange="toggleLive()" style="display: none;">
+            <span class="live-dot inactive" id="live-dot"></span>
+            Live Updates
+          </label>
+        </div>
       </div>
     </div>
+
+    <!-- Stats -->
+    <div class="card">
+      <div class="stats">
+        <div class="stat-card">
+          <div class="stat-value" id="stat-total">-</div>
+          <div class="stat-label">Total Events</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-payments">-</div>
+          <div class="stat-label">Payments</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-volume">-</div>
+          <div class="stat-label">Volume (ETH)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" id="stat-unique">-</div>
+          <div class="stat-label">Unique Addresses</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events List -->
+    <div id="events-container">
+      <div class="loading">Select filters and search to load events</div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination hidden" id="pagination"></div>
   </div>
 
-  <!-- Events List -->
-  <div id="events-container">
-    <div class="loading">Connect wallet and search to load events</div>
-  </div>
+  <script type="module">
+    import { createPublicClient, http, parseAbiItem } from 'https://esm.sh/viem';
+    import {
+      CHAIN_CONFIGS,
+      CHAINS,
+      loadChainConfig,
+      truncateAddress,
+      formatEth,
+      formatNumber,
+      formatTimeAgo
+    } from '/shared/wallet-utils.js';
 
-  <!-- Pagination -->
-  <div class="pagination hidden" id="pagination"></div>
-
-  <script>
     // State
-    let provider;
     let events = [];
     let currentPage = 1;
     let liveUpdateInterval = null;
     const EVENTS_PER_PAGE = 20;
 
-    // Event signatures
-    const EVENT_SIGNATURES = {
-      'Pay': 'event Pay(uint256 indexed rulesetId, uint256 indexed rulesetCycleNumber, uint256 indexed projectId, address payer, address beneficiary, uint256 amount, uint256 newlyIssuedTokenCount, string memo, bytes metadata, address caller)',
-      'CashOutTokens': 'event CashOutTokens(uint256 indexed rulesetId, uint256 indexed rulesetCycleNumber, uint256 indexed projectId, address holder, address beneficiary, uint256 cashOutCount, uint256 reclaimAmount, bytes metadata, address caller)',
-      'DistributePayouts': 'event DistributePayouts(uint256 indexed rulesetId, uint256 indexed rulesetCycleNumber, uint256 indexed projectId, address beneficiary, uint256 amount, uint256 amountPaidOut, uint256 fee, uint256 netLeftoverDistributionAmount, address caller)',
-      'MintTokens': 'event MintTokens(address indexed beneficiary, uint256 indexed projectId, uint256 tokenCount, uint256 beneficiaryTokenCount, string memo, uint256 reservedPercent, address caller)',
-      'LaunchProject': 'event LaunchProject(uint256 rulesetId, uint256 projectId, string memo, address caller)',
-      'QueueRulesets': 'event QueueRulesets(uint256 rulesetId, uint256 projectId, string memo, address caller)'
+    // Event signatures (viem parseAbiItem format)
+    const EVENT_ABIS = {
+      'Pay': parseAbiItem('event Pay(uint256 indexed rulesetId, uint256 indexed rulesetCycleNumber, uint256 indexed projectId, address payer, address beneficiary, uint256 amount, uint256 beneficiaryTokenCount, string memo, bytes metadata, address caller)'),
+      'CashOutTokens': parseAbiItem('event CashOutTokens(uint256 indexed rulesetId, uint256 indexed rulesetCycleNumber, uint256 indexed projectId, address holder, address beneficiary, uint256 cashOutCount, uint256 cashOutTaxRate, uint256 reclaimAmount, bytes metadata, address caller)'),
+      'SendPayouts': parseAbiItem('event SendPayouts(uint256 indexed rulesetId, uint256 indexed rulesetCycleNumber, uint256 indexed projectId, address beneficiary, uint256 amount, uint256 amountPaidOut, uint256 fee, address caller)'),
+      'MintTokens': parseAbiItem('event MintTokens(address indexed beneficiary, uint256 indexed projectId, uint256 tokenCount, uint256 beneficiaryTokenCount, string memo, uint256 reservedPercent, address caller)'),
+      'LaunchProject': parseAbiItem('event LaunchProject(uint256 rulesetId, uint256 projectId, string memo, address caller)'),
+      'QueueRulesets': parseAbiItem('event QueueRulesets(uint256 rulesetId, uint256 projectId, string memo, address caller)')
     };
 
-    // Contract addresses
-    const CONTRACTS = {
-      1: {
-        terminal: '0x...',
-        controller: '0x...'
-      },
-      // ... other chains
-    };
-
-    // Explorers
-    const EXPLORERS = {
-      1: 'https://etherscan.io',
-      11155111: 'https://sepolia.etherscan.io',
-      10: 'https://optimistic.etherscan.io',
-      8453: 'https://basescan.org',
-      42161: 'https://arbiscan.io'
-    };
-
-    // Initialize
-    async function init() {
-      if (window.ethereum) {
-        provider = new ethers.BrowserProvider(window.ethereum);
-      } else {
-        // Fallback to public RPC
-        provider = new ethers.JsonRpcProvider('https://eth.llamarpc.com');
-      }
-    }
-
-    init();
+    // Make functions available globally
+    window.loadEvents = loadEvents;
+    window.toggleLive = toggleLive;
+    window.toggleEvent = toggleEvent;
 
     // Load events
     async function loadEvents() {
@@ -239,33 +194,34 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
       container.innerHTML = '<div class="loading">Loading events...</div>';
 
       try {
-        // Get appropriate provider for chain
-        const rpcUrls = {
-          1: 'https://eth.llamarpc.com',
-          11155111: 'https://rpc.sepolia.org',
-          10: 'https://mainnet.optimism.io',
-          8453: 'https://mainnet.base.org',
-          42161: 'https://arb1.arbitrum.io/rpc'
-        };
+        const config = await loadChainConfig();
+        const chainConfig = config.chains[chainId];
 
-        provider = new ethers.JsonRpcProvider(rpcUrls[chainId]);
-        const currentBlock = await provider.getBlockNumber();
-        const fromBlock = currentBlock - blockRange;
+        if (!chainConfig) {
+          container.innerHTML = '<div class="empty">Chain not configured</div>';
+          return;
+        }
 
-        // Build filter
-        const terminalAddress = CONTRACTS[chainId]?.terminal;
-        const controllerAddress = CONTRACTS[chainId]?.controller;
+        // Create viem client
+        const client = createPublicClient({
+          chain: CHAIN_CONFIGS[chainId],
+          transport: http(chainConfig.rpc)
+        });
+
+        const currentBlock = await client.getBlockNumber();
+        const fromBlock = currentBlock - BigInt(blockRange);
+
+        // Get contract addresses
+        const terminalAddress = chainConfig.contracts.JBMultiTerminal;
+        const controllerAddress = chainConfig.contracts.JBController;
 
         if (!terminalAddress) {
           container.innerHTML = '<div class="empty">Contract addresses not configured for this chain</div>';
           return;
         }
 
-        // Create interface for parsing
-        const iface = new ethers.Interface(Object.values(EVENT_SIGNATURES));
-
         // Fetch logs from both contracts
-        const logs = await provider.getLogs({
+        const logs = await client.getLogs({
           address: [terminalAddress, controllerAddress].filter(Boolean),
           fromBlock,
           toBlock: 'latest'
@@ -279,31 +235,51 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
 
         for (const log of logs) {
           try {
-            const parsed = iface.parseLog(log);
+            // Try to match event signature
+            let parsed = null;
+            let eventName = null;
+
+            for (const [name, abi] of Object.entries(EVENT_ABIS)) {
+              try {
+                const decoded = decodeEventLog({
+                  abi: [abi],
+                  data: log.data,
+                  topics: log.topics
+                });
+                if (decoded) {
+                  parsed = decoded;
+                  eventName = name;
+                  break;
+                }
+              } catch (e) {
+                // Try next event type
+              }
+            }
+
             if (!parsed) continue;
 
             // Filter by event type
-            if (eventType && parsed.name !== eventType) continue;
+            if (eventType && eventName !== eventType) continue;
 
             // Filter by project ID
             if (projectId && parsed.args.projectId?.toString() !== projectId) continue;
 
             // Get block timestamp
-            const block = await provider.getBlock(log.blockNumber);
+            const block = await client.getBlock({ blockNumber: log.blockNumber });
 
             const event = {
-              name: parsed.name,
+              name: eventName,
               args: parsed.args,
               txHash: log.transactionHash,
               blockNumber: log.blockNumber,
-              timestamp: block?.timestamp || 0,
+              timestamp: Number(block.timestamp),
               chainId
             };
 
             events.push(event);
 
             // Stats
-            if (parsed.name === 'Pay') {
+            if (eventName === 'Pay') {
               paymentCount++;
               totalVolume += parsed.args.amount || 0n;
               uniqueAddresses.add(parsed.args.payer);
@@ -323,7 +299,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
         // Update stats
         document.getElementById('stat-total').textContent = events.length;
         document.getElementById('stat-payments').textContent = paymentCount;
-        document.getElementById('stat-volume').textContent = (Number(totalVolume) / 1e18).toFixed(2);
+        document.getElementById('stat-volume').textContent = formatEth(totalVolume);
         document.getElementById('stat-unique').textContent = uniqueAddresses.size;
 
         // Render
@@ -335,6 +311,9 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
         container.innerHTML = `<div class="empty">Error loading events: ${error.message}</div>`;
       }
     }
+
+    // Import decodeEventLog for parsing
+    import { decodeEventLog } from 'https://esm.sh/viem';
 
     // Render events
     function renderEvents() {
@@ -375,6 +354,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
       const summary = getEventSummary(event);
       const details = getEventDetails(event);
       const timeAgo = formatTimeAgo(event.timestamp);
+      const explorer = CHAINS[event.chainId]?.explorer || 'https://etherscan.io';
 
       return `
         <div class="event-card">
@@ -393,10 +373,10 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
                 <span class="detail-value">${d.value}</span>
               </div>
             `).join('')}
-            <div class="detail-row" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid var(--border);">
+            <div class="detail-row mt-sm" style="padding-top: 0.5rem; border-top: 1px solid var(--border-color);">
               <span class="detail-label">Transaction</span>
               <span class="detail-value">
-                <a href="${EXPLORERS[event.chainId]}/tx/${event.txHash}" target="_blank">
+                <a href="${explorer}/tx/${event.txHash}" target="_blank">
                   ${event.txHash.slice(0, 10)}...${event.txHash.slice(-8)}
                 </a>
               </span>
@@ -411,7 +391,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
       const badges = {
         'Pay': { label: 'Pay', class: 'pay' },
         'CashOutTokens': { label: 'Cash Out', class: 'cashout' },
-        'DistributePayouts': { label: 'Distribute', class: 'distribute' },
+        'SendPayouts': { label: 'Distribute', class: 'distribute' },
         'MintTokens': { label: 'Mint', class: 'mint' },
         'LaunchProject': { label: 'Launch', class: 'config' },
         'QueueRulesets': { label: 'Config', class: 'config' }
@@ -427,7 +407,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
         case 'Pay':
           return {
             title: `Project ${args.projectId}`,
-            description: `${truncateAddress(args.payer)} paid ${formatEth(args.amount)} ETH → ${formatNumber(args.newlyIssuedTokenCount)} tokens${args.memo ? ` · "${args.memo}"` : ''}`
+            description: `${truncateAddress(args.payer)} paid ${formatEth(args.amount)} ETH → ${formatNumber(args.beneficiaryTokenCount)} tokens${args.memo ? ` · "${args.memo}"` : ''}`
           };
 
         case 'CashOutTokens':
@@ -436,7 +416,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
             description: `${truncateAddress(args.holder)} redeemed ${formatNumber(args.cashOutCount)} tokens for ${formatEth(args.reclaimAmount)} ETH`
           };
 
-        case 'DistributePayouts':
+        case 'SendPayouts':
           return {
             title: `Project ${args.projectId}`,
             description: `Distributed ${formatEth(args.amountPaidOut)} ETH to ${truncateAddress(args.beneficiary)}`
@@ -472,6 +452,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
     function getEventDetails(event) {
       const args = event.args;
       const details = [];
+      const explorer = CHAINS[event.chainId]?.explorer || 'https://etherscan.io';
 
       // Add all named arguments
       for (const key of Object.keys(args)) {
@@ -485,7 +466,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
               value = value.toString();
             }
           } else if (typeof value === 'string' && value.startsWith('0x') && value.length === 42) {
-            value = `<a href="${EXPLORERS[event.chainId]}/address/${value}" target="_blank">${truncateAddress(value)}</a>`;
+            value = `<a href="${explorer}/address/${value}" target="_blank">${truncateAddress(value)}</a>`;
           }
 
           details.push({ label: key, value: String(value) });
@@ -509,38 +490,12 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
       const dot = document.getElementById('live-dot');
 
       if (checkbox.checked) {
-        dot.style.background = 'var(--success)';
+        dot.classList.remove('inactive');
         liveUpdateInterval = setInterval(loadEvents, 15000);
       } else {
-        dot.style.background = 'var(--text-muted)';
+        dot.classList.add('inactive');
         clearInterval(liveUpdateInterval);
       }
-    }
-
-    // Helpers
-    function truncateAddress(addr) {
-      if (!addr) return '';
-      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-    }
-
-    function formatEth(wei) {
-      if (!wei) return '0';
-      return (Number(wei) / 1e18).toFixed(4);
-    }
-
-    function formatNumber(n) {
-      if (!n) return '0';
-      return Number(n).toLocaleString();
-    }
-
-    function formatTimeAgo(timestamp) {
-      if (!timestamp) return '';
-      const seconds = Math.floor(Date.now() / 1000 - timestamp);
-
-      if (seconds < 60) return `${seconds}s ago`;
-      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-      return `${Math.floor(seconds / 86400)}d ago`;
     }
   </script>
 </body>
@@ -555,7 +510,7 @@ Browse, filter, and decode all Juicebox protocol events. See payment history, re
 |-------|----------|-------------|
 | `Pay` | Terminal | Payment received |
 | `CashOutTokens` | Terminal | Token redemption |
-| `DistributePayouts` | Terminal | Payout distribution |
+| `SendPayouts` | Terminal | Payout distribution |
 | `UseAllowance` | Terminal | Surplus allowance used |
 | `AddToBalance` | Terminal | Balance added without minting |
 | `MintTokens` | Controller | Direct token mint |

@@ -5,7 +5,7 @@ description: Build omnichain UIs for Juicebox projects. Deploy to multiple chain
 
 # Juicebox V5 Omnichain UI Development
 
-Build frontends that deploy and interact with Juicebox projects across multiple chains.
+Build frontends that deploy and interact with Juicebox projects across multiple chains using viem and shared styles.
 
 ## Philosophy
 
@@ -61,26 +61,16 @@ Complete HTML template for deploying projects to multiple chains.
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Deploy Omnichain Project</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+  <link rel="stylesheet" href="/shared/styles.css">
   <style>
-    :root { --bg: #0a0a0a; --surface: #141414; --border: #2a2a2a; --text: #e0e0e0; --text-muted: #808080; --accent: #5c6bc0; --success: #4caf50; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 2rem; max-width: 640px; margin: 0 auto; line-height: 1.6; }
-    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    body { max-width: 640px; margin: 0 auto; }
     .subtitle { color: var(--text-muted); margin-bottom: 1.5rem; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
-    label { display: block; font-size: 0.875rem; color: var(--text-muted); margin-bottom: 0.25rem; }
-    input, select { width: 100%; padding: 0.625rem; background: var(--bg); border: 1px solid var(--border); border-radius: 4px; color: var(--text); font-size: 0.875rem; margin-bottom: 0.75rem; }
-    button { background: var(--accent); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 4px; font-size: 0.875rem; cursor: pointer; width: 100%; }
-    button:hover { opacity: 0.9; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
     .chain-select { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
-    .chain-chip { padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 0.875rem; }
+    .chain-chip { padding: 0.5rem 1rem; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; font-size: 0.875rem; background: var(--bg-secondary); }
+    .chain-chip:hover { border-color: var(--jb-yellow); }
     .chain-chip.selected { background: var(--accent); border-color: var(--accent); }
     .chain-chip.payment { background: var(--success); border-color: var(--success); }
-    .status-item { display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border); }
-    .status-item:last-child { border-bottom: none; }
-    .hidden { display: none !important; }
+    h2 { font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; }
   </style>
 </head>
 <body>
@@ -88,14 +78,14 @@ Complete HTML template for deploying projects to multiple chains.
   <p class="subtitle">Deploy to multiple chains with a single payment</p>
 
   <div class="card">
-    <button id="connect-btn" onclick="connectWallet()">Connect Wallet</button>
+    <button id="connect-btn" class="btn" onclick="connectWallet()">Connect Wallet</button>
     <div id="wallet-status" class="hidden">
       Connected: <span id="wallet-address"></span>
     </div>
   </div>
 
   <div class="card">
-    <h2 style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1rem;">Select Target Chains</h2>
+    <h2>Select Target Chains</h2>
     <div class="chain-select" id="target-chains">
       <div class="chain-chip" data-chain="1" onclick="toggleChain(this)">Ethereum</div>
       <div class="chain-chip" data-chain="10" onclick="toggleChain(this)">Optimism</div>
@@ -107,58 +97,47 @@ Complete HTML template for deploying projects to multiple chains.
   <div class="card">
     <label>Project Name</label>
     <input type="text" id="project-name" placeholder="My Omnichain Project">
-
     <label>Token Symbol</label>
     <input type="text" id="token-symbol" placeholder="OMNI">
   </div>
 
-  <div class="card" id="payment-section" class="hidden">
-    <h2 style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1rem;">Select Payment Chain</h2>
-    <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">
-      Pay gas on one chain. Relayr handles the rest.
-    </p>
+  <div class="card hidden" id="payment-section">
+    <h2>Select Payment Chain</h2>
+    <p style="font-size: 0.875rem; color: var(--text-muted); margin-bottom: 1rem;">Pay gas on one chain. Relayr handles the rest.</p>
     <div class="chain-select" id="payment-chains"></div>
-    <div id="quote-details" style="background: var(--bg); padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.875rem;">
-      <div class="status-item">
-        <span>Total Gas Cost</span>
-        <span id="total-cost">-</span>
-      </div>
+    <div style="background: var(--bg-primary); padding: 0.75rem; border-radius: 4px; margin-bottom: 1rem; font-size: 0.875rem;">
+      <div class="stat-row"><span class="stat-label">Total Gas Cost</span><span class="stat-value" id="total-cost">-</span></div>
     </div>
   </div>
 
   <div class="card">
-    <button id="deploy-btn" onclick="startDeploy()" disabled>
-      Step 1: Sign for Each Chain
-    </button>
+    <button id="deploy-btn" class="btn" onclick="startDeploy()" disabled>Step 1: Sign for Each Chain</button>
   </div>
 
-  <div class="card" id="tx-status" class="hidden">
-    <h2 style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1rem;">Deployment Status</h2>
+  <div class="card hidden" id="tx-status">
+    <h2>Deployment Status</h2>
     <div id="chain-statuses"></div>
   </div>
 
-  <script>
+  <script type="module">
+    import { createWalletClient, custom, formatEther, encodeFunctionData } from 'https://esm.sh/viem';
+    import { mainnet, optimism, base, arbitrum } from 'https://esm.sh/viem/chains';
+    import { CHAIN_CONFIGS, truncateAddress } from '/shared/wallet-utils.js';
+
     const RELAYR_API = 'https://api.relayr.ba5ed.com';
 
     const CHAINS = {
-      1: { name: 'Ethereum', explorer: 'https://etherscan.io' },
-      10: { name: 'Optimism', explorer: 'https://optimistic.etherscan.io' },
-      8453: { name: 'Base', explorer: 'https://basescan.org' },
-      42161: { name: 'Arbitrum', explorer: 'https://arbiscan.io' }
+      1: { name: 'Ethereum', chain: mainnet, explorer: 'https://etherscan.io' },
+      10: { name: 'Optimism', chain: optimism, explorer: 'https://optimistic.etherscan.io' },
+      8453: { name: 'Base', chain: base, explorer: 'https://basescan.org' },
+      42161: { name: 'Arbitrum', chain: arbitrum, explorer: 'https://arbiscan.io' }
     };
 
-    // V5 addresses (deterministic - same on all chains)
-    const V5 = {
-      controller: '0x...',
-      terminal: '0x...',
-      forwarder: '0x...'
-    };
-
-    let provider, signer, address;
+    let walletClient, address;
     let selectedChains = new Set();
     let currentQuote = null;
 
-    function toggleChain(el) {
+    window.toggleChain = function(el) {
       const chainId = el.dataset.chain;
       if (selectedChains.has(chainId)) {
         selectedChains.delete(chainId);
@@ -168,20 +147,20 @@ Complete HTML template for deploying projects to multiple chains.
         el.classList.add('selected');
       }
       document.getElementById('deploy-btn').disabled = selectedChains.size === 0;
-    }
+    };
 
-    async function connectWallet() {
+    window.connectWallet = async function() {
       if (!window.ethereum) { alert('Please install MetaMask'); return; }
-      provider = new ethers.BrowserProvider(window.ethereum);
-      signer = await provider.getSigner();
-      address = await signer.getAddress();
+      walletClient = createWalletClient({ chain: mainnet, transport: custom(window.ethereum) });
+      const [addr] = await walletClient.requestAddresses();
+      address = addr;
 
-      document.getElementById('wallet-address').textContent = `${address.slice(0,6)}...${address.slice(-4)}`;
+      document.getElementById('wallet-address').textContent = truncateAddress(address);
       document.getElementById('wallet-status').classList.remove('hidden');
       document.getElementById('connect-btn').classList.add('hidden');
-    }
+    };
 
-    async function startDeploy() {
+    window.startDeploy = async function() {
       if (selectedChains.size === 0) return;
 
       const btn = document.getElementById('deploy-btn');
@@ -195,11 +174,14 @@ Complete HTML template for deploying projects to multiple chains.
           btn.textContent = `Signing for ${CHAINS[chainId].name}...`;
 
           const calldata = buildLaunchCalldata();
-          const signed = await signForwardRequest(parseInt(chainId), calldata);
+          const forwarder = CHAIN_CONFIGS[parseInt(chainId)]?.contracts?.JBForwarder;
+          const controller = CHAIN_CONFIGS[parseInt(chainId)]?.contracts?.JBController;
+
+          const signed = await signForwardRequest(parseInt(chainId), calldata, forwarder, controller);
 
           signedRequests.push({
             chain: parseInt(chainId),
-            target: V5.forwarder,
+            target: forwarder,
             data: signed.encodedData,
             value: '0'
           });
@@ -216,14 +198,14 @@ Complete HTML template for deploying projects to multiple chains.
         btn.textContent = 'Error - Try Again';
         btn.disabled = false;
       }
-    }
+    };
 
-    async function signForwardRequest(chainId, calldata) {
+    async function signForwardRequest(chainId, calldata, forwarder, controller) {
       const domain = {
         name: 'Juicebox',
         version: '1',
         chainId: chainId,
-        verifyingContract: V5.forwarder
+        verifyingContract: forwarder
       };
 
       const types = {
@@ -242,44 +224,50 @@ Complete HTML template for deploying projects to multiple chains.
 
       const message = {
         from: address,
-        to: V5.controller,
+        to: controller,
         value: '0',
         gas: '1000000',
-        nonce: 0, // Query from forwarder in production
+        nonce: 0,
         deadline: deadline,
         data: calldata
       };
 
-      const signature = await signer.signTypedData(domain, types, message);
+      const signature = await walletClient.signTypedData({
+        account: address,
+        domain,
+        types,
+        primaryType: 'ForwardRequest',
+        message
+      });
 
-      const forwarderInterface = new ethers.Interface([
-        'function execute((address,address,uint256,uint256,uint256,uint48,bytes),bytes)'
-      ]);
-
-      const encodedData = forwarderInterface.encodeFunctionData('execute', [
-        [message.from, message.to, message.value, message.gas, message.nonce, message.deadline, message.data],
-        signature
-      ]);
+      const encodedData = encodeFunctionData({
+        abi: [{ name: 'execute', type: 'function', inputs: [
+          { name: 'request', type: 'tuple', components: [
+            { name: 'from', type: 'address' }, { name: 'to', type: 'address' },
+            { name: 'value', type: 'uint256' }, { name: 'gas', type: 'uint256' },
+            { name: 'nonce', type: 'uint256' }, { name: 'deadline', type: 'uint48' },
+            { name: 'data', type: 'bytes' }
+          ]},
+          { name: 'signature', type: 'bytes' }
+        ]}],
+        functionName: 'execute',
+        args: [[message.from, message.to, message.value, message.gas, message.nonce, message.deadline, message.data], signature]
+      });
 
       return { message, signature, encodedData };
     }
 
     function buildLaunchCalldata() {
-      // Build launchProjectFor calldata
-      // See /jb-project for full struct encoding
-      return '0x...';
+      // Build launchProjectFor calldata - see /jb-project for full struct encoding
+      return '0x';
     }
 
     async function getRelayrQuote(signedRequests) {
       const response = await fetch(`${RELAYR_API}/v1/bundle/prepaid`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transactions: signedRequests,
-          virtual_nonce_mode: 'Disabled'
-        })
+        body: JSON.stringify({ transactions: signedRequests, virtual_nonce_mode: 'Disabled' })
       });
-
       if (!response.ok) throw new Error('Failed to get quote');
       return await response.json();
     }
@@ -294,8 +282,7 @@ Complete HTML template for deploying projects to multiple chains.
         const chain = CHAINS[payment.chain];
         if (!chain) return;
 
-        const costEth = ethers.formatEther(payment.amount);
-
+        const costEth = formatEther(BigInt(payment.amount));
         const chip = document.createElement('div');
         chip.className = 'chain-chip';
         chip.innerHTML = `${chain.name}<br><small>${parseFloat(costEth).toFixed(4)} ETH</small>`;
@@ -320,16 +307,16 @@ Complete HTML template for deploying projects to multiple chains.
       btn.textContent = 'Confirm in wallet...';
 
       try {
-        const tx = await signer.sendTransaction({
+        const hash = await walletClient.sendTransaction({
+          account: address,
           to: payment.target,
-          value: payment.amount,
-          data: payment.calldata
+          value: BigInt(payment.amount),
+          data: payment.calldata,
+          chain: CHAINS[payment.chain].chain
         });
 
         btn.textContent = 'Payment sent...';
         showStatusPanel();
-
-        await tx.wait();
         pollBundleStatus(currentQuote.bundle_uuid);
 
       } catch (error) {
@@ -346,12 +333,9 @@ Complete HTML template for deploying projects to multiple chains.
 
       for (const chainId of selectedChains) {
         const item = document.createElement('div');
-        item.className = 'status-item';
+        item.className = 'stat-row';
         item.id = `status-${chainId}`;
-        item.innerHTML = `
-          <span>${CHAINS[chainId].name}</span>
-          <span class="status-badge">⏳ Pending</span>
-        `;
+        item.innerHTML = `<span class="stat-label">${CHAINS[chainId].name}</span><span class="stat-value status-badge">Pending</span>`;
         container.appendChild(item);
       }
     }
@@ -368,24 +352,19 @@ Complete HTML template for deploying projects to multiple chains.
             if (!statusEl) return;
 
             if (tx.status === 'Success' || tx.status === 'Completed') {
-              statusEl.textContent = '✅ Complete';
+              statusEl.textContent = 'Complete';
               statusEl.style.color = 'var(--success)';
             } else if (tx.status === 'Failed') {
-              statusEl.textContent = '❌ Failed';
+              statusEl.textContent = 'Failed';
+              statusEl.style.color = 'var(--error)';
             } else {
-              statusEl.textContent = '🔄 ' + tx.status;
+              statusEl.textContent = tx.status;
             }
           });
 
-          const allDone = status.transactions.every(
-            tx => ['Success', 'Completed', 'Failed'].includes(tx.status)
-          );
-
-          if (!allDone) {
-            setTimeout(poll, 2000);
-          } else {
-            document.getElementById('deploy-btn').textContent = '✅ Deployment Complete!';
-          }
+          const allDone = status.transactions.every(tx => ['Success', 'Completed', 'Failed'].includes(tx.status));
+          if (!allDone) setTimeout(poll, 2000);
+          else document.getElementById('deploy-btn').textContent = 'Deployment Complete!';
 
         } catch (error) {
           console.error('Poll error:', error);
@@ -413,26 +392,22 @@ Display unified stats across all chains using Bendystraw.
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Omnichain Dashboard</title>
+  <link rel="stylesheet" href="/shared/styles.css">
   <style>
-    :root { --bg: #0a0a0a; --surface: #141414; --border: #2a2a2a; --text: #e0e0e0; --text-muted: #808080; --accent: #5c6bc0; }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, sans-serif; background: var(--bg); color: var(--text); padding: 2rem; max-width: 900px; margin: 0 auto; line-height: 1.6; }
-    h1 { font-size: 1.75rem; margin-bottom: 0.5rem; }
+    body { max-width: 900px; margin: 0 auto; }
     .subtitle { color: var(--text-muted); margin-bottom: 2rem; }
     .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
-    .metric-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; }
+    .metric-card { text-align: center; }
     .metric-label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.5rem; }
     .metric-value { font-size: 1.5rem; font-weight: 600; }
     .metric-sub { font-size: 0.875rem; color: var(--text-muted); margin-top: 0.25rem; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin-bottom: 1rem; }
-    h2 { font-size: 1.1rem; color: var(--text-muted); margin-bottom: 1rem; }
+    h2 { font-size: 1rem; color: var(--text-muted); margin-bottom: 1rem; }
     .chain-breakdown { display: flex; gap: 1rem; flex-wrap: wrap; }
-    .chain-card { flex: 1; min-width: 200px; background: var(--bg); border-radius: 4px; padding: 1rem; }
+    .chain-card { flex: 1; min-width: 200px; background: var(--bg-primary); border-radius: 4px; padding: 1rem; }
     .chain-name { font-weight: 600; margin-bottom: 0.5rem; }
     .chain-stat { display: flex; justify-content: space-between; font-size: 0.875rem; padding: 0.25rem 0; }
     .activity-item { display: flex; justify-content: space-between; padding: 0.75rem 0; border-bottom: 1px solid var(--border); }
     .activity-item:last-child { border-bottom: none; }
-    .loading { color: var(--text-muted); text-align: center; padding: 2rem; }
   </style>
 </head>
 <body>
@@ -440,22 +415,22 @@ Display unified stats across all chains using Bendystraw.
   <p class="subtitle">Omnichain Project Dashboard</p>
 
   <div class="grid">
-    <div class="metric-card">
+    <div class="card metric-card">
       <div class="metric-label">Total Balance</div>
       <div class="metric-value" id="total-balance">-</div>
       <div class="metric-sub">across all chains</div>
     </div>
-    <div class="metric-card">
+    <div class="card metric-card">
       <div class="metric-label">Total Volume</div>
       <div class="metric-value" id="total-volume">-</div>
       <div class="metric-sub">all-time</div>
     </div>
-    <div class="metric-card">
+    <div class="card metric-card">
       <div class="metric-label">Token Supply</div>
       <div class="metric-value" id="total-supply">-</div>
       <div class="metric-sub">total issued</div>
     </div>
-    <div class="metric-card">
+    <div class="card metric-card">
       <div class="metric-label">Contributors</div>
       <div class="metric-value" id="total-contributors">-</div>
       <div class="metric-sub">unique addresses</div>
@@ -476,10 +451,11 @@ Display unified stats across all chains using Bendystraw.
     </div>
   </div>
 
-  <script>
-    // Configuration
+  <script type="module">
+    import { truncateAddress, formatEth, formatNumber } from '/shared/wallet-utils.js';
+
     const SUCKER_GROUP_ID = '0x...'; // Your sucker group ID
-    const API_PROXY = '/api/bendystraw'; // Server-side proxy
+    const API_PROXY = '/api/bendystraw';
 
     const CHAINS = {
       1: { name: 'Ethereum' },
@@ -494,8 +470,7 @@ Display unified stats across all chains using Bendystraw.
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query: graphql, variables })
       });
-      const result = await response.json();
-      return result.data;
+      return (await response.json()).data;
     }
 
     async function loadDashboard() {
@@ -503,19 +478,10 @@ Display unified stats across all chains using Bendystraw.
         const data = await query(`
           query($id: String!) {
             suckerGroup(id: $id) {
-              volume
-              volumeUsd
-              balance
-              tokenSupply
-              paymentsCount
-              contributorsCount
+              volume volumeUsd balance tokenSupply
+              paymentsCount contributorsCount
               projects_rel {
-                projectId
-                chainId
-                name
-                balance
-                volume
-                paymentsCount
+                projectId chainId name balance volume paymentsCount
               }
             }
           }
@@ -523,39 +489,21 @@ Display unified stats across all chains using Bendystraw.
 
         const group = data.suckerGroup;
 
-        // Update totals
-        document.getElementById('project-name').textContent =
-          group.projects_rel[0]?.name || 'Omnichain Project';
-        document.getElementById('total-balance').textContent =
-          formatEth(group.balance) + ' ETH';
-        document.getElementById('total-volume').textContent =
-          formatEth(group.volume) + ' ETH';
-        document.getElementById('total-supply').textContent =
-          formatNumber(group.tokenSupply);
-        document.getElementById('total-contributors').textContent =
-          formatNumber(group.contributorsCount);
+        document.getElementById('project-name').textContent = group.projects_rel[0]?.name || 'Omnichain Project';
+        document.getElementById('total-balance').textContent = formatEth(group.balance) + ' ETH';
+        document.getElementById('total-volume').textContent = formatEth(group.volume) + ' ETH';
+        document.getElementById('total-supply').textContent = formatNumber(group.tokenSupply);
+        document.getElementById('total-contributors').textContent = formatNumber(group.contributorsCount);
 
-        // Chain breakdown
-        document.getElementById('chain-breakdown').innerHTML =
-          group.projects_rel.map(project => `
-            <div class="chain-card">
-              <div class="chain-name">${CHAINS[project.chainId]?.name || 'Chain ' + project.chainId}</div>
-              <div class="chain-stat">
-                <span>Balance</span>
-                <span>${formatEth(project.balance)} ETH</span>
-              </div>
-              <div class="chain-stat">
-                <span>Volume</span>
-                <span>${formatEth(project.volume)} ETH</span>
-              </div>
-              <div class="chain-stat">
-                <span>Payments</span>
-                <span>${formatNumber(project.paymentsCount)}</span>
-              </div>
-            </div>
-          `).join('');
+        document.getElementById('chain-breakdown').innerHTML = group.projects_rel.map(project => `
+          <div class="chain-card">
+            <div class="chain-name">${CHAINS[project.chainId]?.name || 'Chain ' + project.chainId}</div>
+            <div class="chain-stat"><span>Balance</span><span>${formatEth(project.balance)} ETH</span></div>
+            <div class="chain-stat"><span>Volume</span><span>${formatEth(project.volume)} ETH</span></div>
+            <div class="chain-stat"><span>Payments</span><span>${formatNumber(project.paymentsCount)}</span></div>
+          </div>
+        `).join('');
 
-        // Load activity
         if (group.projects_rel.length > 0) {
           const first = group.projects_rel[0];
           await loadActivity(first.projectId, first.chainId);
@@ -576,12 +524,7 @@ Display unified stats across all chains using Bendystraw.
             orderDirection: "desc"
             limit: 10
           ) {
-            items {
-              timestamp
-              from
-              amount
-              memo
-            }
+            items { timestamp from amount memo }
           }
         }
       `, { projectId, chainId });
@@ -589,41 +532,21 @@ Display unified stats across all chains using Bendystraw.
       const events = data.payEvents.items;
 
       if (events.length === 0) {
-        document.getElementById('activity-feed').innerHTML =
-          '<div class="loading">No recent activity</div>';
+        document.getElementById('activity-feed').innerHTML = '<div class="loading">No recent activity</div>';
         return;
       }
 
       document.getElementById('activity-feed').innerHTML = events.map(e => `
         <div class="activity-item">
           <div>
-            <div>${truncate(e.from)} paid</div>
+            <div>${truncateAddress(e.from)} paid</div>
             <div style="font-size: 0.75rem; color: var(--text-muted);">
-              ${e.memo || 'No memo'} · ${formatTime(e.timestamp)}
+              ${e.memo || 'No memo'} · ${new Date(parseInt(e.timestamp) * 1000).toLocaleDateString()}
             </div>
           </div>
           <div style="font-weight: 600;">${formatEth(e.amount)} ETH</div>
         </div>
       `).join('');
-    }
-
-    function formatEth(wei) {
-      if (!wei) return '0';
-      return (parseFloat(wei) / 1e18).toFixed(4);
-    }
-
-    function formatNumber(n) {
-      if (!n) return '0';
-      return parseInt(n).toLocaleString();
-    }
-
-    function truncate(addr) {
-      if (!addr) return '';
-      return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-    }
-
-    function formatTime(ts) {
-      return new Date(parseInt(ts) * 1000).toLocaleDateString();
     }
 
     loadDashboard();
@@ -694,7 +617,6 @@ async function loadProject(projectId, chainId) {
   `, { projectId, chainId });
 
   if (project.suckerGroupId) {
-    // Omnichain - fetch aggregated data
     const group = await bendystrawQuery(`
       query($id: String!) {
         suckerGroup(id: $id) {
@@ -714,7 +636,7 @@ async function loadProject(projectId, chainId) {
 ### Poll After Relayr Deploy
 
 ```javascript
-async function deployAndWaitForIndex(signer, chains, calldata) {
+async function deployAndWaitForIndex(walletClient, chains, calldata) {
   // Deploy via Relayr
   const quote = await relayrClient.createBundle(/* ... */);
   await payForBundle(quote);
