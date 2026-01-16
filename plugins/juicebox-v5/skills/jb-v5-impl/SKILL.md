@@ -642,6 +642,138 @@ if (limit.amount > 0) {
 
 ---
 
+## Fund Access Limit Lifecycle
+
+Understanding the lifecycle of payout limits vs surplus allowances is critical for project design. **This is a common source of confusion.**
+
+### Payout Limits: Reset Each Cycle
+
+Payout limits reset when a new cycle begins:
+
+```
+Cycle 1: Payout limit = 10 ETH
+  → Team sends 10 ETH payouts
+  → Remaining limit = 0
+
+Cycle 2: Payout limit = 10 ETH (RESET!)
+  → Team can send another 10 ETH
+  → This continues every cycle
+```
+
+**Key Insight**: The payout limit is defined per-ruleset, and when a cycling ruleset starts a new cycle, the limit refreshes. This enables **recurring distributions** without queuing multiple rulesets.
+
+### Surplus Allowance: One-Time Per Ruleset
+
+Surplus allowance does NOT reset each cycle:
+
+```
+Cycle 1: Surplus allowance = 20 ETH
+  → Team uses 15 ETH from surplus
+  → Remaining allowance = 5 ETH
+
+Cycle 2: Surplus allowance = 5 ETH (NOT reset!)
+  → Still only 5 ETH available
+  → Allowance only resets if NEW RULESET is queued
+```
+
+**Key Insight**: Surplus allowance is a one-time budget per ruleset configuration. It's designed for **discretionary treasury access**, not recurring distributions.
+
+### How Remaining Limits Are Tracked
+
+The terminal store tracks used amounts separately from configured limits:
+
+```solidity
+// JBTerminalStore
+mapping(address terminal =>
+    mapping(uint256 projectId =>
+        mapping(address token =>
+            mapping(uint256 rulesetCycleNumber => uint256)
+        )
+    )
+) public usedPayoutLimitOf;
+
+mapping(address terminal =>
+    mapping(uint256 projectId =>
+        mapping(address token =>
+            mapping(uint256 rulesetId => uint256)
+        )
+    )
+) public usedSurplusAllowanceOf;
+```
+
+Notice the key difference:
+- **Payout limit**: Keyed by `rulesetCycleNumber` → resets each cycle
+- **Surplus allowance**: Keyed by `rulesetId` → persists across cycles
+
+### Surplus Calculation
+
+Surplus (redeemable amount) is calculated as:
+```
+surplus = balance - remainingPayoutLimit
+```
+
+Where `remainingPayoutLimit` is the configured limit minus used amount for the current cycle.
+
+**Implication**: Payout limits **protect funds from cash outs**. If you set a 10 ETH payout limit, that 10 ETH cannot be cashed out by token holders until it's distributed or the cycle ends.
+
+### Design Pattern: Vesting via Native Mechanics
+
+Combine both limit types for sophisticated treasury management:
+
+| Mechanism | Behavior | Use Case |
+|-----------|----------|----------|
+| Payout Limit | Resets each cycle | Recurring vesting/salaries |
+| Surplus Allowance | One-time per ruleset | Emergency fund / discretionary |
+
+**Example: 12-Month Vesting with Treasury Reserve**
+
+```solidity
+// Single cycling ruleset (NOT 12 separate rulesets!)
+JBRulesetConfig({
+    duration: 30 days,  // Monthly cycles
+    // ...
+    fundAccessLimitGroups: [
+        JBFundAccessLimitGroup({
+            terminal: address(TERMINAL),
+            token: JBConstants.NATIVE_TOKEN,
+            payoutLimits: [
+                JBCurrencyAmount({
+                    amount: 6.67 ether,   // Monthly vesting (80 ETH / 12)
+                    currency: nativeCurrency
+                })
+            ],
+            surplusAllowances: [
+                JBCurrencyAmount({
+                    amount: 20 ether,     // One-time treasury access
+                    currency: nativeCurrency
+                })
+            ]
+        })
+    ]
+});
+```
+
+**Result over 12 months:**
+- Month 1: Team can withdraw 6.67 ETH (payout) + up to 20 ETH (surplus allowance)
+- Month 2-12: Team can withdraw 6.67 ETH/month (payout limit resets each cycle)
+- Surplus allowance does NOT reset - once used, it's gone until new ruleset
+
+### Common Mistakes
+
+1. **Queueing 12 rulesets for 12-month vesting**
+   - Wrong: Queue separate ruleset for each month
+   - Right: One cycling ruleset with monthly payout limit
+
+2. **Expecting surplus allowance to reset**
+   - Wrong: Plan to use 10 ETH each month from surplus allowance
+   - Right: Use payout limits for recurring distributions
+
+3. **Not understanding surplus protection**
+   - Payout limits protect funds from redemption
+   - Funds within the payout limit are NOT part of surplus
+
+---
+
 ### JBPrices
 
 Hierarchical price feed system with inverse calculation support.

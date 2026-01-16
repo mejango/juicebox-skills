@@ -9,13 +9,20 @@ Create and manage Juicebox V5 projects including deployment, configuration, and 
 
 ## Before Writing Custom Code
 
-**Consider if a Revnet fits your needs:**
+**Always check if native mechanics can achieve your goal:**
 
 | User Need | Recommended Solution |
 |-----------|---------------------|
 | Autonomous tokenized treasury | Deploy a **Revnet** via revnet-core-v5 |
 | Project with structured rules and no EOA owner | Use contract-as-owner pattern |
 | Simple fundraising project | Use this skill to generate deployment |
+| Vesting/time-locked distributions | Use **payout limits + cycling rulesets** (no custom contracts) |
+| NFT-gated treasury | Use **nana-721-hook-v5** with native cash outs |
+| Governance-minimal/immutable | Transfer ownership to **burn address** after setup |
+| One-time treasury access | Use **surplus allowance** (doesn't reset each cycle) |
+
+**See `/jb-patterns` for detailed examples of these patterns.**
+**See `/jb-simplify` for a checklist to reduce custom code.**
 
 ## Project Creation Overview
 
@@ -111,9 +118,9 @@ import {JBCurrencyAmount} from "@bananapus/core/src/structs/JBCurrencyAmount.sol
 import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
 
 contract DeployProject is Script {
-    // V5 contract addresses (update for target network)
-    IJBController constant CONTROLLER = IJBController(0x...);
-    IJBMultiTerminal constant TERMINAL = IJBMultiTerminal(0x...);
+    // V5 Mainnet Addresses (see /references/v5-addresses.md for all networks)
+    IJBController constant CONTROLLER = IJBController(0x27da30646502e2f642be5281322ae8c394f7668a);
+    IJBMultiTerminal constant TERMINAL = IJBMultiTerminal(0x2db6d704058e552defe415753465df8df0361846);
 
     function run() external {
         vm.startBroadcast();
