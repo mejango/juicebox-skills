@@ -738,6 +738,76 @@ contract EditableProjectToken is ERC20 {
 
 **Benefit**: Rebrand without redeploying token or migrating liquidity. Project owner controls metadata.
 
+**5. Vesting Token with Per-Address Schedules**
+```solidity
+contract VestingProjectToken is ERC20 {
+    struct VestingSchedule {
+        uint256 totalAmount;     // Total tokens in this schedule
+        uint256 released;        // Already released/transferred
+        uint40 start;            // Vesting start timestamp
+        uint40 cliff;            // Cliff end timestamp
+        uint40 duration;         // Total vesting duration
+    }
+
+    mapping(address => VestingSchedule) public vestingOf;
+
+    function vestedAmountOf(address account) public view returns (uint256) {
+        VestingSchedule memory schedule = vestingOf[account];
+        if (schedule.totalAmount == 0) return balanceOf(account);
+        if (block.timestamp < schedule.cliff) return 0;
+        if (block.timestamp >= schedule.start + schedule.duration) {
+            return schedule.totalAmount;
+        }
+        uint256 elapsed = block.timestamp - schedule.start;
+        return (schedule.totalAmount * elapsed) / schedule.duration;
+    }
+
+    function _update(address from, address to, uint256 amount) internal override {
+        // Skip vesting checks for mints, burns, controller ops
+        if (from == address(0) || to == address(0) || msg.sender == controller) {
+            super._update(from, to, amount);
+            return;
+        }
+
+        VestingSchedule storage schedule = vestingOf[from];
+        if (schedule.totalAmount == 0) {
+            super._update(from, to, amount);
+            return;
+        }
+
+        require(block.timestamp >= schedule.cliff, "Cliff not reached");
+        uint256 transferable = vestedAmountOf(from) - schedule.released;
+        require(amount <= transferable, "Insufficient vested balance");
+        schedule.released += amount;
+        super._update(from, to, amount);
+    }
+
+    function setVestingSchedule(
+        address beneficiary,
+        uint256 totalAmount,
+        uint40 start,
+        uint40 cliffDuration,
+        uint40 vestingDuration
+    ) external onlyProjectOwner {
+        vestingOf[beneficiary] = VestingSchedule({
+            totalAmount: totalAmount,
+            released: 0,
+            start: start,
+            cliff: start + cliffDuration,
+            duration: vestingDuration
+        });
+    }
+}
+```
+
+**Key Difference from Treasury Vesting**:
+- **Treasury vesting** (payout limits): Controls when funds leave the treasury
+- **Token vesting**: Controls when individual holders can transfer tokens
+
+**Use Case**: Team allocations, investor lock-ups, contributor rewards where tokens should vest per-person with individual cliffs and durations. Can be combined with treasury vesting for layered protection.
+
+**Tradeoff**: Does not prevent cash outs (controller operations bypass vesting). If you need to prevent recipients from cashing out, combine with a ruleset that has `pauseCashOut: true` during the vesting period, or set a high `cashOutTaxRate`.
+
 #### Edge Cases and Gotchas
 
 1. **Token assigned twice**: A token can only serve one project. `setTokenFor()` reverts if token already assigned.

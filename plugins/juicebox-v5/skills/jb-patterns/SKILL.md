@@ -843,6 +843,241 @@ contract EditableProjectToken is ERC20 {
 
 **Tradeoff**: Some DEXs and aggregators cache token metadata. Changes may not propagate immediately to all interfaces.
 
+### Example: Vesting Token
+
+Enforce time-based vesting at the token level - useful for team allocations, investor locks, or contributor rewards where tokens should vest over time:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
+
+/// @notice Project token with per-address vesting schedules.
+/// @dev Vesting restricts transfers, not minting/burning. Combined with treasury
+/// vesting (payout limits), this creates layered protection.
+contract VestingProjectToken is ERC20 {
+    struct VestingSchedule {
+        uint256 totalAmount;     // Total tokens in this schedule
+        uint256 released;        // Already released/transferred
+        uint40 start;            // Vesting start timestamp
+        uint40 cliff;            // Cliff end timestamp (0 = no cliff)
+        uint40 duration;         // Total vesting duration from start
+    }
+
+    IJBProjects public immutable PROJECTS;
+    address public immutable controller;
+    uint256 public immutable projectId;
+
+    mapping(address => VestingSchedule) public vestingOf;
+
+    event VestingScheduleSet(
+        address indexed beneficiary,
+        uint256 totalAmount,
+        uint40 start,
+        uint40 cliff,
+        uint40 duration
+    );
+
+    error CliffNotReached();
+    error InsufficientVestedBalance();
+    error VestingAlreadyExists();
+
+    constructor(
+        string memory name,
+        string memory symbol,
+        address _controller,
+        uint256 _projectId,
+        IJBProjects projects
+    ) ERC20(name, symbol) {
+        controller = _controller;
+        projectId = _projectId;
+        PROJECTS = projects;
+    }
+
+    modifier onlyProjectOwner() {
+        require(msg.sender == PROJECTS.ownerOf(projectId), "NOT_OWNER");
+        _;
+    }
+
+    function decimals() public pure override returns (uint8) { return 18; }
+
+    function canBeAddedTo(uint256 _projectId) external view returns (bool) {
+        return _projectId == projectId;
+    }
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _burn(from, amount);
+    }
+
+    /// @notice Set a vesting schedule for an address.
+    /// @dev Call this AFTER minting tokens to the beneficiary.
+    /// @param beneficiary Address whose tokens will vest.
+    /// @param totalAmount Total tokens subject to vesting (should match balance).
+    /// @param start When vesting begins (can be in the past).
+    /// @param cliffDuration Seconds until cliff ends (0 for no cliff).
+    /// @param vestingDuration Total seconds for full vesting from start.
+    function setVestingSchedule(
+        address beneficiary,
+        uint256 totalAmount,
+        uint40 start,
+        uint40 cliffDuration,
+        uint40 vestingDuration
+    ) external onlyProjectOwner {
+        if (vestingOf[beneficiary].totalAmount > 0) revert VestingAlreadyExists();
+
+        vestingOf[beneficiary] = VestingSchedule({
+            totalAmount: totalAmount,
+            released: 0,
+            start: start,
+            cliff: start + cliffDuration,
+            duration: vestingDuration
+        });
+
+        emit VestingScheduleSet(
+            beneficiary,
+            totalAmount,
+            start,
+            start + cliffDuration,
+            vestingDuration
+        );
+    }
+
+    /// @notice Calculate how many tokens have vested for an address.
+    function vestedAmountOf(address account) public view returns (uint256) {
+        VestingSchedule memory schedule = vestingOf[account];
+
+        // No vesting schedule = all tokens are vested (freely transferable)
+        if (schedule.totalAmount == 0) return balanceOf(account);
+
+        // Before cliff = nothing vested
+        if (block.timestamp < schedule.cliff) return 0;
+
+        // After full duration = everything vested
+        if (block.timestamp >= schedule.start + schedule.duration) {
+            return schedule.totalAmount;
+        }
+
+        // Linear vesting between cliff and end
+        uint256 elapsed = block.timestamp - schedule.start;
+        return (schedule.totalAmount * elapsed) / schedule.duration;
+    }
+
+    /// @notice Calculate transferable (vested and unreleased) tokens.
+    function transferableOf(address account) public view returns (uint256) {
+        VestingSchedule memory schedule = vestingOf[account];
+
+        // No vesting = full balance transferable
+        if (schedule.totalAmount == 0) return balanceOf(account);
+
+        uint256 vested = vestedAmountOf(account);
+        uint256 locked = schedule.totalAmount > vested
+            ? schedule.totalAmount - vested
+            : 0;
+
+        uint256 balance = balanceOf(account);
+        return balance > locked ? balance - locked : 0;
+    }
+
+    function _update(address from, address to, uint256 amount) internal override {
+        // Skip vesting checks for mints, burns, and controller operations
+        if (from == address(0) || to == address(0) || msg.sender == controller) {
+            super._update(from, to, amount);
+            return;
+        }
+
+        VestingSchedule storage schedule = vestingOf[from];
+
+        // No vesting schedule = normal transfer
+        if (schedule.totalAmount == 0) {
+            super._update(from, to, amount);
+            return;
+        }
+
+        // Before cliff = no transfers allowed
+        if (block.timestamp < schedule.cliff) revert CliffNotReached();
+
+        // Check transferable amount
+        uint256 transferable = transferableOf(from);
+        if (amount > transferable) revert InsufficientVestedBalance();
+
+        // Track released amount for accounting
+        schedule.released += amount;
+
+        super._update(from, to, amount);
+    }
+}
+```
+
+**Key Design Decisions**:
+- Vesting is per-address, set by project owner after minting
+- No vesting schedule = freely transferable (normal ERC20 behavior)
+- Cliff period: no transfers until cliff is reached
+- Linear vesting after cliff
+- Controller operations (mint/burn for payments/cash outs) bypass vesting
+
+**Usage Pattern**:
+```solidity
+// 1. Deploy and set as project token
+VestingProjectToken token = new VestingProjectToken(...);
+CONTROLLER.setTokenFor(projectId, IJBToken(address(token)));
+
+// 2. Team member receives tokens via payment or reserved distribution
+// (tokens minted by controller - no vesting restriction on mint)
+
+// 3. Project owner sets vesting schedule
+token.setVestingSchedule(
+    teamMember,
+    1_000_000e18,           // 1M tokens vest
+    uint40(block.timestamp), // Start now
+    365 days,               // 1 year cliff
+    4 * 365 days            // 4 year total vest
+);
+
+// Result:
+// - Year 0-1: 0 tokens transferable (cliff)
+// - Year 1: 250k tokens transferable (25% vested)
+// - Year 2: 500k tokens transferable (50% vested)
+// - Year 4+: All tokens transferable
+```
+
+**Combining with Treasury Vesting**:
+
+| Layer | Protects | Mechanism |
+|-------|----------|-----------|
+| Token vesting | Holder's tokens | Transfer restrictions |
+| Treasury vesting | Treasury funds | Payout limits |
+
+For comprehensive protection, use both:
+1. **Treasury vesting** (Pattern 1): Prevents premature fund withdrawal
+2. **Token vesting**: Prevents premature token sales by recipients
+
+**When to Use Token Vesting vs Treasury Vesting**:
+
+| Scenario | Use Token Vesting | Use Treasury Vesting |
+|----------|-------------------|---------------------|
+| Team allocations with cliff | ✅ | Optional |
+| Investor lock-ups | ✅ | Optional |
+| Recurring payroll/grants | ❌ | ✅ |
+| Milestone-based releases | ❌ | ✅ |
+| All-holder protection | ❌ | ✅ |
+| Per-person schedules | ✅ | ❌ |
+
+**Tradeoffs**:
+- Adds complexity vs standard token
+- Vesting schedules are permanent once set
+- Does not prevent cash outs (controller operations are exempt)
+- Must set schedule after minting, not before
+
+---
+
 ### Example: Concentration Limited Token
 
 Prevent any single holder from accumulating too large a share:
@@ -923,7 +1158,8 @@ contract ConcentrationLimitedToken is ERC20 {
 | Rebasing mechanics | **Yes** | - |
 | Governance voting | **Yes** | External governance |
 | Pre-existing token | **Yes** | Migrate to new project |
-| Vesting in token | **Yes** | Use payout limits instead |
+| Per-holder token vesting | **Yes** | - |
+| Treasury fund vesting | No | Use payout limits (Pattern 1) |
 | Compliance restrictions | **Yes** | - |
 | Editable name/symbol | **Yes** | Redeploy token |
 | Concentration limits | **Yes** | - |
@@ -981,8 +1217,10 @@ Need custom payout routing?
 └── Just multi-recipient? → Use native splits
 
 Need vesting/time-locks?
-├── Linear over time? → Use cycling rulesets + payout limits
-├── Milestone-based? → Queue multiple rulesets
+├── Treasury funds over time? → Use cycling rulesets + payout limits
+├── Milestone-based releases? → Queue multiple rulesets
+├── Per-holder token locks? → Custom ERC20 with vesting schedules
+├── Investor/team cliffs? → Custom ERC20 with vesting schedules
 └── Complex conditions? → Consider Revnet or custom
 
 Need custom NFT content?
@@ -1004,6 +1242,7 @@ Need custom token mechanics?
 ├── Rebasing/elastic supply? → Custom ERC20 (careful with totalSupply)
 ├── Editable name/symbol? → Custom ERC20 with setName/setSymbol
 ├── Concentration limits? → Custom ERC20 with max holder checks
+├── Per-holder vesting/cliffs? → Custom ERC20 with vesting schedules
 └── Pre-existing token? → Wrap with IJBToken interface
 ```
 
@@ -1016,10 +1255,12 @@ Need custom token mechanics?
 **Wrong**: Creating a data hook that wraps/delegates to 721 hook
 **Right**: Use 721 hook directly, achieve vesting via ruleset configuration
 
-### 2. Custom Vesting Contracts
+### 2. Custom Vesting Contracts for Treasury Funds
 
 **Wrong**: Writing a VestingSplitHook to hold and release funds
 **Right**: Use payout limits (reset each cycle) for recurring distributions
+
+**Exception**: Per-holder token vesting (team cliffs, investor locks) IS appropriate as a custom ERC20. See Pattern 8 - Vesting Token.
 
 ### 3. Multiple Queued Rulesets for Simple Cycles
 
