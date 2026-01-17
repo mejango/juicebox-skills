@@ -189,6 +189,115 @@ function setControllerAllowed(uint256 projectId) external view returns (bool);
 
 ---
 
+### JBTokens Functions
+
+Manages project token accounting, including credits (unclaimed balances) and ERC20 tokens.
+
+#### Token Deployment
+
+```solidity
+// Deploy standard JBERC20 for a project
+function deployERC20For(
+    uint256 projectId,
+    string calldata name,
+    string calldata symbol,
+    bytes32 salt              // For deterministic address (0 for non-deterministic)
+) external returns (IJBToken token);
+
+// Set a custom ERC20 as the project token
+function setTokenFor(
+    uint256 projectId,
+    IJBToken token            // Must implement IJBToken interface
+) external;
+```
+
+#### Token Operations
+
+```solidity
+// Mint tokens to a holder (called by controller)
+function mintFor(
+    address holder,
+    uint256 projectId,
+    uint256 count
+) external;
+
+// Burn tokens from a holder (called by controller)
+function burnFrom(
+    address holder,
+    uint256 projectId,
+    uint256 count
+) external;
+
+// Convert credits to ERC20 tokens
+function claimTokensFor(
+    address holder,
+    uint256 projectId,
+    uint256 count,
+    address beneficiary
+) external;
+
+// Transfer credits between addresses
+function transferCreditsFrom(
+    address holder,
+    uint256 projectId,
+    address recipient,
+    uint256 count
+) external;
+```
+
+#### View Functions
+
+```solidity
+// Get the ERC20 token for a project (address(0) if credits-only)
+function tokenOf(uint256 projectId) external view returns (IJBToken);
+
+// Get the project ID for a token
+function projectIdOf(IJBToken token) external view returns (uint256);
+
+// Get credit balance for a holder
+function creditBalanceOf(address holder, uint256 projectId) external view returns (uint256);
+
+// Get total credit supply for a project
+function totalCreditSupplyOf(uint256 projectId) external view returns (uint256);
+
+// Get total balance (credits + ERC20) for a holder
+function totalBalanceOf(address holder, uint256 projectId) external view returns (uint256);
+
+// Get total supply (credits + ERC20) for a project
+function totalSupplyOf(uint256 projectId) external view returns (uint256);
+```
+
+#### IJBToken Interface (for Custom Tokens)
+
+Custom tokens must implement this interface:
+
+```solidity
+interface IJBToken is IERC20 {
+    // Standard ERC20 functions (name, symbol, decimals, totalSupply, balanceOf, transfer, etc.)
+
+    /// @notice Check if this token can be added to a project.
+    /// @dev Must return true for setTokenFor() to succeed.
+    function canBeAddedTo(uint256 projectId) external view returns (bool);
+
+    /// @notice Mint tokens. Called by JBTokens on payments.
+    function mint(address holder, uint256 amount) external;
+
+    /// @notice Burn tokens. Called by JBTokens on cash outs.
+    function burn(address holder, uint256 amount) external;
+}
+```
+
+#### Custom Token Requirements
+
+| Requirement | Details |
+|-------------|---------|
+| **18 decimals** | `decimals()` must return 18 |
+| **canBeAddedTo** | Must return true for the target project ID |
+| **Unique assignment** | Cannot be assigned to multiple projects |
+| **Controller access** | Must allow JBController to mint/burn |
+
+---
+
 ### JBMultiTerminal Functions
 
 #### Payments

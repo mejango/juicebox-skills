@@ -606,6 +606,174 @@ if (tokensToBurn > 0) token.burn(holder, tokensToBurn);
 
 ---
 
+### Custom ERC20 Token Integration
+
+The JBTokens system supports custom ERC20 tokens, enabling advanced tokenomics while preserving Juicebox's payment and redemption mechanics.
+
+#### How Custom Tokens Work
+
+When `setTokenFor()` is called with a custom token:
+
+```solidity
+function setTokenFor(uint256 projectId, IJBToken token) external {
+    // 1. Validate token is compatible
+    if (token.decimals() != 18) revert JBTokens_TokensMustHave18Decimals();
+    if (!token.canBeAddedTo(projectId)) revert JBTokens_TokenCannotBeAddedTo();
+    if (projectIdOf[token] != 0) revert JBTokens_TokenAlreadyAssigned();
+
+    // 2. Store bidirectional mapping
+    tokenOf[projectId] = token;
+    projectIdOf[token] = projectId;
+
+    // 3. Existing credits remain claimable
+    // totalCreditSupplyOf[projectId] stays unchanged
+}
+```
+
+**Key Insight**: Setting a custom token doesn't migrate existing credits. Credit holders must call `claimTokensFor()` to convert credits to the ERC20.
+
+#### Mint/Burn Flow with Custom Tokens
+
+When payments are received:
+```
+pay() → mintTokensOf() → JBTokens.mintFor()
+                              ↓
+                         customToken.mint(holder, amount)
+```
+
+When cash outs occur:
+```
+cashOutTokensOf() → burnTokensOf() → JBTokens.burnFrom()
+                                          ↓
+                                     // Burns credits first, then tokens
+                                     customToken.burn(holder, tokensToBurn)
+```
+
+**Critical**: The controller calls `mint()` and `burn()` directly on your token. Your token MUST grant these permissions to the controller address.
+
+#### Custom Token Requirements
+
+| Requirement | Reason |
+|-------------|--------|
+| **18 decimals** | All Juicebox math (weights, rates) assumes 18 decimals |
+| **canBeAddedTo()** | Validates token agrees to serve this project |
+| **mint(address, uint256)** | Controller must mint on payments |
+| **burn(address, uint256)** | Controller must burn on cash outs |
+| **Controller access** | Token must authorize JBController for mint/burn |
+
+#### Common Custom Token Patterns
+
+**1. Transfer Tax Token**
+```solidity
+function _update(address from, address to, uint256 amount) internal override {
+    // Skip tax for controller operations (mints/burns)
+    if (from == address(0) || to == address(0) || msg.sender == controller) {
+        super._update(from, to, amount);
+        return;
+    }
+    // Apply tax on transfers
+    uint256 tax = (amount * TAX_RATE) / 10000;
+    super._update(from, taxRecipient, tax);
+    super._update(from, to, amount - tax);
+}
+```
+
+**Tradeoff**: Tax revenue goes to `taxRecipient`, not the Juicebox treasury. Consider routing tax to the project via `addToBalanceOf()`.
+
+**2. Rebasing Token**
+```solidity
+// Track shares instead of balances
+mapping(address => uint256) private _shares;
+uint256 public totalShares;
+uint256 public rebaseIndex = 1e18; // Starts at 1:1
+
+function balanceOf(address account) public view override returns (uint256) {
+    return (_shares[account] * rebaseIndex) / 1e18;
+}
+
+function rebase(uint256 newIndex) external onlyOwner {
+    rebaseIndex = newIndex;
+    // All balances scale proportionally
+}
+```
+
+**Tradeoff**: Cash out calculations use `totalSupply()`. Rebasing changes supply without minting, which affects redemption value.
+
+**3. Governance Token (ERC20Votes)**
+```solidity
+import {ERC20Votes} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+
+contract GovernanceProjectToken is ERC20Votes {
+    address public controller;
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == controller, "Only controller");
+        _mint(to, amount);
+    }
+
+    // Inherits delegation, checkpointing, getPastVotes()
+}
+```
+
+**Benefit**: Token holders can vote on external governance proposals while maintaining Juicebox treasury mechanics.
+
+**4. Editable Name/Symbol Token**
+```solidity
+contract EditableProjectToken is ERC20 {
+    string private _tokenName;
+    string private _tokenSymbol;
+
+    function name() public view override returns (string memory) { return _tokenName; }
+    function symbol() public view override returns (string memory) { return _tokenSymbol; }
+
+    function setName(string calldata newName) external onlyProjectOwner {
+        _tokenName = newName;
+    }
+
+    function setSymbol(string calldata newSymbol) external onlyProjectOwner {
+        _tokenSymbol = newSymbol;
+    }
+}
+```
+
+**Benefit**: Rebrand without redeploying token or migrating liquidity. Project owner controls metadata.
+
+#### Edge Cases and Gotchas
+
+1. **Token assigned twice**: A token can only serve one project. `setTokenFor()` reverts if token already assigned.
+
+2. **Credit/token split during cash out**: Burns credits first, then tokens:
+   ```solidity
+   // If user has 100 credits and 50 tokens, burning 120:
+   // - Burns all 100 credits
+   // - Burns 20 tokens
+   ```
+
+3. **Transfer restrictions**: If your token blocks certain transfers, ensure controller operations (mint/burn) are always allowed.
+
+4. **Pausable tokens**: Pausing transfers will break cash outs if tokens can't be burned.
+
+5. **Fee-on-transfer tokens**: Not directly supported. The minted amount must equal the amount the controller requested.
+
+6. **Approval requirements**: JBTokens calls `burn()` directly. If your token requires approval for burns, this will fail. Use `burnFrom` pattern that allows controller without approval.
+
+#### Integration Checklist
+
+Before using a custom token:
+
+- [ ] Token uses exactly 18 decimals
+- [ ] `canBeAddedTo(projectId)` returns true for your project
+- [ ] Controller address has mint permission
+- [ ] Controller address has burn permission (without approval)
+- [ ] Token not assigned to another project
+- [ ] Mint/burn don't have unexpected side effects (fees, rebasing)
+- [ ] Transfer restrictions exempt controller operations
+- [ ] Considered interaction with cash out tax rate
+- [ ] Tested credit → token claiming works
+- [ ] Verified `totalSupply()` reflects actual redeemable tokens
+
+---
+
 ### JBFundAccessLimits
 
 Packed storage for payout limits and surplus allowances.

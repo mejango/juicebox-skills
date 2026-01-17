@@ -566,6 +566,401 @@ Features demonstrated:
 
 ---
 
+## Pattern 8: Custom ERC20 Project Tokens
+
+**Use case**: Projects requiring custom tokenomics beyond standard mint/burn mechanics
+
+**Solution**: Implement `IJBToken` interface and use `setTokenFor()` instead of `deployERC20For()`
+
+### Why This Pattern?
+
+Default Juicebox tokens (credits or JBERC20) work for most projects, but some use cases require custom token logic:
+
+| Default Token Limitation | Custom Token Solution |
+|--------------------------|----------------------|
+| No transfer fees | Implement tax-on-transfer |
+| Fixed supply mechanics | Use rebasing/elastic supply |
+| No governance features | Extend ERC20Votes |
+| Immutable name/symbol | Add setName/setSymbol functions |
+| Uniform holder treatment | Add allowlists/denylists |
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Juicebox Protocol (unchanged)                              │
+│  ├── JBController calls mint/burn on token                  │
+│  ├── JBTokens tracks credits + token supply                 │
+│  └── JBMultiTerminal handles payments/cash outs             │
+│                           │                                 │
+│                           ▼                                 │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │  Custom ERC20 Token (your code)                     │   │
+│  │  ├── Implements IJBToken interface                  │   │
+│  │  ├── Authorizes JBController for mint/burn          │   │
+│  │  ├── Uses 18 decimals (REQUIRED)                    │   │
+│  │  └── Custom logic: taxes, rebasing, governance, etc │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Interface Requirements
+
+```solidity
+interface IJBToken is IERC20 {
+    /// @notice Must return true for the target project ID
+    function canBeAddedTo(uint256 projectId) external view returns (bool);
+
+    /// @notice Called by JBController when payments are received
+    function mint(address holder, uint256 amount) external;
+
+    /// @notice Called by JBController when tokens are cashed out
+    function burn(address holder, uint256 amount) external;
+}
+```
+
+### Example: Transfer Tax Token
+
+Revenue-generating token that collects fees on every transfer:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract TaxedProjectToken is ERC20 {
+    uint256 public constant TAX_BPS = 100; // 1%
+    address public immutable controller;
+    address public immutable treasury;
+    uint256 public immutable projectId;
+
+    constructor(
+        string memory name,
+        string memory symbol,
+        address _controller,
+        uint256 _projectId,
+        address _treasury
+    ) ERC20(name, symbol) {
+        controller = _controller;
+        projectId = _projectId;
+        treasury = _treasury;
+    }
+
+    function decimals() public pure override returns (uint8) { return 18; }
+
+    function canBeAddedTo(uint256 _projectId) external view returns (bool) {
+        return _projectId == projectId;
+    }
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _burn(from, amount);
+    }
+
+    function _update(address from, address to, uint256 amount) internal override {
+        // No tax on mints, burns, or controller operations
+        if (from == address(0) || to == address(0) || msg.sender == controller) {
+            super._update(from, to, amount);
+            return;
+        }
+
+        // Apply transfer tax
+        uint256 tax = (amount * TAX_BPS) / 10000;
+        super._update(from, treasury, tax);
+        super._update(from, to, amount - tax);
+    }
+}
+```
+
+**Deployment**:
+```solidity
+// 1. Deploy custom token (before or after project creation)
+TaxedProjectToken token = new TaxedProjectToken(
+    "Taxed Token",
+    "TAX",
+    address(CONTROLLER),
+    projectId,
+    treasuryAddress
+);
+
+// 2. Set as project token (requires SET_TOKEN permission)
+CONTROLLER.setTokenFor(projectId, IJBToken(address(token)));
+```
+
+### Example: Governance Token with Voting
+
+Enable on-chain governance while maintaining treasury mechanics:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {ERC20Votes, ERC20} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Votes.sol";
+import {EIP712} from "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import {Nonces} from "@openzeppelin/contracts/utils/Nonces.sol";
+
+contract GovernanceProjectToken is ERC20Votes {
+    address public immutable controller;
+    uint256 public immutable projectId;
+
+    constructor(
+        string memory name,
+        string memory symbol,
+        address _controller,
+        uint256 _projectId
+    ) ERC20(name, symbol) EIP712(name, "1") {
+        controller = _controller;
+        projectId = _projectId;
+    }
+
+    function decimals() public pure override returns (uint8) { return 18; }
+
+    function canBeAddedTo(uint256 _projectId) external view returns (bool) {
+        return _projectId == projectId;
+    }
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _burn(from, amount);
+    }
+
+    // Inherits: delegate(), delegateBySig(), getVotes(), getPastVotes(), etc.
+}
+```
+
+**Usage with Governor**:
+```solidity
+// Deploy governor that uses token's voting power
+GovernorBravo governor = new GovernorBravo(
+    GovernanceProjectToken(token),
+    timelockAddress,
+    votingDelay,
+    votingPeriod,
+    proposalThreshold
+);
+
+// Token holders delegate and vote
+token.delegate(voterAddress);  // Self-delegate to activate voting
+governor.propose(...);
+governor.castVote(proposalId, support);
+```
+
+### Example: Editable Name/Symbol Token
+
+Allow project owners to rebrand without deploying a new token:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {IJBProjects} from "@bananapus/core/src/interfaces/IJBProjects.sol";
+
+contract EditableProjectToken is ERC20 {
+    IJBProjects public immutable PROJECTS;
+    address public immutable controller;
+    uint256 public immutable projectId;
+
+    string private _tokenName;
+    string private _tokenSymbol;
+
+    event NameUpdated(string oldName, string newName);
+    event SymbolUpdated(string oldSymbol, string newSymbol);
+
+    constructor(
+        string memory initialName,
+        string memory initialSymbol,
+        address _controller,
+        uint256 _projectId,
+        IJBProjects projects
+    ) ERC20(initialName, initialSymbol) {
+        _tokenName = initialName;
+        _tokenSymbol = initialSymbol;
+        controller = _controller;
+        projectId = _projectId;
+        PROJECTS = projects;
+    }
+
+    modifier onlyProjectOwner() {
+        require(msg.sender == PROJECTS.ownerOf(projectId), "NOT_OWNER");
+        _;
+    }
+
+    function name() public view override returns (string memory) {
+        return _tokenName;
+    }
+
+    function symbol() public view override returns (string memory) {
+        return _tokenSymbol;
+    }
+
+    function decimals() public pure override returns (uint8) { return 18; }
+
+    function canBeAddedTo(uint256 _projectId) external view returns (bool) {
+        return _projectId == projectId;
+    }
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _burn(from, amount);
+    }
+
+    /// @notice Update token name. Only callable by project owner.
+    function setName(string calldata newName) external onlyProjectOwner {
+        emit NameUpdated(_tokenName, newName);
+        _tokenName = newName;
+    }
+
+    /// @notice Update token symbol. Only callable by project owner.
+    function setSymbol(string calldata newSymbol) external onlyProjectOwner {
+        emit SymbolUpdated(_tokenSymbol, newSymbol);
+        _tokenSymbol = newSymbol;
+    }
+}
+```
+
+**Use cases**:
+- Project rebranding without migrating liquidity
+- Seasonal/event-based name changes
+- Fixing typos discovered post-launch
+- Community-voted name updates
+
+**Tradeoff**: Some DEXs and aggregators cache token metadata. Changes may not propagate immediately to all interfaces.
+
+### Example: Concentration Limited Token
+
+Prevent any single holder from accumulating too large a share:
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+contract ConcentrationLimitedToken is ERC20 {
+    uint256 public maxHolderBps = 200;  // 2% max per holder
+    address public immutable controller;
+    uint256 public immutable projectId;
+    mapping(address => bool) public isExempt;
+
+    constructor(
+        string memory name,
+        string memory symbol,
+        address _controller,
+        uint256 _projectId
+    ) ERC20(name, symbol) {
+        controller = _controller;
+        projectId = _projectId;
+        isExempt[_controller] = true;  // Controller always exempt
+    }
+
+    function decimals() public pure override returns (uint8) { return 18; }
+
+    function canBeAddedTo(uint256 _projectId) external view returns (bool) {
+        return _projectId == projectId;
+    }
+
+    function mint(address to, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _mint(to, amount);
+    }
+
+    function burn(address from, uint256 amount) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        _burn(from, amount);
+    }
+
+    function _update(address from, address to, uint256 amount) internal override {
+        // Skip checks for mints, burns, and exempt addresses
+        if (from == address(0) || to == address(0) || isExempt[to]) {
+            super._update(from, to, amount);
+            return;
+        }
+
+        // Check concentration limit
+        uint256 maxBalance = (totalSupply() * maxHolderBps) / 10000;
+        require(balanceOf(to) + amount <= maxBalance, "EXCEEDS_MAX_HOLDING");
+
+        super._update(from, to, amount);
+    }
+
+    function setExempt(address account, bool exempt) external {
+        require(msg.sender == controller, "UNAUTHORIZED");
+        isExempt[account] = exempt;
+    }
+}
+```
+
+**Use cases**:
+- Encourage broad token distribution
+- Prevent governance centralization
+- Reduce market manipulation risk
+
+**Tradeoff**: Liquidity pools and the controller must be marked exempt. New holders during early high-supply periods may hit limits before supply grows.
+
+### When to Use This Pattern
+
+| Use Case | Custom Token? | Alternative |
+|----------|---------------|-------------|
+| Simple fundraising | No | Use credits or JBERC20 |
+| Transfer fees/taxes | **Yes** | - |
+| Rebasing mechanics | **Yes** | - |
+| Governance voting | **Yes** | External governance |
+| Pre-existing token | **Yes** | Migrate to new project |
+| Vesting in token | **Yes** | Use payout limits instead |
+| Compliance restrictions | **Yes** | - |
+| Editable name/symbol | **Yes** | Redeploy token |
+| Concentration limits | **Yes** | - |
+
+### Key Tradeoffs
+
+| Aspect | Standard Token | Custom Token |
+|--------|----------------|--------------|
+| Complexity | Low | High |
+| Audit burden | Audited by JB | Your responsibility |
+| Gas costs | Optimized | Variable |
+| Integration | Seamless | Requires testing |
+| Flexibility | Limited | Full control |
+| Risk | Low | Higher (custom code) |
+
+### Critical Constraints
+
+1. **18 decimals mandatory** - All Juicebox math assumes 18 decimals
+2. **Controller must be authorized** - Mint/burn must work without approval
+3. **One token per project** - Can't swap tokens after setting
+4. **totalSupply() accuracy** - Cash outs depend on correct supply
+5. **No fee-on-transfer during mint** - Minted amount must equal requested
+
+### Deployment Checklist
+
+- [ ] Token implements `canBeAddedTo(projectId)` returning true
+- [ ] Token uses exactly 18 decimals
+- [ ] Controller address authorized for mint()
+- [ ] Controller address authorized for burn() (without approval)
+- [ ] Custom logic (taxes, limits) exempts controller operations
+- [ ] Tested with Juicebox payment flow
+- [ ] Tested with Juicebox cash out flow
+- [ ] Tested credit claiming after token is set
+- [ ] Security audit completed (recommended)
+
+---
+
 ## Decision Tree: When to Write Custom Code
 
 ```
@@ -601,6 +996,15 @@ Need prediction/game mechanics?
 ├── Outcome-based payouts? → Extend 721-hook (Defifa pattern)
 ├── On-chain outcome voting? → Add Governor contract
 └── First-owner rewards? → Track in custom delegate
+
+Need custom token mechanics?
+├── Standard ERC20 sufficient? → Use deployERC20For()
+├── Transfer taxes/fees? → Custom ERC20 with _update override
+├── Governance voting? → Custom ERC20Votes
+├── Rebasing/elastic supply? → Custom ERC20 (careful with totalSupply)
+├── Editable name/symbol? → Custom ERC20 with setName/setSymbol
+├── Concentration limits? → Custom ERC20 with max holder checks
+└── Pre-existing token? → Wrap with IJBToken interface
 ```
 
 ---
