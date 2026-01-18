@@ -60,6 +60,8 @@ All addresses are deterministic across all networks (Ethereum, Optimism, Arbitru
 
 ## Shared Contracts (Same for V5.0 & V5.1)
 
+These contracts are shared between V5.0 and V5.1, and use **deterministic deployment** meaning the addresses are identical across all supported chains (Ethereum, Optimism, Base, Arbitrum, Sepolia).
+
 | Contract | Address |
 |----------|---------|
 | JBProjects | `0x885f707efa18d2cb12f05a3a8eba6b4b26c8c1d4` |
@@ -71,6 +73,8 @@ All addresses are deterministic across all networks (Ethereum, Optimism, Arbitru
 | JBFundAccessLimits | `0x3a46b21720c8b70184b0434a2293b2fdcc497ce7` |
 | JBFeelessAddresses | `0xfc702a0190f3edbc369208dfe77bf273add91d53` |
 | JBERC20 | `0xaeac450c8522e40244bdfb8120ee398207be5d31` |
+
+> **Note:** These addresses are the same on all chains due to CREATE2 deterministic deployment. You can safely hardcode them for multi-chain applications.
 
 ---
 
@@ -151,7 +155,7 @@ address constant JB_MULTI_TERMINAL = 0x52869db3d61dde1e391967f2ce5039ad0ecd371c;
 address constant JB_RULESETS = 0xd4257005ca8d27bbe11f356453b0e4692414b056;
 address constant JB_TERMINAL_STORE = 0x5cdfcf7f5f25da0dcb0eccd027e5feebada1d964;
 
-// Shared Contracts
+// Shared Contracts (same on all chains)
 address constant JB_PROJECTS = 0x885f707efa18d2cb12f05a3a8eba6b4b26c8c1d4;
 address constant JB_DIRECTORY = 0x0061e516886a0540f63157f112c0588ee0651dcf;
 address constant JB_TOKENS = 0x4d0edd347fb1fa21589c1e109b3474924be87636;

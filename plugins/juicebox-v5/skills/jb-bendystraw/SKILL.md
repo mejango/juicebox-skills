@@ -968,6 +968,128 @@ app.post('/api/bendystraw', async (req, res) => {
 
 ---
 
+## Gotchas & Common Pitfalls
+
+### V4 vs V5 Address Confusion
+
+**CRITICAL:** V4 and V5 use completely different contract addresses. Never mix them.
+
+| Contract | V4 Address | V5 Address |
+|----------|------------|------------|
+| JBTokens | `0xA59e9F424901fB9DBD8913a9A32A081F9425bf36` | `0x4d0edd347fb1fa21589c1e109b3474924be87636` |
+
+If you use a V4 address with V5 projects (or vice versa), calls will fail silently or return wrong data. Always verify you're using the correct version's addresses.
+
+### Token Symbol Confusion
+
+**CRITICAL:** The `tokenSymbol` field in Bendystraw returns the **base/accounting token** (e.g., "ETH" or "USDC"), NOT the project's issued ERC20 token symbol (e.g., "NANA" for Bananapus).
+
+To get the project's issued token symbol, you must query the blockchain directly:
+
+```javascript
+import { createPublicClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+
+// JBTokens address (same on all V5 chains)
+const JB_TOKENS = '0x4d0edd347fb1fa21589c1e109b3474924be87636'
+
+const TOKEN_ABI = [
+  {
+    name: 'tokenOf',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [{ name: 'projectId', type: 'uint256' }],
+    outputs: [{ name: '', type: 'address' }],
+  },
+  {
+    name: 'symbol',
+    type: 'function',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{ name: '', type: 'string' }],
+  },
+]
+
+async function getProjectTokenSymbol(projectId: number, chainId: number) {
+  const client = createPublicClient({ chain: mainnet, transport: http() })
+
+  // Get the token address from JBTokens
+  const tokenAddress = await client.readContract({
+    address: JB_TOKENS,
+    abi: TOKEN_ABI,
+    functionName: 'tokenOf',
+    args: [BigInt(projectId)],
+  })
+
+  // Zero address means no ERC20 deployed yet (using credits only)
+  if (tokenAddress === '0x0000000000000000000000000000000000000000') {
+    return null
+  }
+
+  // Get symbol from the token contract
+  return await client.readContract({
+    address: tokenAddress,
+    abi: TOKEN_ABI,
+    functionName: 'symbol',
+  })
+}
+```
+
+### GraphQL Type Inconsistencies
+
+Different queries expect different GraphQL types for the same conceptual values. This causes silent failures if you use the wrong type:
+
+| Query | projectId type | chainId type | version type |
+|-------|---------------|--------------|--------------|
+| `project()` | `Float!` | `Float!` | `Float!` |
+| `payEvents()` | `Int!` | `Int!` | `Int!` |
+| `participants()` | `Int!` | `Int` | - |
+| `projects()` | - | - | - |
+
+**Example of the issue:**
+
+```graphql
+# This works (project query uses Float)
+query GetProject($projectId: Float!, $chainId: Float!, $version: Float!) {
+  project(projectId: $projectId, chainId: $chainId, version: $version) { ... }
+}
+
+# This fails silently if you pass Float instead of Int
+query GetPayEvents($projectId: Int!, $chainId: Int!, $version: Int!) {
+  payEvents(where: { projectId: $projectId, chainId: $chainId, version: $version }) { ... }
+}
+```
+
+**Best practice:** Check the schema or use the GraphQL playground to verify expected types for each query.
+
+### SuckerGroup Cross-Chain Aggregation
+
+For omnichain projects, use `suckerGroupId` to get aggregated data across all chains instead of querying each chain separately:
+
+```javascript
+// INEFFICIENT: Query each chain separately
+const chains = [1, 10, 8453, 42161]
+const balances = await Promise.all(
+  chains.map(chainId => getProjectBalance(projectId, chainId))
+)
+const totalBalance = balances.reduce((sum, b) => sum + b, 0n)
+
+// EFFICIENT: Use suckerGroup for cross-chain totals
+const project = await getProject(projectId, chainId)
+if (project.suckerGroupId) {
+  const group = await getSuckerGroup(project.suckerGroupId)
+  // group.balance is already the cross-chain total
+  // group.projects_rel has per-chain breakdown
+}
+```
+
+The `suckerGroup` query returns:
+- Pre-aggregated totals (`balance`, `volume`, `tokenSupply`, etc.)
+- Per-chain breakdown via `projects_rel`
+- Consistent data without race conditions from parallel queries
+
+---
+
 ## Best Practices
 
 1. **Use server-side proxy** - Never expose API key in frontend code
@@ -980,6 +1102,9 @@ app.post('/api/bendystraw', async (req, res) => {
 8. **Always include version** - V4 and V5 projects with the same projectId are completely different
 9. **Use BigInt for USD values** - volumeUsd is 18 decimals; parseFloat loses precision on large values
 10. **Group by projectId + version** - Same project across chains should be grouped, but different versions should not
+11. **Check GraphQL types** - Different queries expect Float vs Int for the same fields
+12. **Use suckerGroup for cross-chain data** - More efficient than querying each chain separately
+13. **Fetch token symbols from chain** - Bendystraw's tokenSymbol is the accounting token, not the project's issued token
 
 ---
 
