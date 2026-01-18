@@ -53,9 +53,10 @@ const response = await fetch(`https://bendystraw.xyz/${API_KEY}/graphql`, {
 ```graphql
 type Project {
   # Identifiers
-  id: String!                    # "{chainId}-{projectId}"
+  id: String!                    # "{chainId}-{projectId}-{version}"
   projectId: Int!
   chainId: Int!
+  version: Int!                  # Protocol version (4 or 5)
 
   # Metadata
   handle: String
@@ -224,6 +225,110 @@ type NFT {
 
 ---
 
+## Critical Concepts
+
+### Project Identity
+
+**A Juicebox project is uniquely identified by three fields: `projectId + chainId + version`.**
+
+This is crucial because:
+- **V4 and V5 are completely different protocols.** Project #64 on Ethereum V4 is NOT the same project as Project #64 on Ethereum V5.
+- The same projectId can exist on multiple chains (via suckers/omnichain), but those ARE the same project.
+- Always include `version` when querying or displaying projects.
+
+```javascript
+// WRONG: Groups V4 and V5 together
+const groupKey = `${project.projectId}-${project.chainId}`;
+
+// CORRECT: Keeps V4 and V5 separate
+const groupKey = `${project.projectId}-v${project.version}`;
+```
+
+### Multi-Chain Grouping
+
+When displaying "top projects" or aggregating stats:
+- **Same projectId + version across chains** → Group together (same project via suckers)
+- **Same projectId, different version** → Keep separate (completely different projects)
+
+```javascript
+// Group projects by projectId + version (V4 and V5 are different projects!)
+const grouped = new Map();
+
+for (const project of projects) {
+  const groupKey = `${project.projectId}-v${project.version || 4}`;
+  const existing = grouped.get(groupKey);
+
+  if (existing) {
+    // Add chain to existing group
+    if (!existing.chainIds.includes(project.chainId)) {
+      existing.chainIds.push(project.chainId);
+    }
+    // Sum volumes
+    existing.totalVolumeUsd += parseFloat(project.volumeUsd || '0');
+  } else {
+    grouped.set(groupKey, {
+      ...project,
+      chainIds: [project.chainId],
+      totalVolumeUsd: parseFloat(project.volumeUsd || '0')
+    });
+  }
+}
+```
+
+### USD Value Formatting
+
+The `volumeUsd`, `amountUsd`, and similar fields use **18 decimal format** (like wei). You must convert properly:
+
+```javascript
+function formatVolumeUsd(volumeUsd) {
+  if (!volumeUsd || volumeUsd === '0') return '$0';
+
+  try {
+    // volumeUsd comes in 18 decimal format
+    // Use BigInt to avoid precision loss on large numbers
+    const raw = BigInt(volumeUsd.split('.')[0]);
+    const usd = Number(raw / BigInt(1e12)) / 1e6; // Divide in steps
+
+    if (usd >= 1_000_000) return `$${(usd / 1_000_000).toFixed(1)}M`;
+    if (usd >= 1_000) return `$${(usd / 1_000).toFixed(1)}k`;
+    if (usd >= 1) return `$${usd.toFixed(0)}`;
+    return `$${usd.toFixed(2)}`;
+  } catch {
+    return '$0';
+  }
+}
+```
+
+**Warning:** Do NOT use `parseFloat()` directly on volumeUsd for large values—JavaScript loses precision beyond ~15 digits.
+
+### Filtering by Version
+
+When querying projects, filter by version to avoid mixing V4 and V5 data:
+
+```graphql
+# Get only V5 projects
+query V5Projects($limit: Int!) {
+  projects(
+    where: { version: 5 }
+    orderBy: "volumeUsd"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      projectId
+      chainId
+      version
+      name
+      volumeUsd
+    }
+  }
+}
+```
+
+To display both versions, query them separately and handle grouping in your application.
+
+---
+
 ## Query Examples
 
 ### Get Single Project
@@ -287,10 +392,10 @@ query GetSuckerGroup($id: String!) {
 ### List Projects
 
 ```graphql
-query ListProjects($chainId: Int, $limit: Int!, $offset: Int!) {
+query ListProjects($chainId: Int, $version: Int, $limit: Int!, $offset: Int!) {
   projects(
-    where: { chainId: $chainId }
-    orderBy: "volume"
+    where: { chainId: $chainId, version: $version }
+    orderBy: "volumeUsd"
     orderDirection: "desc"
     limit: $limit
     offset: $offset
@@ -298,9 +403,10 @@ query ListProjects($chainId: Int, $limit: Int!, $offset: Int!) {
     items {
       projectId
       chainId
+      version
       name
       handle
-      volume
+      volumeUsd
       balance
       paymentsCount
     }
@@ -871,6 +977,9 @@ app.post('/api/bendystraw', async (req, res) => {
 5. **Handle nulls** - Fields like `volumeUsd`, `handle` may be null
 6. **Consider freshness** - Indexer may lag 1-2 blocks behind chain
 7. **Use filters** - Narrow queries by chainId, projectId when possible
+8. **Always include version** - V4 and V5 projects with the same projectId are completely different
+9. **Use BigInt for USD values** - volumeUsd is 18 decimals; parseFloat loses precision on large values
+10. **Group by projectId + version** - Same project across chains should be grouped, but different versions should not
 
 ---
 

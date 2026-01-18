@@ -7,6 +7,15 @@ description: Create and configure Juicebox V5 projects. Generate deployment scri
 
 Create and manage Juicebox V5 projects including deployment, configuration, and ownership.
 
+## Project Identity
+
+**A Juicebox project is uniquely identified by: `projectId + chainId + version`**
+
+This matters because:
+- **V4 and V5 are different protocols.** Project #64 on V4 is NOT the same as Project #64 on V5, even on the same chain.
+- The same projectId can exist on multiple chains via suckers/omnichain—those ARE the same logical project.
+- When referencing a project, always specify the version to avoid confusion.
+
 ## V5.1 Contract Update (Dec 2025)
 
 **Only JBRulesets has a code change** (one-line approval hook fix). Other contracts were redeployed due to dependency chains (JBTerminalStore→JBMultiTerminal, JB721TiersHook→JB721TiersHookDeployer→JBOmnichainDeployer).
