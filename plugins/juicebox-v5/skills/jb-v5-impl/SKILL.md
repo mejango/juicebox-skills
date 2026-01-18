@@ -123,9 +123,9 @@ Queue ruleset
 
 **JBDeadline Implementation**: Requires `DURATION()` seconds between queue time and ruleset start. If queued too late, approval fails.
 
-### Weight Decay Algorithm
+### Weight Cut Algorithm
 
-Weight decays exponentially each cycle:
+Weight is cut exponentially each cycle:
 ```solidity
 newWeight = weight × (MAX_CUT - weightCutPercent) / MAX_CUT
 ```

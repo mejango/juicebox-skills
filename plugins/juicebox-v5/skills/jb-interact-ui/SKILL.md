@@ -956,7 +956,7 @@ These UIs are for:
   <div class="card">
     <h2>Current Ruleset</h2>
     <div class="stat-row"><span class="stat-label">Duration</span><span class="stat-value" id="duration">-</span></div>
-    <div class="stat-row"><span class="stat-label">Weight (tokens/ETH)</span><span class="stat-value" id="weight">-</span></div>
+    <div class="stat-row"><span class="stat-label">Issuance (tokens/ETH)</span><span class="stat-value" id="weight">-</span></div>
     <div class="stat-row"><span class="stat-label">Reserved Rate</span><span class="stat-value" id="reserved-rate">-</span></div>
     <div class="stat-row"><span class="stat-label">Cash Out Tax Rate</span><span class="stat-value" id="cash-out-tax">-</span></div>
     <div class="stat-row"><span class="stat-label">Payout Limit</span><span class="stat-value" id="payout-limit">-</span></div>

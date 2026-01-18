@@ -69,7 +69,7 @@ Every level of abstraction you can avoid:
 | What You Want | Simpler Solution |
 |---------------|------------------|
 | Monthly distributions | One ruleset with `duration: 30 days` |
-| Increasing/decreasing token issuance | Use `weightCutPercent` for automatic decay |
+| Increasing/decreasing token issuance | Use `weightCutPercent` for automatic issuance cut |
 | Different phases over time | Queue rulesets only for actual changes |
 | Vesting over 12 months | One cycling ruleset, NOT 12 queued rulesets |
 

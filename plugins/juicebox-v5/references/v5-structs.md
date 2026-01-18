@@ -176,7 +176,7 @@ struct JBRulesetConfig {
     uint256 mustStartAtOrAfter; // Earliest start time
     uint256 duration;           // Duration in seconds
     uint256 weight;             // Initial weight
-    uint256 weightCutPercent;   // Weight decay per cycle
+    uint256 weightCutPercent;   // Weight cut per cycle
     IJBRulesetApprovalHook approvalHook;  // Approval hook
     JBRulesetMetadata metadata; // Ruleset metadata
     JBSplitGroup[] splitGroups; // Split configurations

@@ -94,7 +94,7 @@ struct JBRulesetConfig {
     uint256 mustStartAtOrAfter;     // Earliest start time (0 = now)
     uint256 duration;               // Duration in seconds (0 = indefinite)
     uint256 weight;                 // Token minting weight (18 decimals)
-    uint256 weightCutPercent;       // Weight decay per cycle (0-1000000000)
+    uint256 weightCutPercent;       // Weight cut per cycle (0-1000000000)
     IJBRulesetApprovalHook approvalHook;  // Approval hook (e.g., JBDeadline)
     JBRulesetMetadata metadata;     // Ruleset settings
     JBSplitGroup[] splitGroups;     // Payout and reserved splits
@@ -185,7 +185,7 @@ contract DeployProject is Script {
             mustStartAtOrAfter: 0,
             duration: 0,                        // Indefinite
             weight: 1e18,                       // 1 token per unit paid
-            weightCutPercent: 0,                // No decay
+            weightCutPercent: 0,                // No weight cut
             approvalHook: IJBRulesetApprovalHook(address(0)),
             metadata: metadata,
             splitGroups: splitGroups,

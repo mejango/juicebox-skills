@@ -1,6 +1,6 @@
 ---
 name: jb-ruleset
-description: Configure and queue Juicebox V5 rulesets. Design ruleset parameters including weight, reserved rate, cash out tax rate, splits, payout limits, and approval hooks. Generate scripts for queueing new rulesets.
+description: Configure and queue Juicebox V5 rulesets. Design ruleset parameters including issuance rate, reserved rate, cash out tax rate, splits, payout limits, and approval hooks. Generate scripts for queueing new rulesets.
 ---
 
 # Juicebox V5 Ruleset Configuration
@@ -15,7 +15,7 @@ Rulesets are time-bounded configuration packages that define project behavior:
 - **Fund distribution**: Payout limits, splits
 - **Governance**: Approval hooks for change control
 
-When a ruleset ends, the next queued ruleset becomes active. If no ruleset is queued, the current one recycles (with optional weight decay).
+When a ruleset ends, the next queued ruleset becomes active. If no ruleset is queued, the current one recycles (with optional issuance cut).
 
 ## Ruleset Parameters
 
@@ -29,7 +29,7 @@ struct JBRuleset {
     uint256 start;              // Start timestamp
     uint256 duration;           // Duration (0 = indefinite)
     uint256 weight;             // Token minting weight (18 decimals)
-    uint256 weightCutPercent;   // Decay per cycle (0-1000000000, where 1e9 = 100%)
+    uint256 weightCutPercent;   // Weight cut per cycle (0-1000000000, where 1e9 = 100%)
     IJBRulesetApprovalHook approvalHook;
     JBRulesetMetadata metadata;
 }
@@ -112,14 +112,14 @@ JBRulesetConfig memory config = JBRulesetConfig({
 });
 ```
 
-### Weekly Cycles with Decay
+### Weekly Cycles with Weight Cut
 
 ```solidity
 JBRulesetConfig memory config = JBRulesetConfig({
     mustStartAtOrAfter: 0,
     duration: 7 days,           // 1 week cycles
     weight: 1000e18,            // Start at 1000 tokens/ETH
-    weightCutPercent: 50000000, // 5% decay per cycle (50000000 / 1e9)
+    weightCutPercent: 50000000, // 5% weight cut per cycle (50000000 / 1e9)
     approvalHook: IJBRulesetApprovalHook(address(0)),
     metadata: metadata,
     splitGroups: splitGroups,

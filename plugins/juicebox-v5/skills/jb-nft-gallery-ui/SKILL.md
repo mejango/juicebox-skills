@@ -1,3 +1,8 @@
+---
+name: jb-nft-gallery-ui
+description: Interactive gallery for browsing and managing NFTs from Juicebox 721 hooks. Displays tier information, owned NFTs, and minting interfaces.
+---
+
 # Juicebox V5 NFT Gallery UI
 
 Interactive gallery for browsing and managing NFTs from Juicebox 721 hooks. Displays tier information, owned NFTs, and minting interfaces.
