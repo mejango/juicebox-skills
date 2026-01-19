@@ -1088,6 +1088,53 @@ The `suckerGroup` query returns:
 - Per-chain breakdown via `projects_rel`
 - Consistent data without race conditions from parallel queries
 
+### ETH vs USDC Project Currency
+
+**CRITICAL:** Projects can use different base currencies (ETH or USDC). The `amount`, `balance`, and `volume` fields use different decimal precision depending on the currency:
+
+| Currency | Decimals | Code |
+|----------|----------|------|
+| ETH | 18 | 1 |
+| USDC | 6 | 2 |
+
+The currency info is available from the `suckerGroup` or `participants` query:
+
+```graphql
+query GetSuckerGroup($id: String!) {
+  suckerGroup(id: $id) {
+    projects_rel {
+      projectId
+      chainId
+      decimals       # 18 for ETH, 6 for USDC
+      currency       # 1 for ETH, 2 for USDC
+      balance
+    }
+  }
+}
+```
+
+**Formatting amounts correctly:**
+
+```javascript
+import { formatUnits } from 'viem'
+
+function formatAmount(wei, decimals, currency) {
+  const num = parseFloat(formatUnits(BigInt(wei), decimals))
+  const symbol = currency === 2 ? 'USDC' : 'ETH'
+  // USDC uses fewer decimal places for display
+  const precision = currency === 2 ? 2 : 4
+  return `${num.toFixed(precision)} ${symbol}`
+}
+
+// Example: USDC project (6 decimals)
+formatAmount('1000000', 6, 2)    // "1.00 USDC"
+
+// Example: ETH project (18 decimals)
+formatAmount('1000000000000000000', 18, 1)  // "1.0000 ETH"
+```
+
+**Common mistake:** Using `formatEther()` (assumes 18 decimals) for USDC projects will show wildly incorrect values. Always detect the currency first and use `formatUnits()` with the correct decimals.
+
 ---
 
 ## Best Practices
@@ -1105,6 +1152,7 @@ The `suckerGroup` query returns:
 11. **Check GraphQL types** - Different queries expect Float vs Int for the same fields
 12. **Use suckerGroup for cross-chain data** - More efficient than querying each chain separately
 13. **Fetch token symbols from chain** - Bendystraw's tokenSymbol is the accounting token, not the project's issued token
+14. **Detect currency before formatting** - Use `formatUnits(wei, decimals)` not `formatEther(wei)` since USDC projects use 6 decimals
 
 ---
 
