@@ -1,6 +1,11 @@
 ---
 name: jb-v5-currency-types
-description: Juicebox V5 currency system with two distinct types: real-world currencies and token-derived currencies. Use when: (1) configuring ruleset.baseCurrency, (2) setting up JBAccountingContext, (3) working with cross-chain projects, (4) confused about why currency values differ between chains, (5) seeing unexpected issuance rates across chains. Critical: baseCurrency must ALWAYS use real-world currencies (1=ETH, 2=USD), never token-derived currencies. Token currencies vary by chain address.
+description: |
+  Juicebox V5 currency system with two distinct types: real-world currencies and token-derived currencies.
+  Use when: (1) configuring ruleset.baseCurrency, (2) setting up JBAccountingContext, (3) working with
+  cross-chain projects, (4) confused about why currency values differ between chains, (5) seeing
+  unexpected issuance rates across chains. Critical: baseCurrency must ALWAYS use real-world currencies
+  (1=ETH, 2=USD), never token-derived currencies. Token currencies vary by chain address.
 ---
 
 # Juicebox V5 Currency Types
