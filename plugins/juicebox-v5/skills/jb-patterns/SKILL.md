@@ -1223,6 +1223,11 @@ Need vesting/time-locks?
 ├── Investor/team cliffs? → Custom ERC20 with vesting schedules
 └── Complex conditions? → Consider Revnet or custom
 
+Need time-limited campaign?
+├── Fundraise then close forever? → Two rulesets (active + paused)
+├── Want immutability? → Burn ownership after deploy
+└── May run another campaign? → Keep ownership
+
 Need custom NFT content?
 ├── Static images per tier? → Use encodedIPFSUri in tier config
 ├── Dynamic/generative art? → Write IJB721TokenUriResolver
@@ -1276,6 +1281,119 @@ Need custom token mechanics?
 
 **Wrong**: Writing hook to calculate pro-rata redemption
 **Right**: Set `cashOutTaxRate: 0` and let terminal handle it
+
+---
+
+## Pattern 9: Time-Limited Campaign
+
+**Use case**: Fundraise for a specific period, then close payments permanently
+
+**Solution**: Deploy with two queued rulesets - active campaign, then paused
+
+### Why This Pattern?
+
+Many projects don't need ongoing payments forever. A time-limited campaign is cleaner:
+- Crowdfunds with a deadline
+- NFT mints with a defined window
+- Grant rounds with cutoff dates
+- "Set it and forget it" treasuries
+
+### Configuration
+
+```solidity
+// Ruleset 1: Active Campaign
+JBRulesetConfig({
+    duration: 30 days,              // Campaign length
+    weight: 1e18,                   // Token issuance rate
+    decayPercent: 0,
+    approvalHook: IJBRulesetApprovalHook(address(0)),
+    metadata: JBRulesetMetadata({
+        // ... normal settings
+        pausePay: false,            // Payments ENABLED
+    }),
+    // ... splits, fund access, etc.
+});
+
+// Ruleset 2: Campaign End (queued immediately)
+JBRulesetConfig({
+    duration: 0,                    // Lasts forever
+    weight: 0,                      // No more tokens issued
+    decayPercent: 0,
+    approvalHook: IJBRulesetApprovalHook(address(0)),
+    metadata: JBRulesetMetadata({
+        pausePay: true,             // Payments DISABLED
+        // Keep cash outs enabled if desired
+    }),
+    // No payout limits needed - campaign is over
+});
+```
+
+### Ownership Options
+
+After deployment, the project owner decides:
+
+**Option A: Keep Ownership**
+- Can queue new rulesets later (run another campaign)
+- Can adjust splits or fund access
+- Maintains flexibility
+
+**Option B: Lock Forever**
+```solidity
+// Transfer ownership to burn address
+PROJECTS.transferFrom(
+    deployer,
+    0x000000000000000000000000000000000000dEaD,
+    projectId
+);
+```
+- No one can ever change the rules
+- Fully trustless and immutable
+- Cannot be undone
+
+### Complete Flow
+
+```
+Deploy with 2 rulesets
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  Ruleset 1: Active Campaign         │
+│  ├── Duration: 30 days              │
+│  ├── Payments: enabled              │
+│  └── Tokens issued to payers        │
+└─────────────────────────────────────┘
+         │
+         │ (30 days pass automatically)
+         ▼
+┌─────────────────────────────────────┐
+│  Ruleset 2: Campaign Over           │
+│  ├── Duration: forever              │
+│  ├── Payments: paused               │
+│  └── Cash outs still work           │
+└─────────────────────────────────────┘
+         │
+         ▼
+   Owner decides:
+   ├── Keep ownership → can modify later
+   └── Burn ownership → locked forever
+```
+
+### When to Use
+
+| Scenario | Good Fit? |
+|----------|-----------|
+| One-time crowdfund | ✅ |
+| NFT mint with deadline | ✅ |
+| Grant distribution round | ✅ |
+| Ongoing membership/subscription | ❌ Use cycling rulesets |
+| Revnet with autonomous issuance | ❌ Use Revnet deployer |
+
+### Key Benefits
+
+1. **Simple** - Just two rulesets, no custom contracts
+2. **Clear expectations** - Everyone knows when it ends
+3. **Optional immutability** - Lock it or keep flexibility
+4. **No ongoing management** - Set and forget
 
 ---
 

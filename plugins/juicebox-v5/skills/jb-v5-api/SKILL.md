@@ -816,7 +816,7 @@ Applied by JBMultiTerminal on:
 
 ```solidity
 // Native token identifier
-address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
+address constant NATIVE_TOKEN = 0x000000000000000000000000000000000000EEEe;
 
 // Max values
 uint256 constant MAX_RESERVED_RATE = 10000;      // 100%

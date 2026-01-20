@@ -88,14 +88,25 @@ cast call $JB_TERMINAL "currentSurplusOf(uint256,address[],uint256,uint256)" \
 
 ### Get Splits
 ```bash
-# Payout splits (groupId = 1)
+# Reserved token splits (groupId = 1, JBSplitGroupIds.RESERVED_TOKENS)
 cast call $JB_SPLITS "splitsOf(uint256,uint256,uint256)" \
     $PROJECT_ID $RULESET_ID 1 \
     --rpc-url $RPC_URL
 
-# Reserved token splits (groupId = 2)
+# Payout splits - groupId = uint256(uint160(token))
+# For ETH payouts: groupId = uint256(uint160(0x000000000000000000000000000000000000EEEe))
+# The payout split group is derived from the token address being paid out
+NATIVE_TOKEN="0x000000000000000000000000000000000000EEEe"
+ETH_PAYOUT_GROUP=$(cast --to-uint256 $NATIVE_TOKEN)
 cast call $JB_SPLITS "splitsOf(uint256,uint256,uint256)" \
-    $PROJECT_ID $RULESET_ID 2 \
+    $PROJECT_ID $RULESET_ID $ETH_PAYOUT_GROUP \
+    --rpc-url $RPC_URL
+
+# For USDC payouts (example on mainnet):
+USDC_ADDRESS="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+USDC_PAYOUT_GROUP=$(cast --to-uint256 $USDC_ADDRESS)
+cast call $JB_SPLITS "splitsOf(uint256,uint256,uint256)" \
+    $PROJECT_ID $RULESET_ID $USDC_PAYOUT_GROUP \
     --rpc-url $RPC_URL
 ```
 
@@ -167,8 +178,10 @@ async function getTokenBalance(holder: string, projectId: number) {
 
 ### "Who are the split recipients?"
 1. Get current ruleset ID from `currentRulesetOf`
-2. Query payout splits: `JBSplits.splitsOf(projectId, rulesetId, 1)`
-3. Query reserved splits: `JBSplits.splitsOf(projectId, rulesetId, 2)`
+2. Query reserved splits: `JBSplits.splitsOf(projectId, rulesetId, 1)` (group 1 = RESERVED_TOKENS)
+3. Query payout splits: `JBSplits.splitsOf(projectId, rulesetId, uint256(uint160(token)))`
+   - For native token (ETH): group = uint256(uint160(JBConstants.NATIVE_TOKEN))
+   - For USDC: group = uint256(uint160(USDC_ADDRESS))
 
 ### "How much can be paid out?"
 1. Get payout limit: `JBFundAccessLimits.payoutLimitOf(...)`

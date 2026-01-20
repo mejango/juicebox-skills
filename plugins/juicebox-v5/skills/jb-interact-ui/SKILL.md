@@ -86,7 +86,7 @@ These UIs are for:
     const CHAIN_ID = 1;
 
     const CHAINS = { 1: mainnet, 10: optimism, 8453: base, 42161: arbitrum, 11155111: sepolia };
-    const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+    const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
     const TERMINAL_ABI = [
       { name: 'pay', type: 'function', stateMutability: 'payable',
@@ -255,7 +255,7 @@ These UIs are for:
     const PROJECT_ID = 1n;
     const CHAIN_ID = 1;
     const CHAINS = { 1: mainnet, 10: optimism, 8453: base, 42161: arbitrum, 11155111: sepolia };
-    const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+    const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
     const TERMINAL_ABI = [
       { name: 'cashOutTokensOf', type: 'function', stateMutability: 'nonpayable',
@@ -379,7 +379,7 @@ These UIs are for:
     const PROJECT_ID = 1n;
     const CHAIN_ID = 1;
     const CHAINS = { 1: mainnet, 10: optimism, 8453: base, 42161: arbitrum, 11155111: sepolia };
-    const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+    const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
     const TERMINAL_ABI = [
       { name: 'pay', type: 'function', stateMutability: 'payable',
@@ -571,7 +571,7 @@ These UIs are for:
     const PROJECT_ID = 1n;
     const CHAIN_ID = 1;
     const CHAINS = { 1: mainnet, 10: optimism, 8453: base, 42161: arbitrum, 11155111: sepolia };
-    const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+    const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
     const TERMINAL_ABI = [
       { name: 'sendPayoutsOf', type: 'function', stateMutability: 'nonpayable',

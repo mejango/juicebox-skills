@@ -130,13 +130,13 @@ const directoryABI = await loadABI('JBDirectory');
 const directory = getContractAddress(CHAIN_ID, 'JBDirectory');
 const primaryTerminal = await publicClient.readContract({
   address: directory, abi: directoryABI,
-  functionName: 'primaryTerminalOf', args: [PROJECT_ID, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE']
+  functionName: 'primaryTerminalOf', args: [PROJECT_ID, '0x000000000000000000000000000000000000EEEe']
 });
 
 // 4. Write: pay the project
 const hash = await walletClient.writeContract({
   address: terminal, abi: terminalABI, functionName: 'pay',
-  args: [PROJECT_ID, '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', parseEther('0.01'), address, 0n, 'Hello JB!', '0x'],
+  args: [PROJECT_ID, '0x000000000000000000000000000000000000EEEe', parseEther('0.01'), address, 0n, 'Hello JB!', '0x'],
   value: parseEther('0.01')
 });
 console.log('Paid! Tx:', hash);

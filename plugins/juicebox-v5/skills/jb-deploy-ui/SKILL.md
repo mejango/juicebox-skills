@@ -210,7 +210,7 @@ Generate simple frontends for deploying Juicebox projects, hooks, and configurat
 
         const terminalConfig = {
           terminal: addresses.JBMultiTerminal,
-          accountingContexts: [{ token: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18, currency: 0 }]
+          accountingContexts: [{ token: '0x000000000000000000000000000000000000EEEe', decimals: 18, currency: 0 }]
         };
 
         const hash = await walletClient.writeContract({

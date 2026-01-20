@@ -1,0 +1,207 @@
+---
+name: jb-multi-currency
+description: |
+  Handle Juicebox V5 multi-currency projects (ETH vs USDC accounting).
+  Use when: (1) building UI that displays currency labels (ETH vs USDC),
+  (2) sending transactions that require currency parameter,
+  (3) configuring fund access limits or accounting contexts for new rulesets,
+  (4) querying project balance/surplus with correct token,
+  (5) debugging "wrong currency" issues in payout or allowance transactions,
+  (6) need currency code constants (NATIVE_CURRENCY=61166, USDC varies by chain).
+  Currency in JBAccountingContext is uint32(uint160(tokenAddress)), NOT 1 or 2.
+  Covers baseCurrency detection, decimal handling, terminal accounting, currency codes, and dynamic labels.
+---
+
+# Juicebox V5 Multi-Currency Support
+
+## Problem
+
+Juicebox V5 projects can be denominated in either ETH (baseCurrency=1) or USD (baseCurrency=2).
+UI components and transactions must use the correct currency value, token address, and display
+labels. Hardcoding "ETH" or currency=1 causes failures for USDC-based projects.
+
+## Context / Trigger Conditions
+
+- UI shows "ETH" when project is USDC-based
+- Payout or allowance transaction fails silently
+- Fund access limits set with wrong currency
+- Currency mismatch between ruleset config and terminal accounting
+- Need to display correct currency symbol in forms
+
+## Solution
+
+### 1. Detect Project Currency from Ruleset
+
+```typescript
+// baseCurrency is in ruleset metadata
+// 1 = ETH, 2 = USD (USDC)
+const baseCurrency = ruleset?.metadata?.baseCurrency || 1
+const currencyLabel = baseCurrency === 2 ? 'USDC' : 'ETH'
+```
+
+### 2. Use Dynamic Currency in Transactions
+
+When calling terminal functions (sendPayoutsOf, useAllowanceOf), use the project's baseCurrency:
+
+```typescript
+// WRONG - hardcoded
+args: [projectId, token, amount, 1n, minTokensPaidOut, beneficiary]
+
+// CORRECT - dynamic
+args: [projectId, token, amount, BigInt(baseCurrency), minTokensPaidOut, beneficiary]
+```
+
+### 3. Fund Access Limits Currency
+
+When queuing new rulesets or displaying limits, match the existing project currency:
+
+```typescript
+// Get currency from existing config
+const currency = existingConfig?.baseCurrency || 1
+
+// Use in fund access limit configuration
+const payoutLimits = [{
+  amount: parseEther(limitAmount).toString(),
+  currency, // Match project's base currency
+}]
+```
+
+### 4. Token Addresses and Currency Codes by Chain
+
+**CRITICAL:** The `currency` value in JBAccountingContext is NOT 1 or 2. It's `uint32(uint160(tokenAddress))`.
+
+```typescript
+// NATIVE_TOKEN (ETH) - same on all chains - from JBConstants.NATIVE_TOKEN
+const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe'
+const NATIVE_CURRENCY = 61166 // uint32(uint160(NATIVE_TOKEN)) = 0x0000EEEe
+
+// USDC addresses and currency codes per chain
+const USDC_CONFIG: Record<number, { address: string; currency: number }> = {
+  1: {      // Ethereum
+    address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    currency: 909516616,
+  },
+  10: {     // Optimism
+    address: '0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85',
+    currency: 3530704773,
+  },
+  8453: {   // Base
+    address: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+    currency: 3169378579,
+  },
+  42161: {  // Arbitrum
+    address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    currency: 1156540465,
+  },
+}
+```
+
+**How to calculate currency from any token address:**
+```typescript
+const calculateCurrency = (tokenAddress: string): number => {
+  // Take last 4 bytes of address as uint32
+  return Number(BigInt(tokenAddress) & BigInt(0xFFFFFFFF))
+}
+```
+
+### 5. Decimal Handling
+
+- ETH: 18 decimals - use `parseEther()`
+- USDC: 6 decimals - use `parseUnits(amount, 6)`
+
+```typescript
+const parseAmount = (amount: string, baseCurrency: number) => {
+  return baseCurrency === 2
+    ? parseUnits(amount, 6)  // USDC
+    : parseEther(amount)     // ETH
+}
+```
+
+### 6. Terminal Accounting Contexts
+
+When configuring terminals, set accounting context to match. **The currency MUST be derived from the token address.**
+
+```typescript
+// ETH-based project
+{
+  terminal: JB_MULTI_TERMINAL,
+  accountingContextsToAccept: [{
+    token: NATIVE_TOKEN,        // 0x000000000000000000000000000000000000EEEe
+    decimals: 18,
+    currency: 61166,            // uint32(uint160(NATIVE_TOKEN)) = 0x0000EEEe
+  }]
+}
+
+// USDC-based project (example: Ethereum)
+{
+  terminal: JB_MULTI_TERMINAL,
+  accountingContextsToAccept: [{
+    token: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+    decimals: 6,
+    currency: 909516616,        // uint32(uint160(USDC_ADDRESS))
+  }]
+}
+```
+
+**WRONG:** Using currency: 1 for ETH or currency: 2 for USD
+**RIGHT:** Using the calculated uint32 value from the token address
+
+## Component Pattern
+
+For React components that handle multiple currencies:
+
+```typescript
+interface ChainData {
+  chainId: number
+  projectId: number
+  baseCurrency: number // 1 = ETH, 2 = USD
+  // ... other fields
+}
+
+function MyComponent({ chainData }: { chainData: ChainData }) {
+  const baseCurrency = chainData?.baseCurrency || 1
+  const currencyLabel = baseCurrency === 2 ? 'USDC' : 'ETH'
+
+  return (
+    <div>
+      <span>Amount: {amount} {currencyLabel}</span>
+      {/* Use currencyLabel throughout, never hardcode "ETH" */}
+    </div>
+  )
+}
+```
+
+## Verification
+
+- USDC-based projects display "USDC" labels (not "ETH")
+- Transactions use correct currency parameter
+- Fund access limits store correct currency
+- Balance queries use correct token address
+
+## Example
+
+For Artizen (project 6 on Base):
+- baseCurrency = 2 (USD)
+- Display "USDC" in all labels
+- Use USDC token address for balance queries: `0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`
+- Fund access limits use currency: 2
+
+## Common Mistakes
+
+1. **Hardcoded labels**: Using "ETH" string instead of `currencyLabel`
+2. **Hardcoded currency**: Using `1n` instead of `BigInt(baseCurrency)`
+3. **Wrong decimals**: Using 18 decimals for USDC (should be 6)
+4. **Token mismatch**: Querying with NATIVE_TOKEN for USDC project
+
+## Notes
+
+- Default to ETH (baseCurrency=1) if not specified
+- JBSwapTerminal accepts any token and swaps to project's base currency
+- Cash out returns funds in the project's base currency
+- Price feeds convert between currencies when needed
+
+## References
+
+- JBMultiTerminal5_1: `0x52869db3d61dde1e391967f2ce5039ad0ecd371c`
+- JBSwapTerminal: `0x0c02e48e55f4451a499e48a53595de55c40f3574`
+- JBPrices: `0x6e92e3b5ce1e7a4344c6d27c0c54efd00df92fb6`
