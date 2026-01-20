@@ -154,7 +154,7 @@ Paying a new community project (not a Revnet):
 - REVDeployer address is the same on all chains
 - When in doubt, check the project owner to determine version
 - JBOmnichainDeployer5_1 deploys to all chains at once using V5.1 contracts
-- Source of truth: ~/Documents/jb/v5/evm/nana-core-v5/deployments and docs.juicebox.money/dev/v5/addresses
+- Source of truth: [nana-core-v5/deployments](https://github.com/Bananapus/nana-core-v5/tree/main/deployments) and [docs.juicebox.money/dev/v5/addresses](https://docs.juicebox.money/dev/v5/addresses)
 
 ## References
 
