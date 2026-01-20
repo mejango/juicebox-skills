@@ -7,9 +7,12 @@ description: |
   (3) configuring fund access limits or accounting contexts for new rulesets,
   (4) querying project balance/surplus with correct token,
   (5) debugging "wrong currency" issues in payout or allowance transactions,
-  (6) need currency code constants (NATIVE_CURRENCY=61166, USDC varies by chain).
+  (6) need currency code constants (NATIVE_CURRENCY=61166, USDC varies by chain),
+  (7) cash out modal shows wrong return currency (ETH instead of USDC),
+  (8) need shared chain constants (names, explorers) across multiple modals.
   Currency in JBAccountingContext is uint32(uint160(tokenAddress)), NOT 1 or 2.
-  Covers baseCurrency detection, decimal handling, terminal accounting, currency codes, and dynamic labels.
+  Covers baseCurrency detection, decimal handling, terminal accounting, currency codes,
+  dynamic labels, cash out return display, and shared chain constants patterns.
 ---
 
 # Juicebox V5 Multi-Currency Support
@@ -171,9 +174,94 @@ function MyComponent({ chainData }: { chainData: ChainData }) {
 }
 ```
 
+### 7. Cash Out Modal Currency Display
+
+When cashing out, users burn project tokens and receive funds **in the project's base currency**.
+The modal must show the correct currency for the return amount:
+
+```typescript
+interface CashOutModalProps {
+  projectId: string
+  tokenAmount: string      // Tokens being burned
+  tokenSymbol: string      // e.g., "NANA", "REV"
+  estimatedReturn: number  // Amount user will receive
+  currencySymbol: 'ETH' | 'USDC'  // CRITICAL: matches project's base currency
+}
+
+function CashOutModal({
+  tokenAmount,
+  tokenSymbol,
+  estimatedReturn,
+  currencySymbol = 'ETH',  // Default to ETH for backwards compatibility
+}: CashOutModalProps) {
+  // Format decimals based on currency
+  const decimals = currencySymbol === 'USDC' ? 2 : 4
+
+  return (
+    <div>
+      <div>Burning: {tokenAmount} {tokenSymbol}</div>
+      <div>You receive: ~{estimatedReturn.toFixed(decimals)} {currencySymbol}</div>
+    </div>
+  )
+}
+```
+
+**Key insight**: The component receiving cash out data must pass `currencySymbol` based on the
+project's `baseCurrency`, not hardcode "ETH". For USDC-based projects, show "~5.00 USDC" not "~0.002 ETH".
+
+### 8. Shared Chain Constants Pattern
+
+Avoid duplicating chain info across modals. Create a shared constants file:
+
+```typescript
+// constants/index.ts
+export const CHAINS: Record<number, {
+  name: string
+  shortName: string
+  explorerTx: string
+  explorerAddress: string
+}> = {
+  1: {
+    name: 'Ethereum',
+    shortName: 'ETH',
+    explorerTx: 'https://etherscan.io/tx/',
+    explorerAddress: 'https://etherscan.io/address/',
+  },
+  10: {
+    name: 'Optimism',
+    shortName: 'OP',
+    explorerTx: 'https://optimistic.etherscan.io/tx/',
+    explorerAddress: 'https://optimistic.etherscan.io/address/',
+  },
+  8453: {
+    name: 'Base',
+    shortName: 'BASE',
+    explorerTx: 'https://basescan.org/tx/',
+    explorerAddress: 'https://basescan.org/address/',
+  },
+  42161: {
+    name: 'Arbitrum',
+    shortName: 'ARB',
+    explorerTx: 'https://arbiscan.io/tx/',
+    explorerAddress: 'https://arbiscan.io/address/',
+  },
+}
+
+export const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe' as const
+```
+
+Then import in modals:
+```typescript
+import { CHAINS, NATIVE_TOKEN } from '../constants'
+
+const chainInfo = CHAINS[chainId] || CHAINS[1]
+const explorerLink = `${chainInfo.explorerTx}${txHash}`
+```
+
 ## Verification
 
 - USDC-based projects display "USDC" labels (not "ETH")
+- Cash out modals show return in correct currency (ETH or USDC)
 - Transactions use correct currency parameter
 - Fund access limits store correct currency
 - Balance queries use correct token address
