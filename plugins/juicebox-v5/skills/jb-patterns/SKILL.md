@@ -1,6 +1,11 @@
 ---
 name: jb-patterns
-description: Common Juicebox V5 design patterns for vesting, NFT treasuries, and governance-minimal configurations. Prefer native mechanics over custom code.
+description: |
+  Common Juicebox V5 design patterns for vesting, NFT treasuries, terminal wrappers, and governance-minimal
+  configurations. Use when: (1) need treasury vesting without custom contracts, (2) building NFT-gated
+  redemptions, (3) extending revnet functionality via pay wrappers, (4) implementing custom ERC20 tokens,
+  (5) deciding between native mechanics vs custom code. Covers 10 patterns including terminal wrapper
+  for dynamic pay-time splits and token interception. Golden rule: prefer configuration over custom contracts.
 ---
 
 # Juicebox V5 Design Patterns
@@ -1249,6 +1254,14 @@ Need custom token mechanics?
 ├── Concentration limits? → Custom ERC20 with max holder checks
 ├── Per-holder vesting/cliffs? → Custom ERC20 with vesting schedules
 └── Pre-existing token? → Wrap with IJBToken interface
+
+Need extended pay functionality on locked project/revnet?
+├── Dynamic splits at pay time? → Terminal wrapper
+├── Atomic pay + distribute? → Terminal wrapper
+├── Token interception/staking? → Terminal wrapper (beneficiary-to-self)
+├── Multi-hop payments? → Terminal wrapper
+├── Block certain payments? → CAN'T DO (permissionless is a feature)
+└── Standard payments work fine? → Use MultiTerminal directly
 ```
 
 ---
@@ -1397,6 +1410,539 @@ Deploy with 2 rulesets
 
 ---
 
+## Pattern 10: Terminal Wrapper (Pay Wrapper)
+
+**Use case**: Extend payment functionality without modifying rulesets - especially for revnets where hooks can't be edited
+
+**Solution**: Create an `IJBTerminal` that wraps `JBMultiTerminal`, like Swap Terminal does
+
+### Why This Pattern?
+
+Revnets and locked projects can't modify ruleset data hooks. But you can still add functionality by wrapping the terminal:
+
+| Need | How Wrapper Solves It |
+|------|----------------------|
+| Dynamic splits at pay time | Parse from metadata, configure before forwarding |
+| Pay + distribute atomically | Bundle operations in one tx |
+| Token interception | Set beneficiary to wrapper, then stake/forward |
+| Referral tracking | Parse referrer from metadata, record on-chain |
+| Multi-hop payments | Receive tokens, swap, pay another project |
+
+### Core Architecture
+
+```solidity
+contract PayWithSplitsTerminal is IJBTerminal {
+    IJBMultiTerminal public immutable MULTI_TERMINAL;
+    IJBController public immutable CONTROLLER;
+
+    function pay(
+        uint256 projectId,
+        address token,
+        uint256 amount,
+        address beneficiary,
+        uint256 minReturnedTokens,
+        string calldata memo,
+        bytes calldata metadata
+    ) external payable returns (uint256 beneficiaryTokenCount) {
+        // 1. Parse custom metadata
+        (JBSplit[] memory splits, bytes memory innerMetadata) = _parseMetadata(metadata);
+
+        // 2. Configure splits if provided
+        if (splits.length > 0) {
+            _configureSplits(projectId, splits);
+        }
+
+        // 3. Forward to underlying terminal
+        beneficiaryTokenCount = MULTI_TERMINAL.pay{value: msg.value}(
+            projectId, token, amount, beneficiary,
+            minReturnedTokens, memo, innerMetadata
+        );
+
+        // 4. Distribute reserved tokens
+        CONTROLLER.sendReservedTokensToSplitsOf(projectId);
+
+        return beneficiaryTokenCount;
+    }
+}
+```
+
+### Beneficiary-to-Self Pattern
+
+Intercept tokens by making the wrapper the beneficiary:
+
+```solidity
+function payAndStake(uint256 projectId, ..., bytes calldata metadata) external payable {
+    (address finalDestination, bytes memory stakingParams) = abi.decode(metadata, (address, bytes));
+
+    // Wrapper receives tokens
+    uint256 tokenCount = MULTI_TERMINAL.pay{value: msg.value}(
+        projectId, token, amount,
+        address(this),  // <-- Beneficiary is wrapper
+        minReturnedTokens, "", ""
+    );
+
+    // Do something with them
+    _stakeTokens(projectToken, tokenCount, finalDestination, stakingParams);
+}
+```
+
+### Critical Mental Model
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    WRAPPER IS ADDITIVE                          │
+├─────────────────────────────────────────────────────────────────┤
+│   Client A ──► PayWrapper ──► JBMultiTerminal                   │
+│                (gets special features)                          │
+│                                                                 │
+│   Client B ─────────────────► JBMultiTerminal                   │
+│                (still works!)                                   │
+│                                                                 │
+│   BOTH ARE VALID. Wrapper cannot block direct access.           │
+│   This is a FEATURE. Permissionless = good.                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Bad thinking**: "I'll use a wrapper to block payments that don't meet criteria X"
+
+**Good thinking**: "I'll provide enhanced functionality for clients that opt in"
+
+### Comparison with Swap Terminal
+
+Swap Terminal is the canonical example:
+
+```
+User pays USDC ──► SwapTerminal ──► Swaps to ETH ──► JBMultiTerminal
+```
+
+Your wrapper follows the same architecture with different transformation logic.
+
+### Cash Out Wrappers
+
+The same pattern applies to cash outs. Wrap `cashOutTokensOf` to intercept redeemed funds:
+
+```solidity
+/// @notice Cash out with automatic bridging of redeemed funds.
+function cashOutAndBridge(
+    address holder,
+    uint256 projectId,
+    uint256 tokenCount,
+    address tokenToReclaim,
+    uint256 minTokensReclaimed,
+    address beneficiary,
+    uint256 destChainId,    // Custom: where to bridge
+    bytes calldata metadata
+) external returns (uint256 reclaimAmount) {
+    // 1. Cash out to THIS contract (intercept funds)
+    reclaimAmount = MULTI_TERMINAL.cashOutTokensOf(
+        holder,
+        projectId,
+        tokenCount,
+        tokenToReclaim,
+        minTokensReclaimed,
+        address(this),  // <-- Wrapper receives funds
+        metadata
+    );
+
+    // 2. Bridge the redeemed funds to destination chain
+    _bridgeFunds(tokenToReclaim, reclaimAmount, beneficiary, destChainId);
+
+    return reclaimAmount;
+}
+
+/// @notice Cash out with automatic swap to different token.
+function cashOutAndSwap(
+    address holder,
+    uint256 projectId,
+    uint256 tokenCount,
+    address tokenToReclaim,
+    uint256 minTokensReclaimed,
+    address tokenOut,       // Custom: swap to this token
+    uint256 minAmountOut,   // Custom: slippage protection
+    address beneficiary,
+    bytes calldata metadata
+) external returns (uint256 amountOut) {
+    // 1. Cash out to this contract
+    uint256 reclaimAmount = MULTI_TERMINAL.cashOutTokensOf(
+        holder,
+        projectId,
+        tokenCount,
+        tokenToReclaim,
+        minTokensReclaimed,
+        address(this),
+        metadata
+    );
+
+    // 2. Swap redeemed tokens
+    amountOut = _swap(tokenToReclaim, tokenOut, reclaimAmount, minAmountOut);
+
+    // 3. Send swapped tokens to beneficiary
+    _sendFunds(tokenOut, amountOut, beneficiary);
+
+    return amountOut;
+}
+```
+
+### When to Use
+
+| Scenario | Terminal Wrapper? | Alternative |
+|----------|-------------------|-------------|
+| **Pay Wrappers** | | |
+| Revnet needs new pay-time features | **Yes** | Can't modify hooks |
+| Dynamic splits specified by payer | **Yes** | Native splits are static |
+| Atomic pay + distribute | **Yes** | Two separate txs |
+| Token interception/staking | **Yes** | - |
+| **Cash Out Wrappers** | | |
+| Cash out + bridge in one tx | **Yes** | Two separate txs |
+| Cash out + swap to different token | **Yes** | Manual swap after |
+| Cash out + stake redeemed funds | **Yes** | - |
+| Cash out + LP deposit | **Yes** | - |
+| **Both** | | |
+| Simple operations with existing hooks | No | Use MultiTerminal directly |
+| Need to block payments/cashouts | **No** | Wrappers can't enforce this |
+
+### Complete Example: Pay-Time Splits Terminal
+
+```solidity
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.23;
+
+import {IJBTerminal} from "@bananapus/core/src/interfaces/IJBTerminal.sol";
+import {IJBMultiTerminal} from "@bananapus/core/src/interfaces/IJBMultiTerminal.sol";
+import {IJBController} from "@bananapus/core/src/interfaces/IJBController.sol";
+import {JBSplit} from "@bananapus/core/src/structs/JBSplit.sol";
+import {JBSplitGroup} from "@bananapus/core/src/structs/JBSplitGroup.sol";
+import {JBConstants} from "@bananapus/core/src/libraries/JBConstants.sol";
+import {JBPermissionIds} from "@bananapus/permission-ids/src/JBPermissionIds.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+/// @notice Terminal wrapper that allows payers to specify reserved token splits at pay time.
+/// @dev Useful for revnets where ruleset hooks can't be modified post-deploy.
+/// @dev Follows JBSwapTerminalRegistry pattern with shared _acceptFunds helper.
+contract PayWithSplitsTerminal is IJBTerminal {
+    using SafeERC20 for IERC20;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ERRORS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    error InvalidSplitTotal();
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTANTS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// @notice Split group ID for reserved tokens.
+    uint256 public constant RESERVED_TOKEN_GROUP = 1;
+
+    /// @notice The underlying terminal this wrapper forwards to.
+    IJBMultiTerminal public immutable MULTI_TERMINAL;
+
+    /// @notice The controller for setting splits and distributing reserved tokens.
+    IJBController public immutable CONTROLLER;
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CONSTRUCTOR
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// @param _multiTerminal The JBMultiTerminal to wrap.
+    /// @param _controller The JBController for this deployment.
+    constructor(IJBMultiTerminal _multiTerminal, IJBController _controller) {
+        MULTI_TERMINAL = _multiTerminal;
+        CONTROLLER = _controller;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EXTERNAL FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// @notice Pay a project with optional dynamic splits specified in metadata.
+    /// @dev If metadata contains splits, they're applied before payment. Reserved tokens
+    ///      are distributed after payment completes.
+    /// @param projectId The project to pay.
+    /// @param token The token to pay with (JBConstants.NATIVE_TOKEN for ETH).
+    /// @param amount The amount to pay (ignored for ETH, uses msg.value).
+    /// @param beneficiary Who receives the project tokens.
+    /// @param minReturnedTokens Minimum tokens to receive (slippage protection).
+    /// @param memo Payment memo.
+    /// @param metadata ABI-encoded (JBSplit[] splits, bytes innerMetadata).
+    ///        - splits: Reserved token split configuration (empty array to skip)
+    ///        - innerMetadata: Passed through to MultiTerminal (for hooks, etc.)
+    /// @return beneficiaryTokenCount The number of tokens minted to beneficiary.
+    function pay(
+        uint256 projectId,
+        address token,
+        uint256 amount,
+        address beneficiary,
+        uint256 minReturnedTokens,
+        string calldata memo,
+        bytes calldata metadata
+    ) external payable returns (uint256 beneficiaryTokenCount) {
+        bytes memory innerMetadata;
+
+        // Parse and apply splits if metadata provided
+        if (metadata.length > 0) {
+            JBSplit[] memory splits;
+            (splits, innerMetadata) = abi.decode(metadata, (JBSplit[], bytes));
+
+            if (splits.length > 0) {
+                _validateAndSetSplits(projectId, splits);
+            }
+        }
+
+        // Accept funds and get value to forward
+        uint256 valueToSend = _acceptFunds(token, amount, address(MULTI_TERMINAL));
+
+        // Forward payment to MultiTerminal
+        beneficiaryTokenCount = MULTI_TERMINAL.pay{value: valueToSend}(
+            projectId,
+            token,
+            amount,
+            beneficiary,
+            minReturnedTokens,
+            memo,
+            innerMetadata
+        );
+
+        // Distribute reserved tokens to the configured splits
+        CONTROLLER.sendReservedTokensToSplitsOf(projectId);
+
+        return beneficiaryTokenCount;
+    }
+
+    /// @notice Add to a project's balance without receiving tokens.
+    /// @dev Pass-through to MultiTerminal.
+    function addToBalanceOf(
+        uint256 projectId,
+        address token,
+        uint256 amount,
+        bool shouldReturnHeldFees,
+        string calldata memo,
+        bytes calldata metadata
+    ) external payable {
+        // Accept funds and get value to forward
+        uint256 valueToSend = _acceptFunds(token, amount, address(MULTI_TERMINAL));
+
+        MULTI_TERMINAL.addToBalanceOf{value: valueToSend}(
+            projectId,
+            token,
+            amount,
+            shouldReturnHeldFees,
+            memo,
+            metadata
+        );
+    }
+
+    /// @notice Check accounting contexts accepted by underlying terminal.
+    function accountingContextForTokenOf(
+        uint256 projectId,
+        address token
+    ) external view returns (JBAccountingContext memory) {
+        return MULTI_TERMINAL.accountingContextForTokenOf(projectId, token);
+    }
+
+    /// @notice Get all accounting contexts for a project.
+    function accountingContextsOf(
+        uint256 projectId
+    ) external view returns (JBAccountingContext[] memory) {
+        return MULTI_TERMINAL.accountingContextsOf(projectId);
+    }
+
+    /// @notice Get current surplus in a project's terminal.
+    function currentSurplusOf(
+        uint256 projectId,
+        JBAccountingContext[] calldata accountingContexts,
+        uint256 decimals,
+        uint256 currency
+    ) external view returns (uint256) {
+        return MULTI_TERMINAL.currentSurplusOf(
+            projectId,
+            accountingContexts,
+            decimals,
+            currency
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTERNAL FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /// @notice Accept funds from the caller and prepare them for forwarding.
+    /// @dev For ERC20s: transfers from sender, approves spender.
+    /// @dev For ETH: returns msg.value to forward.
+    /// @dev Pattern from JBSwapTerminalRegistry - consolidates token handling.
+    /// @param token The token being paid (NATIVE_TOKEN for ETH).
+    /// @param amount The amount being paid.
+    /// @param spender The address that will spend the tokens (the terminal).
+    /// @return valueToSend The ETH value to forward (0 for ERC20s).
+    function _acceptFunds(
+        address token,
+        uint256 amount,
+        address spender
+    ) internal returns (uint256 valueToSend) {
+        if (token == JBConstants.NATIVE_TOKEN) {
+            // For ETH, just return msg.value to forward
+            return msg.value;
+        }
+
+        // For ERC20s: pull tokens from sender
+        IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
+
+        // Approve the spender (terminal) to pull tokens
+        IERC20(token).forceApprove(spender, amount);
+
+        // No ETH to forward for ERC20 payments
+        return 0;
+    }
+
+    /// @notice Validate splits sum to 100% and set them on the controller.
+    /// @dev This wrapper must have SET_SPLIT_GROUPS permission on the project.
+    function _validateAndSetSplits(uint256 projectId, JBSplit[] memory splits) internal {
+        // Validate splits sum to 100%
+        uint256 total;
+        for (uint256 i; i < splits.length; i++) {
+            total += splits[i].percent;
+        }
+        if (total != JBConstants.SPLITS_TOTAL_PERCENT) revert InvalidSplitTotal();
+
+        // Get current ruleset ID
+        (JBRuleset memory ruleset,) = CONTROLLER.currentRulesetOf(projectId);
+
+        // Build split group
+        JBSplitGroup[] memory groups = new JBSplitGroup[](1);
+        groups[0] = JBSplitGroup({
+            groupId: RESERVED_TOKEN_GROUP,
+            splits: splits
+        });
+
+        // Set splits (requires SET_SPLIT_GROUPS permission)
+        CONTROLLER.setSplitGroupsOf(projectId, ruleset.id, groups);
+    }
+
+    /// @notice Required for receiving ETH refunds from terminal.
+    receive() external payable {}
+}
+```
+
+### Client-Side Usage (TypeScript)
+
+```typescript
+import {
+  encodeFunctionData,
+  encodeAbiParameters,
+  parseAbiParameters,
+  parseUnits,
+  Address
+} from 'viem';
+
+const SPLITS_TOTAL_PERCENT = 1_000_000_000n; // 1e9
+
+// Build split configuration
+function encodeSplits(recipients: { address: Address; percent: number }[]) {
+  // Convert percentages (0-100) to JB format (0-1e9)
+  const splits = recipients.map(r => ({
+    preferredProjectId: 0n,
+    preferredBeneficiary: r.address,
+    percent: BigInt(Math.floor(r.percent * 10_000_000)), // 1% = 10_000_000
+    lockedUntil: 0n,
+    hook: '0x0000000000000000000000000000000000000000' as Address,
+  }));
+
+  return splits;
+}
+
+// Encode metadata for pay call
+function encodePayMetadata(
+  splits: ReturnType<typeof encodeSplits>,
+  innerMetadata: `0x${string}` = '0x'
+) {
+  return encodeAbiParameters(
+    parseAbiParameters([
+      '(uint256 preferredProjectId, address preferredBeneficiary, uint256 percent, uint256 lockedUntil, address hook)[]',
+      'bytes'
+    ]),
+    [splits, innerMetadata]
+  );
+}
+
+// Example: Pay with dynamic splits
+async function payWithSplits(
+  walletClient: WalletClient,
+  wrapperAddress: Address,
+  projectId: bigint,
+  paymentAmount: bigint,
+  recipients: { address: Address; percent: number }[]
+) {
+  const splits = encodeSplits(recipients);
+  const metadata = encodePayMetadata(splits);
+
+  const NATIVE_TOKEN = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+
+  const hash = await walletClient.writeContract({
+    address: wrapperAddress,
+    abi: PAY_WITH_SPLITS_ABI,
+    functionName: 'pay',
+    args: [
+      projectId,
+      NATIVE_TOKEN,
+      paymentAmount,
+      walletClient.account.address, // beneficiary
+      0n, // minReturnedTokens
+      'Payment with custom splits',
+      metadata
+    ],
+    value: paymentAmount
+  });
+
+  return hash;
+}
+
+// Usage
+await payWithSplits(
+  walletClient,
+  '0x...wrapper',
+  3n, // projectId
+  parseUnits('1', 18), // 1 ETH
+  [
+    { address: '0xaaa...', percent: 50 }, // 50% to address A
+    { address: '0xbbb...', percent: 30 }, // 30% to address B
+    { address: '0xccc...', percent: 20 }, // 20% to address C
+  ]
+);
+```
+
+### Deployment & Permissions
+
+```solidity
+// Deploy the wrapper
+PayWithSplitsTerminal wrapper = new PayWithSplitsTerminal(
+    IJBMultiTerminal(MULTI_TERMINAL_ADDRESS),
+    IJBController(CONTROLLER_ADDRESS)
+);
+
+// Grant SET_SPLIT_GROUPS permission to wrapper
+// (Must be called by project owner or someone with SET_PERMISSIONS)
+JBPermissionsData[] memory permissions = new JBPermissionsData[](1);
+permissions[0] = JBPermissionsData({
+    operator: address(wrapper),
+    projectId: PROJECT_ID,
+    permissionIds: _asSingletonArray(JBPermissionIds.SET_SPLIT_GROUPS)
+});
+
+PERMISSIONS.setPermissionsFor(projectOwner, permissions);
+```
+
+### Key Notes
+
+- Wrapper must be granted permissions if setting splits
+- Multiple wrappers can exist for different purposes - they don't conflict
+- Wrappers can be chained: WrapperA → WrapperB → MultiTerminal
+- For revnets: often the ONLY way to add functionality post-deploy
+- Validate metadata carefully - parsing adds attack surface
+
+---
+
 ## Reference Implementations
 
 - **Vesting + NFT**: Drip x Juicebox (see `/jb-project` for deployment script)
@@ -1411,3 +1957,4 @@ Deploy with 2 rulesets
 - `/jb-project` - Project deployment and configuration
 - `/jb-ruleset` - Ruleset configuration details
 - `/jb-v5-impl` - Deep implementation mechanics
+- `/jb-terminal-wrapper` - Full terminal wrapper implementation details

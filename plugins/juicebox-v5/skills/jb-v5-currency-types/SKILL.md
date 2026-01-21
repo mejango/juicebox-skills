@@ -157,3 +157,8 @@ const rulesetConfig = {
 - On non-ETH-native chains (Celo, Polygon), JBPrices provides the ETH/NATIVE_TOKEN exchange rate so issuance stays ETH-denominated
 - This architecture enables truly portable rulesets that behave identically regardless of deployment chain
 - The separation between "real-world currency concepts" and "token-derived currencies" is what makes cross-chain consistency possible
+
+## Related Skills
+
+- `/jb-suckers` - Cross-chain bridging mechanics via sucker contracts
+- `/jb-omnichain-ui` - Building omnichain UIs with Relayr and Bendystraw

@@ -56,22 +56,37 @@ args: [projectId, token, amount, BigInt(baseCurrency), minTokensPaidOut, benefic
 
 ### 3. Fund Access Limits Currency
 
-When queuing new rulesets or displaying limits, match the existing project currency:
+When queuing new rulesets or displaying limits, match the existing project currency.
+**Use correct decimals**: Query from `ERC20.decimals()` or use 18 for native tokens.
 
 ```typescript
+import { parseUnits } from 'viem'
+
 // Get currency from existing config
 const currency = existingConfig?.baseCurrency || 1
 
+// Get decimals from the token contract (or 18 for native token)
+// For USDC: 6 decimals. For native token (ETH): 18 decimals.
+const decimals = await getTokenDecimals(tokenAddress, publicClient)
+
 // Use in fund access limit configuration
 const payoutLimits = [{
-  amount: parseEther(limitAmount).toString(),
-  currency, // Match project's base currency
+  amount: parseUnits(limitAmount, decimals).toString(),
+  currency, // Match project's base currency (1 or 2)
 }]
 ```
 
-### 4. Token Addresses and Currency Codes by Chain
+### 4. Two Different "currency" Concepts (CRITICAL)
 
-**CRITICAL:** The `currency` value in JBAccountingContext is NOT 1 or 2. It's `uint32(uint160(tokenAddress))`.
+Juicebox V5 has TWO different concepts called "currency" that are often confused:
+
+| Field | Location | Values | Purpose |
+|-------|----------|--------|---------|
+| `baseCurrency` | Ruleset metadata | 1 = ETH, 2 = USD | Issuance rate calculation |
+| `JBCurrencyAmount.currency` | Fund access limits | 1 = ETH, 2 = USD | Payout/allowance limits |
+| `JBAccountingContext.currency` | Terminal config | `uint32(uint160(token))` | Terminal accounting |
+
+**The `currency` value in JBAccountingContext is NOT 1 or 2. It's `uint32(uint160(tokenAddress))`.**
 
 ```typescript
 // NATIVE_TOKEN (ETH) - same on all chains - from JBConstants.NATIVE_TOKEN
@@ -109,14 +124,33 @@ const calculateCurrency = (tokenAddress: string): number => {
 
 ### 5. Decimal Handling
 
-- ETH: 18 decimals - use `parseEther()`
-- USDC: 6 decimals - use `parseUnits(amount, 6)`
+**General rule:** Get decimals from `ERC20.decimals()` for any token. Native tokens (ETH, MATIC, etc.) always use 18 decimals.
+
+Common cases:
+- Native token (ETH): 18 decimals
+- USDC: 6 decimals
+- Most ERC-20s: varies - always query `decimals()`
 
 ```typescript
-const parseAmount = (amount: string, baseCurrency: number) => {
-  return baseCurrency === 2
-    ? parseUnits(amount, 6)  // USDC
-    : parseEther(amount)     // ETH
+import { erc20Abi } from 'viem'
+
+// For native token
+const NATIVE_DECIMALS = 18
+
+// For ERC-20 tokens - query the contract
+const getTokenDecimals = async (tokenAddress: string, publicClient: PublicClient) => {
+  if (tokenAddress === NATIVE_TOKEN) return NATIVE_DECIMALS
+  return await publicClient.readContract({
+    address: tokenAddress as `0x${string}`,
+    abi: erc20Abi,
+    functionName: 'decimals',
+  })
+}
+
+// Shortcut for known tokens (use with caution)
+const KNOWN_DECIMALS: Record<string, number> = {
+  [NATIVE_TOKEN]: 18,
+  // USDC on all chains uses 6 decimals
 }
 ```
 

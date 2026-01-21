@@ -656,6 +656,8 @@ async function deployAndWaitForIndex(walletClient, chains, calldata) {
 
 ## Related Skills
 
+- `/jb-suckers` - Core sucker mechanics (prepare/toRemote/claim flow)
+- `/jb-v5-currency-types` - Currency handling for cross-chain consistency
 - `/jb-relayr` - Complete Relayr API reference
 - `/jb-bendystraw` - Complete Bendystraw GraphQL reference
 - `/jb-deploy-ui` - Single-chain deployment UIs
