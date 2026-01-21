@@ -135,6 +135,22 @@ These use V5.0 core contracts internally.
 | JBSwapTerminal | Arbitrum | `0x483c9b12c5bd2da73133aae30642ce0008c752ad` |
 | JBSwapTerminal | Base | `0x4fd73d8b285e82471f08a4ef9861d6248b832edd` |
 | JBSwapTerminalRegistry | All | `0x60b4f5595ee509c4c22921c7b7999f1616e6a4f6` |
+| JBSwapTerminalUSDCRegistry | All | `0x1ce40d201cdec791de05810d17aaf501be167422` |
+
+### Swap Terminal Registry Selection
+
+When deploying a project, choose the correct swap terminal registry based on what currency the project should **receive**:
+
+| Registry | TOKEN_OUT | Use When |
+|----------|-----------|----------|
+| **JBSwapTerminalRegistry** | NATIVE_TOKEN (ETH) | Project accepts ETH payments, swap incoming tokens to ETH |
+| **JBSwapTerminalUSDCRegistry** | USDC | Project accepts USDC payments, swap incoming tokens to USDC |
+
+Like all terminals, swap terminal registries are configured during project creation via the `terminalConfigurations` parameter in `launchProjectFor()`. The correct terminal will be returned by `primaryTerminalOf(projectId, token)` and `terminalsOf(projectId)`.
+
+**Permit2 Metadata**: When building permit2 metadata for swap terminal payments, use the terminal address returned by `primaryTerminalOf` for:
+1. Computing the metadata ID (`bytes4(bytes20(terminal) ^ bytes20(keccak256("permit2")))`)
+2. Setting the `spender` in the Permit2 signature
 
 ---
 
