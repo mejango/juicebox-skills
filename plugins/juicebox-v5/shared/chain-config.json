@@ -1,6 +1,6 @@
 {
   "_version": "5.1",
-  "_note": "V5.1 for new projects, V5.0 for revnets. Only JBRulesets has code changes; others redeployed due to dependencies. Do NOT mix V5.0 and V5.1.",
+  "_note": "IMPORTANT: Some non-revnet projects also use V5.0. ALWAYS check JBDirectory.controllerOf() to determine which controller a project uses, then route to matching contracts.",
   "_dependencyChain": {
     "JBRulesets5_1": "Actual code fix (one-line approval hook fix)",
     "JBController5_1": "Depends on JBRulesets",
@@ -11,9 +11,10 @@
     "JBOmnichainDeployer5_1": "Depends on JB721TiersHookDeployer"
   },
   "versionGuidance": {
-    "v5.1": "Use for new projects and integrations. Has approval hook fix.",
-    "v5.0": "Use ONLY for revnets (REVDeployer uses V5.0 JBController).",
-    "warning": "Do NOT mix V5.0 and V5.1 contracts - use one complete set or the other."
+    "detection": "ALWAYS query JBDirectory.controllerOf(projectId) to get the actual controller address. Compare against known V5/V5.1 controller addresses to determine version.",
+    "v5.1": "Use for new projects. Has approval hook fix. Controller: 0xf3cc99b11bd73a2e3b8815fb85fe0381b29987e1",
+    "v5.0": "Used by revnets AND some older non-revnet projects. Controller: 0x27da30646502e2f642be5281322ae8c394f7668a",
+    "warning": "Do NOT mix V5.0 and V5.1 contracts - use one complete set or the other. Do NOT assume non-revnet = V5.1."
   },
   "chains": {
     "1": {

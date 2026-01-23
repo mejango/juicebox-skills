@@ -18,11 +18,18 @@ tokenURI(projectId) → string         // Project metadata URI
 
 ### JBDirectory
 ```solidity
-controllerOf(projectId) → address              // Project's controller
+controllerOf(projectId) → address              // Project's controller (CRITICAL for version detection!)
 terminalsOf(projectId) → IJBTerminal[]         // All terminals
 primaryTerminalOf(projectId, token) → address  // Primary terminal for token
 isTerminalOf(projectId, terminal) → bool       // Check terminal validity
 ```
+
+**IMPORTANT**: `controllerOf()` is the ONLY authoritative way to determine which contract version
+a project uses. Compare the returned address against known V5/V5.1 controller addresses:
+- V5.0: `0x27da30646502e2f642be5281322ae8c394f7668a`
+- V5.1: `0xf3cc99b11bd73a2e3b8815fb85fe0381b29987e1`
+
+Some non-revnet projects use V5.0 contracts. Never assume version based on ownership.
 
 ### JBController
 ```solidity
@@ -169,12 +176,25 @@ async function getTokenBalance(holder: string, projectId: number) {
 
 ## Common Queries
 
+### "Which contract version does project X use?"
+**ALWAYS start here before making any other queries that involve versioned contracts.**
+```bash
+# Check JBDirectory.controllerOf() - the authoritative source
+cast call 0x0061e516886a0540f63157f112c0588ee0651dcf \
+  "controllerOf(uint256)(address)" $PROJECT_ID --rpc-url $RPC_URL
+
+# V5.0 controller: 0x27da30646502e2f642be5281322ae8c394f7668a
+# V5.1 controller: 0xf3cc99b11bd73a2e3b8815fb85fe0381b29987e1
+```
+Then use the matching versioned contracts (terminal, rulesets, etc.) for all subsequent queries.
+
 ### "What's the current state of project X?"
-1. Get owner: `JBProjects.ownerOf(projectId)`
-2. Get ruleset: `JBController.currentRulesetOf(projectId)`
-3. Get token: `JBTokens.tokenOf(projectId)`
-4. Get terminals: `JBDirectory.terminalsOf(projectId)`
-5. Get surplus: `JBMultiTerminal.currentSurplusOf(...)`
+1. **First**: Get controller version via `JBDirectory.controllerOf(projectId)` - determines which contracts to use
+2. Get owner: `JBProjects.ownerOf(projectId)`
+3. Get ruleset: Use correct versioned `JBController.currentRulesetOf(projectId)`
+4. Get token: `JBTokens.tokenOf(projectId)`
+5. Get terminals: `JBDirectory.terminalsOf(projectId)`
+6. Get surplus: Use correct versioned `JBMultiTerminal.currentSurplusOf(...)`
 
 ### "Who are the split recipients?"
 1. Get current ruleset ID from `currentRulesetOf`
