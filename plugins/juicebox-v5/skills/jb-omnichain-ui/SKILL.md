@@ -11,6 +11,12 @@ Build frontends that deploy and interact with Juicebox projects across multiple 
 
 > **Pay once on any chain. Deploy everywhere. Query unified data.**
 
+### What is an Omnichain Project?
+
+An "omnichain project" is a set of Juicebox projects deployed across multiple chains, connected via Suckers for token bridging.
+
+**Key concept:** Project IDs cannot be coordinated across chains—each chain assigns the next available ID independently. Deploying to Ethereum might give you project #42, while Optimism gives you project #17. Suckers link these separate projects together so they function as one logical project with unified token bridging.
+
 Omnichain UIs enable:
 - Single-payment multi-chain deployments via Relayr
 - Unified project data across all chains via Bendystraw

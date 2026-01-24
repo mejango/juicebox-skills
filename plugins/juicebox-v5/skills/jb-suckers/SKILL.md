@@ -29,7 +29,11 @@ Apply this knowledge when:
 
 ### What Are Suckers?
 
-Suckers are specialized bridge contracts that move project tokens AND their proportional treasury backing between chains. Unlike standard token bridges:
+Suckers are specialized bridge contracts that **link Juicebox projects across chains** and move project tokens AND their proportional treasury backing between them.
+
+**Why Suckers are necessary:** Project IDs cannot be coordinated across chains—each chain assigns the next available ID independently. If you deploy to Ethereum you might get project #42, and deploying to Optimism might give you project #17. Suckers connect these separate projects so they function as a single "omnichain project" with unified token bridging.
+
+Unlike standard token bridges:
 
 - Tokens are burned on source chain via cash-out
 - Proportional ETH/USDC moves with the tokens

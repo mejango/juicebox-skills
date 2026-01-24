@@ -13,8 +13,9 @@ Create and manage Juicebox V5 projects including deployment, configuration, and 
 
 This matters because:
 - **V4 and V5 are different protocols.** Project #64 on V4 is NOT the same as Project #64 on V5, even on the same chain.
-- The same projectId can exist on multiple chains via suckers/omnichain—those ARE the same logical project.
-- When referencing a project, always specify the version to avoid confusion.
+- **Project IDs cannot be coordinated across chains.** Each chain assigns the next available ID independently. If you deploy to Ethereum you might get project #42, and deploying to Optimism might give you project #17.
+- **Suckers link projects across chains.** To create an "omnichain project," you deploy separate projects on each chain (with different IDs) and connect them using Suckers. This enables token bridging while maintaining treasury backing.
+- When referencing a project, always specify the version and chain to avoid confusion.
 
 ## V5.1 Contract Update (Dec 2025)
 
