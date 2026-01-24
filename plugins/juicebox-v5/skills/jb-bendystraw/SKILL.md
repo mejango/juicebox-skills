@@ -1,6 +1,6 @@
 ---
 name: jb-bendystraw
-description: Bendystraw GraphQL API reference for querying Juicebox project data across all chains. Get project stats, payments, token holders, and cross-chain aggregations.
+description: Bendystraw GraphQL API reference for querying Juicebox project data across all chains. Get project stats, payments, token holders, loans, NFT tiers, unified activity feeds, historical snapshots, and cross-chain aggregations.
 ---
 
 # Bendystraw: Cross-Chain Juicebox Data API
@@ -220,6 +220,959 @@ type NFT {
 
   # Metadata
   tokenUri: String
+}
+```
+
+### ActivityEvent Entity (Unified Activity Feed)
+
+A polymorphic event type that provides a unified view of all project activity. Query this instead of individual event types when building activity feeds.
+
+```graphql
+type ActivityEvent {
+  id: String!
+  chainId: Int!
+  projectId: Int!
+  suckerGroupId: String
+  version: Int!
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  from: String!
+
+  # Event type discriminator
+  type: ActivityEventType!       # Determines which embedded event is populated
+
+  # Embedded events (one will be non-null based on type)
+  payEvent: PayEvent
+  cashOutTokensEvent: CashOutTokensEvent
+  mintNftEvent: MintNftEvent
+  sendPayoutsEvent: SendPayoutsEvent
+  sendPayoutToSplitEvent: SendPayoutToSplitEvent
+  borrowLoanEvent: BorrowLoanEvent
+  repayLoanEvent: RepayLoanEvent
+  liquidateLoanEvent: LiquidateLoanEvent
+  deployErc20Event: DeployErc20Event
+  burnEvent: BurnEvent
+  mintTokensEvent: MintTokensEvent
+  projectCreateEvent: ProjectCreateEvent
+  addToBalanceEvent: AddToBalanceEvent
+  useAllowanceEvent: UseAllowanceEvent
+  decorateBannyEvent: DecorateBannyEvent
+  # ... and more
+
+  # Relations
+  project: Project
+  suckerGroup: SuckerGroup
+}
+
+enum ActivityEventType {
+  payEvent
+  cashOutTokensEvent
+  mintNftEvent
+  sendPayoutsEvent
+  sendPayoutToSplitEvent
+  borrowLoanEvent
+  repayLoanEvent
+  liquidateLoanEvent
+  reallocateLoanEvent
+  deployErc20Event
+  burnEvent
+  mintTokensEvent
+  manualMintTokensEvent
+  manualBurnEvent
+  autoIssueEvent
+  projectCreateEvent
+  addToBalanceEvent
+  useAllowanceEvent
+  sendReservedTokensToSplitEvent
+  sendReservedTokensToSplitsEvent
+  decorateBannyEvent
+}
+```
+
+### Loan Entity (RevLoans)
+
+Active loan state from the RevLoans protocol.
+
+```graphql
+type Loan {
+  id: BigInt!                    # Loan ID (NFT token ID)
+  projectId: Int!
+  chainId: Int!
+  version: Int!
+  createdAt: Int!
+
+  # Loan terms
+  borrowAmount: BigInt!          # Amount borrowed (wei)
+  collateral: BigInt!            # Collateral locked (project tokens)
+  sourceFeeAmount: BigInt!       # Fee amount
+  prepaidDuration: Int!          # Prepaid period in seconds
+  prepaidFeePercent: Int!        # Fee percent (basis points)
+
+  # Addresses
+  beneficiary: String!           # Who receives borrowed funds
+  owner: String!                 # Loan NFT owner
+  token: String!                 # Collateral token address
+  terminal: String!              # Terminal address
+
+  # Metadata
+  tokenUri: String               # Loan NFT metadata URI
+
+  # Relations
+  project: Project
+  participant: Participant
+  wallet: Wallet
+}
+```
+
+### Wallet Entity
+
+Wallet-level aggregation across all project participations.
+
+```graphql
+type Wallet {
+  address: String!               # Wallet address
+
+  # Aggregated stats
+  volume: BigInt!                # Total volume across all projects
+  volumeUsd: BigInt!             # USD equivalent (18 decimals)
+  lastPaidTimestamp: Int         # Most recent payment timestamp
+
+  # Relations
+  participants: ParticipantPage  # All project participations
+  nfts: NFTPage                  # All owned NFTs
+}
+```
+
+### NFTTier Entity
+
+NFT tier configuration with pricing and supply.
+
+```graphql
+type NFTTier {
+  chainId: Int!
+  projectId: Int!
+  version: Int!
+  tierId: Int!
+
+  # Pricing
+  price: BigInt!                 # Price in terminal token (wei)
+
+  # Supply
+  initialSupply: Int!            # Original supply
+  remainingSupply: Int!          # Current available
+
+  # Configuration
+  allowOwnerMint: Boolean!       # Owner can mint without payment
+  cannotBeRemoved: Boolean!      # Tier is permanent
+  transfersPausable: Boolean!    # Transfers can be paused
+  votingUnits: BigInt!           # Governance weight per NFT
+  category: Int                  # Tier category
+  reserveFrequency: Int          # Reserve rate
+  reserveBeneficiary: String     # Reserve recipient
+
+  # Metadata
+  encodedIpfsUri: String         # IPFS hash (encoded)
+  resolvedUri: String            # Full resolved URI
+  metadata: JSON                 # Parsed metadata
+  svg: String                    # SVG content if available
+
+  createdAt: Int!
+
+  # Relations
+  hook: NFTHook
+  nfts: NFTPage                  # Minted NFTs in this tier
+  project: Project
+}
+```
+
+### NFTHook Entity
+
+721 hook contract configuration.
+
+```graphql
+type NFTHook {
+  chainId: Int!
+  projectId: Int!
+  version: Int!
+  createdAt: Int!
+
+  address: String!               # Hook contract address
+  name: String                   # Collection name
+  symbol: String                 # Collection symbol
+
+  # Relations
+  nfts: NFTPage
+  nftTiers: NFTTierPage
+  project: Project
+}
+```
+
+### ProjectMoment Entity (Historical Snapshots)
+
+Point-in-time snapshots of project state. Useful for historical charts and analytics.
+
+```graphql
+type ProjectMoment {
+  projectId: Int!
+  chainId: Int!
+  version: Int!
+
+  # Snapshot point
+  block: Int!                    # Block number
+  timestamp: Int!                # Unix timestamp
+
+  # State at snapshot
+  volume: BigInt!
+  volumeUsd: BigInt!
+  balance: BigInt!
+  trendingScore: BigInt!
+
+  # Relations
+  project: Project
+}
+```
+
+### SuckerGroupMoment Entity
+
+Point-in-time snapshots of cross-chain aggregated state.
+
+```graphql
+type SuckerGroupMoment {
+  suckerGroupId: String!
+
+  # Snapshot point
+  block: Int!
+  timestamp: Int!
+
+  # Aggregated state
+  volume: BigInt!
+  volumeUsd: BigInt!
+  balance: BigInt!
+  tokenSupply: BigInt!
+
+  # Relations
+  suckerGroup: SuckerGroup
+}
+```
+
+### SuckerTransaction Entity (Cross-Chain Bridging)
+
+Token bridging transactions between chains via suckers.
+
+```graphql
+type SuckerTransaction {
+  index: Int!                    # Transaction index
+  projectId: Int!
+  chainId: Int!                  # Source chain
+  version: Int!
+  suckerGroupId: String!
+  createdAt: Int!
+
+  # Bridge details
+  token: String!                 # Token being bridged
+  sucker: String!                # Source sucker address
+  peer: String!                  # Destination sucker address
+  peerChainId: Int!              # Destination chain
+  beneficiary: String!           # Recipient address
+
+  # Amounts
+  projectTokenCount: BigInt!     # Project tokens bridged
+  terminalTokenAmount: BigInt!   # Terminal tokens (if any)
+
+  # State
+  root: String                   # Merkle root
+  status: SuckerTransactionStatus!
+
+  # Relations
+  suckerGroup: SuckerGroup
+}
+
+enum SuckerTransactionStatus {
+  pending
+  completed
+  failed
+}
+```
+
+### SendPayoutsEvent Entity
+
+Payout distribution events from the terminal.
+
+```graphql
+type SendPayoutsEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  logIndex: Int!
+
+  # Payout details
+  caller: String!                # Who triggered payout
+  from: String!                  # Source address
+  rulesetId: Int!
+  rulesetCycleNumber: Int!
+
+  # Amounts
+  amount: BigInt!                # Total payout amount
+  amountUsd: BigInt!
+  amountPaidOut: BigInt!         # Actually distributed
+  amountPaidOutUsd: BigInt!
+  netLeftoverPayoutAmount: BigInt!  # Remaining after splits
+  fee: BigInt!                   # Protocol fee
+  feeUsd: BigInt!
+
+  # Relations
+  project: Project
+}
+```
+
+### UseAllowanceEvent Entity
+
+Surplus allowance usage events.
+
+```graphql
+type UseAllowanceEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+
+  # Allowance details
+  caller: String!
+  beneficiary: String!           # Who receives funds
+  rulesetId: Int!
+  rulesetCycleNumber: Int!
+
+  # Amounts
+  amount: BigInt!                # Amount used
+  amountUsd: BigInt!
+  netAmount: BigInt!             # After fees
+  netAmountUsd: BigInt!
+
+  # Relations
+  project: Project
+}
+```
+
+### PermissionHolder Entity
+
+Operator permissions granted to accounts.
+
+```graphql
+type PermissionHolder {
+  chainId: Int!
+  projectId: Int!
+  version: Int!
+
+  account: String!               # Account with permissions
+  operator: String!              # Operator address
+  permissions: [Int!]!           # Permission IDs granted
+  isRevnetOperator: Boolean!     # Is a revnet operator
+
+  # Relations
+  project: Project
+}
+```
+
+### BorrowLoanEvent Entity
+
+Loan creation events from RevLoans.
+
+```graphql
+type BorrowLoanEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Loan details
+  borrowAmount: BigInt!          # Amount borrowed
+  collateral: BigInt!            # Collateral locked
+  sourceFeeAmount: BigInt!       # Fee paid
+  prepaidDuration: Int!          # Prepaid period (seconds)
+  prepaidFeePercent: Int!        # Fee percent (basis points)
+  beneficiary: String!           # Loan recipient
+  token: String!                 # Collateral token
+  terminal: String!              # Terminal address
+
+  # Relations
+  project: Project
+}
+```
+
+### RepayLoanEvent Entity
+
+Loan repayment events.
+
+```graphql
+type RepayLoanEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Repayment details
+  loanId: BigInt!                # Loan being repaid
+  paidOffLoanId: BigInt          # If fully paid off
+  repayBorrowAmount: BigInt!     # Amount repaid
+  collateralCountToReturn: BigInt!  # Collateral returned
+
+  # Relations
+  project: Project
+}
+```
+
+### LiquidateLoanEvent Entity
+
+Loan liquidation events.
+
+```graphql
+type LiquidateLoanEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Liquidation details
+  borrowAmount: BigInt!          # Outstanding borrow
+  collateral: BigInt!            # Collateral seized
+
+  # Relations
+  project: Project
+}
+```
+
+### ReallocateLoanEvent Entity
+
+Loan reallocation events (moving collateral between loans).
+
+```graphql
+type ReallocateLoanEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Reallocation details
+  loanId: BigInt!                # Source loan
+  reallocatedLoanId: BigInt!     # Target loan
+  removedCollateralCount: BigInt!  # Collateral moved
+
+  # Relations
+  project: Project
+}
+```
+
+### BurnEvent Entity
+
+Token burn events (from cash outs).
+
+```graphql
+type BurnEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  from: String!
+
+  # Burn details
+  amount: BigInt!                # Total burned
+  creditAmount: BigInt!          # Credits burned
+  erc20Amount: BigInt!           # ERC20 burned
+
+  # Relations
+  project: Project
+}
+```
+
+### MintTokensEvent Entity
+
+Token minting events (from payments).
+
+```graphql
+type MintTokensEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Mint details
+  beneficiary: String!           # Token recipient
+  beneficiaryTokenCount: BigInt! # Tokens to beneficiary
+  reservedPercent: BigInt!       # Reserved rate
+  tokenCount: BigInt!            # Total minted
+  memo: String                   # Payment memo
+
+  # Relations
+  project: Project
+}
+```
+
+### ManualMintTokensEvent Entity
+
+Manual token minting by project owner.
+
+```graphql
+type ManualMintTokensEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Mint details
+  beneficiary: String!
+  beneficiaryTokenCount: BigInt!
+  reservedPercent: BigInt!
+  tokenCount: BigInt!
+  memo: String
+
+  # Relations
+  project: Project
+}
+```
+
+### ManualBurnEvent Entity
+
+Manual token burning.
+
+```graphql
+type ManualBurnEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  from: String!
+
+  # Burn details
+  amount: BigInt!
+  creditAmount: BigInt!
+  erc20Amount: BigInt!
+
+  # Relations
+  project: Project
+}
+```
+
+### MintNftEvent Entity
+
+NFT minting events.
+
+```graphql
+type MintNftEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Mint details
+  hook: String!                  # 721 hook address
+  beneficiary: String!           # NFT recipient
+  tierId: Int!                   # Tier minted
+  tokenId: BigInt!               # Token ID
+  totalAmountPaid: BigInt!       # Amount paid
+
+  # Relations
+  project: Project
+  tier: NFTTier
+  nft: NFT
+}
+```
+
+### DeployErc20Event Entity
+
+ERC20 token deployment events.
+
+```graphql
+type DeployErc20Event {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Token details
+  symbol: String!                # Token symbol
+  name: String!                  # Token name
+  token: String!                 # Token address
+
+  # Relations
+  project: Project
+}
+```
+
+### ProjectCreateEvent Entity
+
+Project creation events.
+
+```graphql
+type ProjectCreateEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Relations
+  project: Project
+}
+```
+
+### AddToBalanceEvent Entity
+
+Direct balance addition events.
+
+```graphql
+type AddToBalanceEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Details
+  amount: BigInt!                # Amount added
+  memo: String                   # Memo
+  metadata: String               # Additional metadata
+  returnedFees: BigInt           # Fees returned
+
+  # Relations
+  project: Project
+}
+```
+
+### SendPayoutToSplitEvent Entity
+
+Individual split payout events.
+
+```graphql
+type SendPayoutToSplitEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Split details
+  rulesetId: Int!
+  group: BigInt!                 # Split group
+  beneficiary: String!           # Split recipient
+  splitProjectId: Int            # If split to project
+  hook: String                   # Split hook if any
+
+  # Amounts
+  amount: BigInt!                # Gross amount
+  netAmount: BigInt!             # After fees
+  amountUsd: BigInt!
+  percent: Int!                  # Split percent
+  lockedUntil: BigInt            # Lock timestamp
+  preferAddToBalance: Boolean!   # Add to balance vs pay
+
+  # Relations
+  project: Project
+}
+```
+
+### SendReservedTokensToSplitEvent Entity
+
+Reserved token distribution to individual split.
+
+```graphql
+type SendReservedTokensToSplitEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Split details
+  rulesetId: Int!
+  groupId: BigInt!
+  beneficiary: String!
+  splitProjectId: Int
+  hook: String
+  tokenCount: BigInt!            # Tokens sent
+  percent: Int!
+  lockedUntil: BigInt
+  preferAddToBalance: Boolean!
+
+  # Relations
+  project: Project
+}
+```
+
+### SendReservedTokensToSplitsEvent Entity
+
+Batch reserved token distribution event.
+
+```graphql
+type SendReservedTokensToSplitsEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+  suckerGroupId: String
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Distribution details
+  rulesetId: Int!
+  rulesetCycleNumber: Int!
+  owner: String!                 # Project owner
+  tokenCount: BigInt!            # Total distributed
+  leftoverAmount: BigInt!        # Remaining after splits
+
+  # Relations
+  project: Project
+}
+```
+
+### AutoIssueEvent Entity
+
+Auto-issuance events (revnet stage transitions).
+
+```graphql
+type AutoIssueEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Issuance details
+  stageId: BigInt!               # Revnet stage
+  beneficiary: String!           # Token recipient
+  count: BigInt!                 # Tokens issued
+
+  # Relations
+  project: Project
+}
+```
+
+### StoreAutoIssuanceAmountEvent Entity
+
+Auto-issuance configuration events.
+
+```graphql
+type StoreAutoIssuanceAmountEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+  projectId: Int!
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Config details
+  stageId: BigInt!               # Revnet stage
+  beneficiary: String!           # Configured recipient
+  count: BigInt!                 # Amount to auto-issue
+
+  # Relations
+  project: Project
+}
+```
+
+### DecorateBannyEvent Entity
+
+Banny NFT decoration events.
+
+```graphql
+type DecorateBannyEvent {
+  id: String!
+  chainId: Int!
+  version: Int!
+
+  # Transaction
+  txHash: String!
+  timestamp: Int!
+  caller: String!
+  from: String!
+  logIndex: Int!
+
+  # Decoration details
+  bannyBodyId: BigInt!           # Banny being decorated
+  outfitIds: [BigInt!]!          # Outfit NFT IDs
+  backgroundId: BigInt           # Background NFT ID
+  tokenUri: String               # Updated token URI
+  tokenUriMetadata: JSON         # Parsed metadata
+
+  # Relations
+  bannyNft: NFT
+}
+```
+
+### CashOutTaxSnapshot Entity
+
+Historical cash-out tax rate snapshots.
+
+```graphql
+type CashOutTaxSnapshot {
+  chainId: Int!
+  projectId: Int!
+  suckerGroupId: String
+  version: Int!
+
+  # Snapshot period
+  start: BigInt!                 # Period start timestamp
+  duration: BigInt!              # Period duration
+  rulesetId: BigInt!             # Ruleset ID
+
+  # Tax rate
+  cashOutTax: Int!               # Tax rate (basis points)
+}
+```
+
+### ParticipantSnapshot Entity (GraphQL)
+
+Historical participant balance snapshots via GraphQL (alternative to REST endpoint).
+
+```graphql
+type ParticipantSnapshot {
+  chainId: Int!
+  projectId: Int!
+  suckerGroupId: String
+  version: Int!
+
+  # Snapshot point
+  block: Int!
+  timestamp: Int!
+
+  # Participant
+  address: String!
+
+  # Balances at snapshot
+  balance: BigInt!
+  creditBalance: BigInt!
+  erc20Balance: BigInt!
+  volume: BigInt!
+  volumeUsd: BigInt!
 }
 ```
 
@@ -529,6 +1482,556 @@ query ListNFTs($projectId: Int!, $chainId: Int!, $limit: Int!) {
 }
 ```
 
+### Get Unified Activity Feed
+
+The most powerful query for building activity feeds. Returns all event types in a single query.
+
+```graphql
+query GetActivityFeed($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  activityEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      id
+      timestamp
+      txHash
+      from
+      type                        # Discriminator for event type
+
+      # Include fields from each possible event type
+      payEvent {
+        amount
+        amountUsd
+        beneficiary
+        memo
+      }
+      cashOutTokensEvent {
+        cashOutCount
+        reclaimAmount
+        holder
+      }
+      mintNftEvent {
+        tierId
+        tokenId
+      }
+      sendPayoutsEvent {
+        amount
+        amountPaidOut
+        fee
+      }
+      borrowLoanEvent {
+        borrowAmount
+        collateral
+      }
+    }
+  }
+}
+```
+
+### Get Omnichain Activity Feed
+
+Query activity across all chains for a sucker group.
+
+```graphql
+query GetOmnichainActivity($suckerGroupId: String!, $limit: Int!) {
+  activityEvents(
+    where: { suckerGroupId: $suckerGroupId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      chainId
+      timestamp
+      type
+      txHash
+      from
+      payEvent { amount, memo }
+      cashOutTokensEvent { cashOutCount, reclaimAmount }
+    }
+  }
+}
+```
+
+### List Active Loans
+
+```graphql
+query ListLoans($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  loans(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "createdAt"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      id
+      borrowAmount
+      collateral
+      prepaidDuration
+      prepaidFeePercent
+      owner
+      beneficiary
+      createdAt
+    }
+    totalCount
+  }
+}
+```
+
+### Get Loan by ID
+
+```graphql
+query GetLoan($id: BigInt!) {
+  loan(id: $id) {
+    id
+    projectId
+    chainId
+    borrowAmount
+    collateral
+    sourceFeeAmount
+    prepaidDuration
+    prepaidFeePercent
+    beneficiary
+    owner
+    token
+    terminal
+    tokenUri
+    createdAt
+  }
+}
+```
+
+### Get Wallet Portfolio
+
+```graphql
+query GetWallet($address: String!) {
+  wallet(address: $address) {
+    address
+    volume
+    volumeUsd
+    lastPaidTimestamp
+    participants(limit: 100) {
+      items {
+        projectId
+        chainId
+        balance
+        volume
+      }
+    }
+    nfts(limit: 50) {
+      items {
+        projectId
+        chainId
+        tokenId
+        tierId
+      }
+    }
+  }
+}
+```
+
+### List NFT Tiers
+
+```graphql
+query ListNFTTiers($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  nftTiers(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "tierId"
+    orderDirection: "asc"
+    limit: $limit
+  ) {
+    items {
+      tierId
+      price
+      initialSupply
+      remainingSupply
+      category
+      votingUnits
+      resolvedUri
+      metadata
+      svg
+    }
+  }
+}
+```
+
+### Get NFT Hook Details
+
+```graphql
+query GetNFTHook($projectId: Int!, $chainId: Int!) {
+  nftHooks(
+    where: { projectId: $projectId, chainId: $chainId }
+    limit: 1
+  ) {
+    items {
+      address
+      name
+      symbol
+      nftTiers(limit: 100) {
+        items {
+          tierId
+          price
+          remainingSupply
+        }
+      }
+    }
+  }
+}
+```
+
+### Get Historical Project Snapshots
+
+```graphql
+query GetProjectHistory($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  projectMoments(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      block
+      timestamp
+      volume
+      volumeUsd
+      balance
+      trendingScore
+    }
+  }
+}
+```
+
+### Get Cross-Chain Bridge Transactions
+
+```graphql
+query GetSuckerTransactions($suckerGroupId: String!, $limit: Int!) {
+  suckerTransactions(
+    where: { suckerGroupId: $suckerGroupId }
+    orderBy: "createdAt"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      index
+      chainId
+      peerChainId
+      beneficiary
+      projectTokenCount
+      terminalTokenAmount
+      status
+      createdAt
+    }
+  }
+}
+```
+
+### List Payout Events
+
+```graphql
+query ListPayouts($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  sendPayoutsEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      caller
+      rulesetCycleNumber
+      amount
+      amountPaidOut
+      fee
+      netLeftoverPayoutAmount
+    }
+  }
+}
+```
+
+### List Allowance Usage
+
+```graphql
+query ListAllowanceUsage($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  useAllowanceEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      caller
+      beneficiary
+      amount
+      netAmount
+      rulesetCycleNumber
+    }
+  }
+}
+```
+
+### List Loan Events (Borrow/Repay/Liquidate)
+
+```graphql
+query ListBorrowEvents($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  borrowLoanEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      borrowAmount
+      collateral
+      prepaidDuration
+      beneficiary
+    }
+  }
+}
+
+query ListRepayEvents($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  repayLoanEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      loanId
+      repayBorrowAmount
+      collateralCountToReturn
+    }
+  }
+}
+
+query ListLiquidations($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  liquidateLoanEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      borrowAmount
+      collateral
+    }
+  }
+}
+```
+
+### List Token Burns
+
+```graphql
+query ListBurns($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  burnEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      from
+      amount
+      creditAmount
+      erc20Amount
+    }
+  }
+}
+```
+
+### List NFT Mints
+
+```graphql
+query ListNFTMints($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  mintNftEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      beneficiary
+      tierId
+      tokenId
+      totalAmountPaid
+    }
+  }
+}
+```
+
+### Get Permission Holders
+
+```graphql
+query ListPermissionHolders($projectId: Int!, $chainId: Int!) {
+  permissionHolders(
+    where: { projectId: $projectId, chainId: $chainId }
+    limit: 100
+  ) {
+    items {
+      account
+      operator
+      permissions
+      isRevnetOperator
+    }
+  }
+}
+```
+
+### List Project Creations
+
+```graphql
+query ListProjectCreations($chainId: Int!, $limit: Int!) {
+  projectCreateEvents(
+    where: { chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      projectId
+      caller
+      project {
+        name
+        handle
+        owner
+      }
+    }
+  }
+}
+```
+
+### List ERC20 Deployments
+
+```graphql
+query ListERC20Deployments($chainId: Int!, $limit: Int!) {
+  deployErc20Events(
+    where: { chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      projectId
+      name
+      symbol
+      token
+    }
+  }
+}
+```
+
+### Get Cash Out Tax History
+
+```graphql
+query GetCashOutTaxHistory($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  cashOutTaxSnapshots(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "start"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      start
+      duration
+      rulesetId
+      cashOutTax
+    }
+  }
+}
+```
+
+### Get Participant History (GraphQL Snapshots)
+
+```graphql
+query GetParticipantHistory(
+  $projectId: Int!,
+  $chainId: Int!,
+  $address: String!,
+  $limit: Int!
+) {
+  participantSnapshots(
+    where: { projectId: $projectId, chainId: $chainId, address: $address }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      block
+      timestamp
+      balance
+      creditBalance
+      erc20Balance
+      volume
+      volumeUsd
+    }
+  }
+}
+```
+
+### List Reserved Token Distributions
+
+```graphql
+query ListReservedDistributions($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  sendReservedTokensToSplitsEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      rulesetCycleNumber
+      tokenCount
+      leftoverAmount
+      owner
+    }
+  }
+}
+```
+
+### List Split Payouts
+
+```graphql
+query ListSplitPayouts($projectId: Int!, $chainId: Int!, $limit: Int!) {
+  sendPayoutToSplitEvents(
+    where: { projectId: $projectId, chainId: $chainId }
+    orderBy: "timestamp"
+    orderDirection: "desc"
+    limit: $limit
+  ) {
+    items {
+      timestamp
+      txHash
+      beneficiary
+      splitProjectId
+      amount
+      netAmount
+      percent
+    }
+  }
+}
+```
+
 ---
 
 ## Filtering
@@ -575,6 +2078,25 @@ orderDirection: "desc"      # "asc" or "desc"
 | PayEvent | `timestamp`, `amount` |
 | CashOutEvent | `timestamp`, `reclaimAmount` |
 | NFT | `createdAt`, `tokenId` |
+| ActivityEvent | `timestamp` |
+| Loan | `createdAt`, `borrowAmount`, `collateral` |
+| Wallet | `volume`, `volumeUsd`, `lastPaidTimestamp` |
+| NFTTier | `tierId`, `price`, `createdAt` |
+| ProjectMoment | `timestamp`, `block` |
+| SuckerTransaction | `createdAt` |
+| SendPayoutsEvent | `timestamp`, `amount` |
+| UseAllowanceEvent | `timestamp`, `amount` |
+| BorrowLoanEvent | `timestamp`, `borrowAmount` |
+| RepayLoanEvent | `timestamp`, `repayBorrowAmount` |
+| LiquidateLoanEvent | `timestamp` |
+| BurnEvent | `timestamp`, `amount` |
+| MintTokensEvent | `timestamp`, `tokenCount` |
+| MintNftEvent | `timestamp`, `tokenId` |
+| DeployErc20Event | `timestamp` |
+| ProjectCreateEvent | `timestamp` |
+| SendPayoutToSplitEvent | `timestamp`, `amount` |
+| CashOutTaxSnapshot | `start` |
+| ParticipantSnapshot | `timestamp`, `block` |
 
 ---
 
@@ -835,6 +2357,154 @@ async function getSnapshot(suckerGroupId, timestamp) {
   });
 
   return await response.json();
+}
+
+/**
+ * Get unified activity feed (all event types)
+ */
+async function getActivityFeed(projectId, chainId, limit = 50) {
+  const data = await query(`
+    query($projectId: Int!, $chainId: Int!, $limit: Int!) {
+      activityEvents(
+        where: { projectId: $projectId, chainId: $chainId }
+        orderBy: "timestamp"
+        orderDirection: "desc"
+        limit: $limit
+      ) {
+        items {
+          id
+          timestamp
+          txHash
+          from
+          type
+          payEvent { amount, amountUsd, beneficiary, memo }
+          cashOutTokensEvent { cashOutCount, reclaimAmount, holder }
+          mintNftEvent { tierId, tokenId }
+          sendPayoutsEvent { amount, amountPaidOut, fee }
+          borrowLoanEvent { borrowAmount, collateral }
+        }
+      }
+    }
+  `, { projectId, chainId, limit });
+
+  return data.activityEvents.items;
+}
+
+/**
+ * Get active loans for a project
+ */
+async function getLoans(projectId, chainId, limit = 100) {
+  const data = await query(`
+    query($projectId: Int!, $chainId: Int!, $limit: Int!) {
+      loans(
+        where: { projectId: $projectId, chainId: $chainId }
+        orderBy: "createdAt"
+        orderDirection: "desc"
+        limit: $limit
+      ) {
+        items {
+          id
+          borrowAmount
+          collateral
+          prepaidDuration
+          prepaidFeePercent
+          owner
+          beneficiary
+          createdAt
+        }
+        totalCount
+      }
+    }
+  `, { projectId, chainId, limit });
+
+  return {
+    loans: data.loans.items,
+    total: data.loans.totalCount
+  };
+}
+
+/**
+ * Get wallet portfolio across all projects
+ */
+async function getWalletPortfolio(address) {
+  const data = await query(`
+    query($address: String!) {
+      wallet(address: $address) {
+        address
+        volume
+        volumeUsd
+        lastPaidTimestamp
+        participants(limit: 100) {
+          items {
+            projectId
+            chainId
+            balance
+            volume
+            project { name, handle }
+          }
+        }
+      }
+    }
+  `, { address });
+
+  return data.wallet;
+}
+
+/**
+ * Get NFT tier details with metadata
+ */
+async function getNFTTiers(projectId, chainId) {
+  const data = await query(`
+    query($projectId: Int!, $chainId: Int!) {
+      nftTiers(
+        where: { projectId: $projectId, chainId: $chainId }
+        orderBy: "tierId"
+        orderDirection: "asc"
+        limit: 100
+      ) {
+        items {
+          tierId
+          price
+          initialSupply
+          remainingSupply
+          category
+          votingUnits
+          resolvedUri
+          metadata
+          svg
+        }
+      }
+    }
+  `, { projectId, chainId });
+
+  return data.nftTiers.items;
+}
+
+/**
+ * Get historical project snapshots for charting
+ */
+async function getProjectHistory(projectId, chainId, limit = 100) {
+  const data = await query(`
+    query($projectId: Int!, $chainId: Int!, $limit: Int!) {
+      projectMoments(
+        where: { projectId: $projectId, chainId: $chainId }
+        orderBy: "timestamp"
+        orderDirection: "desc"
+        limit: $limit
+      ) {
+        items {
+          block
+          timestamp
+          volume
+          volumeUsd
+          balance
+          trendingScore
+        }
+      }
+    }
+  `, { projectId, chainId, limit });
+
+  return data.projectMoments.items;
 }
 
 // Example usage
@@ -1159,11 +2829,16 @@ formatAmount('1000000000000000000', 18, 1)  // "1.0000 ETH"
 ## Use Cases
 
 - **Project dashboards** - Display stats, activity, holders
+- **Unified activity feeds** - Use `activityEvents` for all-in-one activity streams
 - **Governance snapshots** - Get token balances at specific timestamps
-- **Analytics** - Track trends, volumes, contributor growth
-- **Portfolio tracking** - Show user's positions across projects
-- **Omnichain aggregation** - Unified view of cross-chain projects
+- **Analytics** - Track trends, volumes, contributor growth via `projectMoments`
+- **Portfolio tracking** - Use `wallet` query for user positions across all projects
+- **Omnichain aggregation** - Unified view via `suckerGroup` and `suckerGroupMoments`
 - **Airdrops** - Generate recipient lists from holder data
+- **Loan dashboards** - Track RevLoans borrowing, repayments, liquidations
+- **NFT galleries** - Full tier metadata via `nftTiers` including SVGs and pricing
+- **Cross-chain tracking** - Monitor token bridging via `suckerTransactions`
+- **Treasury management** - Track payouts and allowance usage
 
 ---
 
@@ -1172,3 +2847,6 @@ formatAmount('1000000000000000000', 18, 1)  // "1.0000 ETH"
 - `/jb-relayr` - Execute multi-chain transactions
 - `/jb-omnichain-ui` - Build UIs with Bendystraw data
 - `/jb-query` - Direct on-chain queries via cast/ethers
+- `/jb-revloans` - RevLoans protocol integration
+- `/jb-loan-queries` - Loan-specific query patterns
+- `/jb-nft-gallery-ui` - Build NFT galleries with tier data
