@@ -660,8 +660,32 @@ async function deployAndWaitForIndex(walletClient, chains, calldata) {
 
 ---
 
+---
+
+## Important Limitation: Aggregate Payout Limits
+
+**Payout limits in omnichain projects are per-chain, not aggregate.**
+
+If you set a 10 ETH payout limit on a 4-chain project, you could potentially pay out 40 ETH total (10 ETH × 4 chains), not 10 ETH total.
+
+This is a fundamental constraint of cross-chain systems - there's no atomic way to enforce aggregate limits across chains.
+
+**See `/jb-omnichain-payout-limits` for:**
+- Why this limitation exists
+- Practical approaches (monitoring, cron automation, oracles)
+- Tradeoffs for each approach
+- Recommendations by use case
+
+**Quick guidance:**
+- Soft caps → Set per-chain limits that sum to ~80% of goal
+- Need automation → Use cron + Relayr to pause when threshold approached
+- Hard compliance limits → Consider single-chain only, or build oracle infrastructure
+
+---
+
 ## Related Skills
 
+- `/jb-omnichain-payout-limits` - Aggregate limit constraints and solutions
 - `/jb-suckers` - Core sucker mechanics (prepare/toRemote/claim flow)
 - `/jb-v5-currency-types` - Currency handling for cross-chain consistency
 - `/jb-relayr` - Complete Relayr API reference
