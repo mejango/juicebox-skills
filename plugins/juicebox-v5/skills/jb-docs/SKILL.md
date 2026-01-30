@@ -1,30 +1,74 @@
 ---
 name: jb-docs
-description: Query Juicebox V5 documentation programmatically via the juice-docs MCP server. Get latest contract addresses, API specs, and protocol documentation.
+description: Query Juicebox V5 documentation via the REST API at docs.juicebox.money. Search docs, get contract addresses, and find implementation guides.
 ---
 
 # Juicebox V5 Documentation Lookup
 
-Query Juicebox documentation via the MCP server at `https://docs.juicebox.money/api/mcp`.
+Query Juicebox documentation via the REST API at `https://docs.juicebox.money/api/mcp/`.
 
-## MCP Server Configuration
+## REST API Endpoints
 
-Add the Juicebox docs MCP server to your Claude configuration:
+### Search Documentation
+```bash
+POST https://docs.juicebox.money/api/mcp/search
+Content-Type: application/json
 
-```json
 {
-  "mcpServers": {
-    "juicebox-docs": {
-      "type": "http",
-      "url": "https://docs.juicebox.money/api/mcp"
-    }
-  }
+  "query": "pay hook",
+  "category": "all",    # all, developer, user, dao, ecosystem
+  "version": "v5",      # v3, v4, v5, all
+  "limit": 10
 }
 ```
 
-## Available Documentation
+### Get Specific Document
+```bash
+POST https://docs.juicebox.money/api/mcp/get-doc
+Content-Type: application/json
 
-The MCP server provides access to:
+{
+  "path": "dev/v5/learn/overview.md"
+}
+```
+
+### List Documents by Category
+```bash
+GET https://docs.juicebox.money/api/mcp/list-docs?category=developer&version=v5
+```
+
+### Get Documentation Structure
+```bash
+GET https://docs.juicebox.money/api/mcp/structure
+```
+
+## Using WebFetch
+
+Use WebFetch to query the API or fetch documentation pages directly:
+
+### Search for documentation
+```
+WebFetch https://docs.juicebox.money/dev/v5/build/pay-hook/
+"Extract how to implement a pay hook"
+```
+
+### Fetch specific pages
+```
+WebFetch https://docs.juicebox.money/dev/v5/learn/overview/
+"Summarize the V5 protocol overview"
+```
+
+## Documentation Structure
+
+```
+/dev/                    # Developer documentation root
+/dev/v5/learn/           # Conceptual documentation
+/dev/v5/build/           # Implementation guides
+/dev/v5/api/             # API reference
+/dev/v5/api/core/        # Core contract docs
+```
+
+## Available Documentation
 
 ### Protocol Documentation
 - **Learn**: Conceptual guides and protocol overview
@@ -41,79 +85,38 @@ The MCP server provides access to:
 - Struct documentation
 - Event signatures
 
-## Direct API Access
-
-If MCP is not available, query the docs directly:
-
-### Base URL
-```
-https://docs.juicebox.money
-```
-
-### Documentation Structure
-```
-/dev/                    # Developer documentation root
-/dev/learn/              # Conceptual documentation
-/dev/build/              # Implementation guides
-/dev/api/                # API reference
-/dev/api/contracts/      # Contract documentation
-/dev/api/interfaces/     # Interface specs
-```
-
 ## Common Documentation Queries
 
 ### "What's the JBController address on mainnet?"
-Look up contract addresses in the deployment documentation or use the MCP server.
+Use the /references folder for offline contract addresses, or fetch from docs.
 
 ### "How do I implement a pay hook?"
-Reference the Build section for hook implementation guides.
+```
+WebFetch https://docs.juicebox.money/dev/v5/build/pay-hook/
+"Extract implementation steps for pay hooks"
+```
 
 ### "What events does JBMultiTerminal emit?"
-Check the API section for contract event documentation.
-
-### "What's the latest V5 protocol changes?"
-Review the Learn section for protocol overview and changelog.
-
-## Using WebFetch for Docs
-
-If MCP is not configured, use WebFetch to query docs:
-
 ```
-WebFetch https://docs.juicebox.money/dev/api/contracts/jbcontroller/
-"Extract the contract address and main functions"
+WebFetch https://docs.juicebox.money/dev/v5/api/core/jbmultiterminal/
+"List all events emitted by JBMultiTerminal"
 ```
 
-## Documentation Resources
+## Official Resources
 
-### Official Sources
 - **Docs**: https://docs.juicebox.money
 - **GitHub**: https://github.com/jbx-protocol
 - **V5 Core**: https://github.com/Bananapus/nana-core-v5
-
-### Reference Implementations
 - **Buyback Hook**: https://github.com/Bananapus/nana-buyback-hook-v5
 - **721 Hook**: https://github.com/Bananapus/nana-721-hook-v5
 - **Revnet**: https://github.com/rev-net/revnet-core-v5
 
-## MCP Tools
-
-When connected to the juice-docs MCP server, use these tools:
-
-### search_docs
-Search documentation by keyword.
-
-### get_contract_address
-Get deployed contract address for a specific network.
-
-### get_interface
-Get interface definition for a contract.
-
 ## Generation Guidelines
 
-1. **Check MCP availability** first
-2. **Fall back to WebFetch** if MCP not configured
+1. **Use WebFetch** to query documentation pages directly
+2. **Reference the /references folder** for offline interface/struct definitions
 3. **Provide direct links** to relevant documentation
-4. **Reference the /references folder** for offline interface/struct definitions
+4. **Default to V5** unless user explicitly asks about older versions
 
 ## Example Prompts
 
