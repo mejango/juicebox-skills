@@ -1,11 +1,12 @@
 ---
 name: jb-patterns
 description: |
-  Common Juicebox V5 design patterns for vesting, NFT treasuries, terminal wrappers, and governance-minimal
-  configurations. Use when: (1) need treasury vesting without custom contracts, (2) building NFT-gated
-  redemptions, (3) extending revnet functionality via pay wrappers, (4) implementing custom ERC20 tokens,
-  (5) deciding between native mechanics vs custom code. Covers 10 patterns including terminal wrapper
-  for dynamic pay-time splits and token interception. Golden rule: prefer configuration over custom contracts.
+  Common Juicebox V5 design patterns for vesting, NFT treasuries, terminal wrappers, yield integration, and
+  governance-minimal configurations. Use when: (1) need treasury vesting without custom contracts, (2) building
+  NFT-gated redemptions, (3) extending revnet functionality via pay wrappers, (4) implementing custom ERC20
+  tokens, (5) integrating yield protocols like Aave, (6) deciding between native mechanics vs custom code.
+  Covers 11 patterns including terminal wrapper for dynamic pay-time splits, yield-generating hooks for
+  Aave/DeFi integration, and token interception. Golden rule: prefer configuration over custom contracts.
 ---
 
 # Juicebox V5 Design Patterns
@@ -1943,6 +1944,223 @@ PERMISSIONS.setPermissionsFor(projectOwner, permissions);
 
 ---
 
+## Pattern 11: Yield-Generating Hook (Aave Integration)
+
+**Use case**: Deposit contributions to yield protocols (Aave, Compound, etc.), route yield to project balance while allowing principal cash-outs
+
+**Solution**: Combined pay/cash-out hook that deposits to Aave, tracks principal separately from yield
+
+### Why This Pattern?
+
+Create "YeeHaw" style funding where:
+- Investor contributions earn yield via DeFi
+- Investors can always cash out their principal
+- Yield flows to project balance for team operations
+- Clear separation between protected principal and operational yield
+
+### Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Payment Flow                                                    │
+│  User pays → Hook deposits to Aave → Principal tracked           │
+│                                                                  │
+│  Yield Flow                                                      │
+│  Aave earns yield → Hook withdraws → addToBalanceOf()           │
+│                     → Appears in project balance                 │
+│                     → Team uses sendPayoutsOf()                  │
+│                                                                  │
+│  Cash Out Flow                                                   │
+│  User cashes out → Hook withdraws from Aave → Direct to user    │
+│                    (bypasses terminal, separate from yield)      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Core Hook Structure
+
+```solidity
+contract YieldHook is IJBPayHook, IJBCashOutHook, IJBRulesetDataHook {
+    IPool public immutable AAVE_POOL;
+    IJBTerminal public immutable TERMINAL;
+
+    mapping(uint256 projectId => uint256) public principalDeposited;
+    mapping(uint256 projectId => uint256) public principalWithdrawn;
+    mapping(uint256 projectId => uint256) public yieldWithdrawn;
+
+    struct ProjectConfig {
+        address principalToken;    // USDC, ETH, etc.
+        address aToken;           // Corresponding aToken
+        uint256 yieldThreshold;   // Min yield before transfer
+        bool active;
+    }
+}
+```
+
+### Data Hook: Route Payments to Hook
+
+```solidity
+function beforePayRecordedWith(
+    JBBeforePayRecordedContext calldata context
+) external view override returns (
+    uint256 weight,
+    JBPayHookSpecification[] memory hookSpecifications
+) {
+    weight = context.weight;
+
+    // Forward ALL payment funds to this hook for Aave deposit
+    hookSpecifications = new JBPayHookSpecification[](1);
+    hookSpecifications[0] = JBPayHookSpecification({
+        hook: IJBPayHook(address(this)),
+        amount: context.amount.value,  // Must be explicit, not 0
+        metadata: ""
+    });
+}
+```
+
+### Pay Hook: Deposit to Aave
+
+```solidity
+function afterPayRecordedWith(
+    JBAfterPayRecordedContext calldata context
+) external payable override {
+    ProjectConfig storage config = projectConfigs[context.projectId];
+    uint256 amount = context.forwardedAmount.value;
+
+    // Deposit to Aave
+    IERC20(config.principalToken).forceApprove(address(AAVE_POOL), amount);
+    AAVE_POOL.supply(config.principalToken, amount, address(this), 0);
+
+    // Track principal
+    principalDeposited[context.projectId] += amount;
+
+    // Check if yield should be transferred
+    _maybeTransferYield(context.projectId);
+}
+```
+
+### Cash Out Hook: Principal Withdrawal
+
+```solidity
+function beforeCashOutRecordedWith(
+    JBBeforeCashOutRecordedContext calldata context
+) external view override returns (
+    uint256 cashOutTaxRate,
+    uint256 cashOutCount,
+    uint256 totalSupply,
+    JBCashOutHookSpecification[] memory hookSpecifications
+) {
+    // Calculate user's share of principal
+    uint256 availablePrincipal = principalDeposited[context.projectId]
+                                - principalWithdrawn[context.projectId];
+    uint256 userShare = (availablePrincipal * context.cashOutCount) / context.totalSupply;
+
+    cashOutTaxRate = 0;  // No tax on principal
+    cashOutCount = context.cashOutCount;
+    totalSupply = context.totalSupply;
+
+    // Route to this hook for Aave withdrawal
+    hookSpecifications = new JBCashOutHookSpecification[](1);
+    hookSpecifications[0] = JBCashOutHookSpecification({
+        hook: IJBCashOutHook(address(this)),
+        amount: userShare,
+        metadata: ""
+    });
+}
+
+function afterCashOutRecordedWith(
+    JBAfterCashOutRecordedContext calldata context
+) external payable override {
+    ProjectConfig storage config = projectConfigs[context.projectId];
+    uint256 amount = context.forwardedAmount.value;
+
+    // Withdraw principal from Aave directly to user
+    AAVE_POOL.withdraw(config.principalToken, amount, context.beneficiary);
+    principalWithdrawn[context.projectId] += amount;
+}
+```
+
+### Yield Management: Route to Project Balance
+
+```solidity
+function _maybeTransferYield(uint256 projectId) internal {
+    ProjectConfig storage config = projectConfigs[projectId];
+    uint256 availableYield = _calculateAvailableYield(projectId);
+
+    if (availableYield >= config.yieldThreshold) {
+        // Withdraw yield from Aave to this contract
+        uint256 withdrawn = AAVE_POOL.withdraw(
+            config.principalToken,
+            availableYield,
+            address(this)
+        );
+
+        // Approve terminal
+        IERC20(config.principalToken).forceApprove(address(TERMINAL), withdrawn);
+
+        // Add to project balance (team can then use sendPayoutsOf)
+        TERMINAL.addToBalanceOf(
+            projectId,
+            config.principalToken,
+            withdrawn,
+            false,  // shouldReturnHeldFees
+            "",     // memo
+            ""      // metadata
+        );
+
+        yieldWithdrawn[projectId] += withdrawn;
+    }
+}
+
+function _calculateAvailableYield(uint256 projectId) internal view returns (uint256) {
+    ProjectConfig storage config = projectConfigs[projectId];
+    uint256 totalBalance = IERC20(config.aToken).balanceOf(address(this));
+    uint256 principalRemaining = principalDeposited[projectId] - principalWithdrawn[projectId];
+
+    if (totalBalance > principalRemaining + yieldWithdrawn[projectId]) {
+        return totalBalance - principalRemaining - yieldWithdrawn[projectId];
+    }
+    return 0;
+}
+```
+
+### Project Configuration
+
+```solidity
+// Ruleset must enable data hooks
+JBRulesetMetadata({
+    useDataHookForPay: true,      // Enable beforePay/afterPay
+    useDataHookForCashOut: true,  // Enable beforeCashOut/afterCashOut
+    dataHook: address(yieldHook), // Your hook address
+    // ...
+});
+```
+
+### When to Use
+
+| Scenario | Fits Pattern? |
+|----------|---------------|
+| Yield-backed funding | ✅ |
+| Aave/Compound integration | ✅ |
+| Principal-protected investing | ✅ |
+| Staking rewards integration | ✅ (adapt for staking protocol) |
+| Standard fundraising | ❌ Use native terminals |
+| NFT-based funding | ❌ Use 721 hook |
+
+### Key Implementation Notes
+
+1. **amount in JBPayHookSpecification**: Must be `context.amount.value` to forward funds, not 0
+2. **Yield routing**: Use `addToBalanceOf()` to add yield to project balance
+3. **Principal tracking**: Separate tracking for deposits vs withdrawals
+4. **Emergency fallback**: Include direct withdrawal function for emergencies
+5. **Gas optimization**: Use yield threshold to batch transfers
+
+### Reference
+
+- YeeHaw concept: Yield-backed crowdfunding
+- Uses pattern from jb-yield-to-balance-pattern skill
+
+---
+
 ## Reference Implementations
 
 - **Vesting + NFT**: Drip x Juicebox (see `/jb-project` for deployment script)
@@ -1950,6 +2168,7 @@ PERMISSIONS.setPermissionsFor(projectOwner, permissions);
 - **NFT Rewards**: Any project using `JB721TiersHookProjectDeployer`
 - **Custom NFT Content**: [banny-retail-v5](https://github.com/mejango/banny-retail-v5) - composable SVG NFTs with outfit decoration
 - **Prediction Games**: [defifa-collection-deployer-v5](https://github.com/BallKidz/defifa-collection-deployer-v5) - dynamic cash out weights with on-chain governance
+- **Yield-Generating Hook**: YeeHaw concept - Aave integration for yield-backed funding
 
 ## Related Skills
 
