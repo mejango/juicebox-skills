@@ -1,11 +1,39 @@
 ---
 name: jb-docs
-description: Query Juicebox V5 documentation via the REST API at docs.juicebox.money. Search docs, get contract addresses, and find implementation guides.
+description: Query Juicebox V5 documentation via REST API or MCP server. Search docs, get contract addresses, and find implementation guides.
 ---
 
 # Juicebox V5 Documentation Lookup
 
-Query Juicebox documentation via the REST API at `https://docs.juicebox.money/api/mcp/`.
+Query Juicebox documentation via the REST API or MCP server.
+
+## MCP Server (Recommended)
+
+Add to your Claude Code or MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "juice-docs": {
+      "type": "http",
+      "url": "https://docs.juicebox.money/api/mcp-sse"
+    }
+  }
+}
+```
+
+### MCP Tools Available
+- `search_docs` - Search documentation by keyword
+- `get_doc` - Get full document content by path
+- `list_docs_by_category` - List docs in a category
+- `get_doc_structure` - Get documentation structure
+
+### Direct MCP Call Example
+```bash
+curl -X POST https://docs.juicebox.money/api/mcp-sse \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"search_docs","arguments":{"query":"pay hook"}}}'
+```
 
 ## REST API Endpoints
 
