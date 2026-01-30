@@ -24,6 +24,10 @@ A comprehensive Claude Code skills library for Juicebox V5 protocol development.
 | Decode a transaction | `/jb-decode` |
 | Build a project explorer UI | `/jb-explorer-ui` |
 | Deploy a custom hook | `/jb-hook-deploy-ui` |
+| Calculate cash out amounts | `/jb-cash-out-curve` |
+| Handle multi-currency payments | `/jb-multi-currency` |
+| Work with revnet loans | `/jb-revloans` |
+| Bridge tokens cross-chain | `/jb-suckers` |
 
 ---
 
@@ -57,6 +61,8 @@ Read data and decode transactions.
 | Query | `/jb-query` | Query project state from the blockchain |
 | Decode | `/jb-decode` | Decode Juicebox transaction calldata |
 | Docs | `/jb-docs` | Query Juicebox documentation via MCP |
+| Fund Access Limits | `/jb-fund-access-limits` | Query payout limits and surplus allowances |
+| Loan Queries | `/jb-loan-queries` | Query REVLoans data via Bendystraw |
 
 ### 📚 Reference
 
@@ -66,6 +72,8 @@ Deep protocol knowledge and patterns.
 |-------|---------|-------------|
 | V5 API | `/jb-v5-api` | Function signatures and parameters |
 | V5 Implementation | `/jb-v5-impl` | Internal mechanics and edge cases |
+| V5 Currency Types | `/jb-v5-currency-types` | Real-world vs token-derived currencies |
+| V5/V5.1 Contracts | `/jb-v5-v51-contracts` | Contract version separation rules |
 | Patterns | `/jb-patterns` | Common integration patterns |
 | Simplify | `/jb-simplify` | Simplify complex JB concepts |
 
@@ -78,6 +86,39 @@ Cross-chain deployment and indexing.
 | Relayr | `/jb-relayr` | Multi-chain transaction relay API |
 | Bendystraw | `/jb-bendystraw` | GraphQL indexer for JB events |
 | Omnichain UI | `/jb-omnichain-ui` | Multi-chain deployment interfaces |
+| Suckers | `/jb-suckers` | Cross-chain token bridging |
+| Omnichain Payout Limits | `/jb-omnichain-payout-limits` | Per-chain vs aggregate limit constraints |
+
+### 💰 Protocol Economics
+
+Fee structures, bonding curves, and economic calculations.
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| Cash Out Curve | `/jb-cash-out-curve` | Bonding curve redemption calculations |
+| Protocol Fees | `/jb-protocol-fees` | NANA, Revnet, and loan fee structures |
+| JBX Fee Flows | `/jbx-fee-flows` | How fees generate value for JBX holders |
+
+### 💱 Multi-Currency & Terminals
+
+Currency handling and terminal interactions.
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| Multi-Currency | `/jb-multi-currency` | ETH vs USDC accounting and currency codes |
+| Terminal Selection | `/jb-terminal-selection` | Dynamic terminal selection for payments |
+| Terminal Wrapper | `/jb-terminal-wrapper` | Extend terminal functionality |
+| Permit2 Metadata | `/jb-permit2-metadata` | Gasless ERC20 payments and metadata encoding |
+
+### 🔄 Revnets
+
+Autonomous treasury mechanics and tooling.
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| REVLoans | `/jb-revloans` | Loan borrow/repay/refinance mechanics |
+| Revnet Economics | `/revnet-economics` | Academic findings and economic thresholds |
+| Revnet Modeler | `/revnet-modeler` | Simulation and parameter planning |
 
 ### 🖥️ UI Templates
 
@@ -191,28 +232,44 @@ juicebox-skills/
 ├── plugins/
 │   └── juicebox-v5/
 │       ├── skills/
-│       │   ├── jb-pay-hook/
-│       │   ├── jb-cash-out-hook/
-│       │   ├── jb-split-hook/
-│       │   ├── jb-project/
-│       │   ├── jb-ruleset/
-│       │   ├── jb-query/
-│       │   ├── jb-decode/
-│       │   ├── jb-docs/
-│       │   ├── jb-v5-api/
-│       │   ├── jb-v5-impl/
-│       │   ├── jb-patterns/
-│       │   ├── jb-simplify/
-│       │   ├── jb-relayr/
 │       │   ├── jb-bendystraw/
-│       │   ├── jb-omnichain-ui/
-│       │   ├── jb-explorer-ui/
-│       │   ├── jb-event-explorer-ui/
-│       │   ├── jb-ruleset-timeline-ui/
-│       │   ├── jb-nft-gallery-ui/
-│       │   ├── jb-hook-deploy-ui/
+│       │   ├── jb-cash-out-curve/
+│       │   ├── jb-cash-out-hook/
+│       │   ├── jb-decode/
 │       │   ├── jb-deploy-ui/
-│       │   └── jb-interact-ui/
+│       │   ├── jb-docs/
+│       │   ├── jb-event-explorer-ui/
+│       │   ├── jb-explorer-ui/
+│       │   ├── jb-fund-access-limits/
+│       │   ├── jb-hook-deploy-ui/
+│       │   ├── jb-interact-ui/
+│       │   ├── jb-loan-queries/
+│       │   ├── jb-multi-currency/
+│       │   ├── jb-nft-gallery-ui/
+│       │   ├── jb-omnichain-payout-limits/
+│       │   ├── jb-omnichain-ui/
+│       │   ├── jb-patterns/
+│       │   ├── jb-pay-hook/
+│       │   ├── jb-permit2-metadata/
+│       │   ├── jb-project/
+│       │   ├── jb-protocol-fees/
+│       │   ├── jb-query/
+│       │   ├── jb-relayr/
+│       │   ├── jb-revloans/
+│       │   ├── jb-ruleset/
+│       │   ├── jb-ruleset-timeline-ui/
+│       │   ├── jb-simplify/
+│       │   ├── jb-split-hook/
+│       │   ├── jb-suckers/
+│       │   ├── jb-terminal-selection/
+│       │   ├── jb-terminal-wrapper/
+│       │   ├── jb-v5-api/
+│       │   ├── jb-v5-currency-types/
+│       │   ├── jb-v5-impl/
+│       │   ├── jb-v5-v51-contracts/
+│       │   ├── jbx-fee-flows/
+│       │   ├── revnet-economics/
+│       │   └── revnet-modeler/
 │       └── references/
 │           ├── v5-interfaces.md
 │           ├── v5-structs.md
