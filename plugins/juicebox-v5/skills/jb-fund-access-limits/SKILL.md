@@ -84,15 +84,25 @@ const correctConfigUSDC = {
 }
 ```
 
-**When to use unlimited payouts:**
-- User says they will "manage" or "control" the funds
-- Donation/fundraising projects where owner needs to withdraw
-- Any project where payouts should not be restricted
+**When to use payout limits:**
+- User wants to withdraw funds that are RESERVED (not available for cash outs)
+- Donation/fundraising projects where owner needs guaranteed access
+- Payout limits reset each ruleset cycle - good for recurring distributions
 
-**When to use zero/specific limits:**
+**When to use surplus allowance (owner access + cash outs both available):**
+- Funds should be accessible to owner BUT ALSO available for cash outs
+- Surplus allowance taps into the SAME pool supporters can cash out from
+- Until owner actually uses the allowance, supporters can still cash out the full balance
+- One-time per ruleset (doesn't reset each cycle)
+
+**Key difference:**
+- Payout limits REDUCE cash out value (reserved funds aren't surplus)
+- Surplus allowance PRESERVES cash out value until owner uses it
+- **Both owner and supporters share access to surplus** - first come, first served
+
+**When to use zero payouts + zero allowance:**
 - Revnets (use surplus allowance for loans instead)
-- Projects with predefined payout schedules
-- Projects where funds should be locked
+- Projects where funds should be locked for supporter redemption only
 
 ### 1. Query with Multiple Tokens
 
