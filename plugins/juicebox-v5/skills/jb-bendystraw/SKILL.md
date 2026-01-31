@@ -2640,15 +2640,46 @@ app.post('/api/bendystraw', async (req, res) => {
 
 ## Gotchas & Common Pitfalls
 
-### V4 vs V5 Address Confusion
+### V4 vs V5 Protocol Confusion
 
-**CRITICAL:** V4 and V5 use completely different contract addresses. Never mix them.
+**CRITICAL:** V4 and V5 are completely different protocols with different contract addresses.
+Project #1 on V4 is NOT the same as Project #1 on V5. Never mix V4 and V5 addresses.
 
-| Contract | V4 Address | V5 Address |
-|----------|------------|------------|
-| JBTokens | `0xA59e9F424901fB9DBD8913a9A32A081F9425bf36` | `0x4d0edd347fb1fa21589c1e109b3474924be87636` |
+### V5.0 vs V5.1 Contract Confusion
 
-If you use a V4 address with V5 projects (or vice versa), calls will fail silently or return wrong data. Always verify you're using the correct version's addresses.
+**CRITICAL:** Within V5, there are two contract versions: V5.0 and V5.1. Contracts that have
+both versions MUST NOT be mixed. A project using JBController5_1 MUST use JBMultiTerminal5_1.
+
+**Shared contracts (work with both V5.0 and V5.1):**
+
+| Contract | Address |
+|----------|---------|
+| JBProjects | `0x885f707efa18d2cb12f05a3a8eba6b4b26c8c1d4` |
+| JBTokens | `0x4d0edd347fb1fa21589c1e109b3474924be87636` |
+| JBDirectory | `0x0061e516886a0540f63157f112c0588ee0651dcf` |
+| JBSplits | `0x7160a322fea44945a6ef9adfd65c322258df3c5e` |
+
+**V5.0 contracts (for revnets and older projects):**
+
+| Contract | Address |
+|----------|---------|
+| JBController | `0x27da30646502e2f642be5281322ae8c394f7668a` |
+| JBMultiTerminal | `0x2db6d704058e552defe415753465df8df0361846` |
+| JBRulesets | `0x6292281d69c3593fcf6ea074e5797341476ab428` |
+
+**V5.1 contracts (for new projects):**
+
+| Contract | Address |
+|----------|---------|
+| JBController5_1 | `0xf3cc99b11bd73a2e3b8815fb85fe0381b29987e1` |
+| JBMultiTerminal5_1 | `0x52869db3d61dde1e391967f2ce5039ad0ecd371c` |
+| JBRulesets5_1 | `0xd4257005ca8d27bbe11f356453b0e4692414b056` |
+
+**Determining project version:** Query `JBDirectory.controllerOf(projectId)` and compare:
+- `0x27da30646502e2f642be5281322ae8c394f7668a` = V5.0 (use JBMultiTerminal, JBRulesets)
+- `0xf3cc99b11bd73a2e3b8815fb85fe0381b29987e1` = V5.1 (use JBMultiTerminal5_1, JBRulesets5_1)
+
+See `/jb-v5-v51-contracts` for complete reference and code patterns.
 
 ### Token Symbol Confusion
 
