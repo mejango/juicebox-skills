@@ -131,6 +131,62 @@ Reference: **revnet-core-v5** (REVDeployer)
 - **nana-721-hook-v5**: https://github.com/Bananapus/nana-721-hook-v5
 - **revnet-core-v5**: https://github.com/rev-net/revnet-core-v5
 
+## Fund Forwarding: The `amount` Parameter
+
+**Critical**: The `amount` field in `JBPayHookSpecification` controls how much of the payment gets forwarded to the hook.
+
+| Value | Behavior |
+|-------|----------|
+| `amount: 0` | Funds stay in terminal, hook called but receives nothing |
+| `amount: context.amount.value` | All funds forwarded to hook |
+
+Both are valid depending on what the hook needs to do.
+
+### When hook needs to receive funds (e.g., deposit to Aave):
+
+```solidity
+function beforePayRecordedWith(
+    JBBeforePayRecordedContext calldata context
+) external view override returns (
+    uint256 weight,
+    JBPayHookSpecification[] memory hookSpecifications
+) {
+    weight = context.weight;
+
+    hookSpecifications = new JBPayHookSpecification[](1);
+    hookSpecifications[0] = JBPayHookSpecification({
+        hook: IJBPayHook(address(this)),
+        amount: context.amount.value,  // Forward funds to hook
+        metadata: ""
+    });
+}
+```
+
+### When hook just needs notification (funds stay in Juicebox):
+
+```solidity
+// Many hooks work this way - react to payments but don't need the funds
+hookSpecifications[0] = JBPayHookSpecification({
+    hook: IJBPayHook(address(this)),
+    amount: 0,  // Funds stay in terminal, hook just gets called
+    metadata: ""
+});
+```
+
+### Verification
+
+After payment, check:
+1. `afterPayRecordedWith` is called
+2. `context.forwardedAmount.value` equals expected amount
+3. Hook contract receives the expected tokens/ETH
+
+**Notes:**
+- For partial forwarding, calculate the exact amount for each hook
+- Multiple hooks can receive portions (amounts should sum correctly)
+- `JBCashOutHookSpecification` follows the same pattern
+
+---
+
 ## Output Format
 
 Generate:

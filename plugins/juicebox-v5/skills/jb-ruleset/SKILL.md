@@ -284,6 +284,69 @@ contract QueueRuleset is Script {
 - "Add a 3-day approval delay for ruleset changes"
 - "Configure splits to send 30% to a DAO treasury"
 
+## Percentage Field Scales
+
+**Critical**: Juicebox V5 uses different scales for percentage fields depending on the context.
+
+### launchProject metadata fields (uint16, scale 10000 = 100%)
+
+| Field | Type | Scale | 30% Example |
+|-------|------|-------|-------------|
+| `reservedPercent` | uint16 | 10000 = 100% | 3000 |
+| `cashOutTaxRate` | uint16 | 10000 = 100% | 3000 |
+
+```json
+"metadata": {
+  "reservedPercent": 3000,
+  "cashOutTaxRate": 2000
+}
+```
+
+### deployRevnet stageConfiguration fields (uint32, scale 10^9 = 100%)
+
+| Field | Type | Scale | 30% Example |
+|-------|------|-------|-------------|
+| `splitPercent` | uint32 | 10^9 = 100% | 300000000 |
+| `cashOutTaxRate` | uint32 | 10^9 = 100% | 300000000 |
+| `issuanceDecayPercent` | uint32 | 10^9 = 100% | 300000000 |
+
+```json
+"stageConfigurations": [{
+  "splitPercent": 300000000,
+  "cashOutTaxRate": 200000000,
+  "issuanceDecayPercent": 50000000
+}]
+```
+
+### Quick Reference
+
+**launchProject (uint16):**
+- 10% = 1000
+- 20% = 2000
+- 30% = 3000
+- 50% = 5000
+- 100% = 10000
+
+**deployRevnet (uint32):**
+- 5% = 50000000
+- 10% = 100000000
+- 20% = 200000000
+- 30% = 300000000
+- 70% = 700000000
+
+### Common Error
+
+Error: `"Number 'X' is not in safe 16-bit unsigned integer range (0 to 65535)"`
+
+**Cause**: Using revnet scale (10^9) for launchProject fields (uint16 max = 65535)
+
+**Fix**: Use correct scale based on context:
+- Inside `metadata` → uint16 scale (10000 = 100%)
+- Inside `stageConfigurations` → uint32 scale (10^9 = 100%)
+- Split `percent` fields → always uint32 scale (10^9 = 100%)
+
+---
+
 ## Reference
 
 - **nana-core-v5**: https://github.com/Bananapus/nana-core-v5
