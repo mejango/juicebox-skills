@@ -236,6 +236,45 @@ for each split:
 
 **Critical**: Split hooks receive funds optimistically before `processSplitWith()` is called. Malicious hooks could steal funds.
 
+### Modifying Splits Mid-Ruleset
+
+**Critical Routing**: To modify splits during an active ruleset (without queuing a new ruleset), you MUST call `setSplitGroupsOf` on the project's **controller**, NOT on JBSplits directly.
+
+```
+JBSplits.setSplitGroupsOf() → Restricted to controller-only access ❌
+JBController.setSplitGroupsOf() → Enforces ownership/operator permissions ✅
+```
+
+**Why Controller?** The controller performs access control checks (owner, operator with SET_SPLIT_GROUPS permission), then forwards to JBSplits internally. Calling JBSplits directly will revert.
+
+**Implementation Pattern**:
+
+```typescript
+// 1. Fetch controller address from JBDirectory (varies per chain and project version)
+const controller = await publicClient.readContract({
+  address: JB_DIRECTORY,
+  abi: JB_DIRECTORY_ABI,
+  functionName: 'controllerOf',
+  args: [BigInt(projectId)],
+})
+
+// 2. Call setSplitGroupsOf on the controller (NOT JBSplits)
+await walletClient.writeContract({
+  address: controller,
+  abi: JB_CONTROLLER_ABI,
+  functionName: 'setSplitGroupsOf',
+  args: [projectId, rulesetId, splitGroups],
+})
+```
+
+**Omnichain Consideration**: For projects on multiple chains, the controller address may differ per chain (V5 vs V5.1). Always fetch `controllerOf` dynamically for each chain rather than hardcoding addresses.
+
+**Split Group IDs**:
+- Reserved token splits: `groupId = 1`
+- Payout splits: `groupId = uint256(uint160(tokenAddress))` (e.g., for ETH: `0x000000000000000000000000000000000000EEEe`)
+
+**Use Case**: Project owner wants to change payout recipients mid-cycle without waiting for the next ruleset to take effect.
+
 ---
 
 ## Buyback Hook Decision Logic
