@@ -275,6 +275,38 @@ await walletClient.writeContract({
 
 **Use Case**: Project owner wants to change payout recipients mid-cycle without waiting for the next ruleset to take effect.
 
+### Modifying Project Metadata (setUriOf)
+
+Same routing pattern applies to updating project metadata URI:
+
+```
+JBProjects.setUri() → Does not exist ❌
+JBController.setUriOf() → Enforces ownership/operator permissions ✅
+```
+
+**Implementation**:
+
+```typescript
+// Fetch controller, then call setUriOf
+const controller = await publicClient.readContract({
+  address: JB_DIRECTORY,
+  abi: JB_DIRECTORY_ABI,
+  functionName: 'controllerOf',
+  args: [BigInt(projectId)],
+})
+
+await walletClient.writeContract({
+  address: controller,
+  abi: JB_CONTROLLER_ABI,
+  functionName: 'setUriOf',
+  args: [projectId, 'ipfs://Qm...'],
+})
+```
+
+**Omnichain**: For projects on multiple chains, each chain stores its own metadata URI. To update consistently, call `setUriOf` on each chain's controller. The URI is typically an IPFS CID pointing to a JSON file with project name, description, logo, etc.
+
+**Permission**: Requires project ownership or `SET_URI` operator permission.
+
 ---
 
 ## Buyback Hook Decision Logic
