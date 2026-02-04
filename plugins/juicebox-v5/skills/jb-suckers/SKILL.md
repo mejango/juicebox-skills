@@ -465,6 +465,7 @@ async function bridgeTokens({
 
 ## Related Skills
 
+- `/jb-omnichain-per-chain-projectids` - **CRITICAL**: Each chain has different projectIds - must query before any operation
 - `/jb-omnichain-ui` - Building omnichain UIs with Relayr and Bendystraw
 - `/jb-v5-currency-types` - Currency handling for cross-chain projects
 - `/jb-bendystraw` - Querying cross-chain data

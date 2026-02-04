@@ -461,6 +461,7 @@ This could be built as infrastructure, but requires:
 
 ## Related Skills
 
+- `/jb-omnichain-per-chain-projectids` - **CRITICAL**: Each chain has different projectIds - must query before any operation
 - `/jb-omnichain-ui` - Building omnichain frontends
 - `/jb-suckers` - Cross-chain token bridging mechanics
 - `/jb-bendystraw` - Querying aggregate project data
