@@ -7,9 +7,6 @@ description: |
   across multiple chains, (3) building UI that calls contracts on multiple chains for the
   same "project". Each chain mints its own project NFT with an incrementing ID - you must
   query per-chain projectIds from suckerGroups or bendystraw before any omnichain operation.
-author: Claude Code
-version: 1.0.0
-date: 2026-02-03
 ---
 
 # Omnichain Juicebox Projects Have Different ProjectIds Per Chain
