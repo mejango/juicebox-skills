@@ -75,7 +75,7 @@ const tierConfig = {
   reserveBeneficiary: zeroAddress,
   // IPFS CID encoded as bytes32
   encodedIPFSUri: encodeIpfsUri('ipfs://QmYourMetadataHash'),
-  category: 1,
+  category: 0, // Default to 0 unless organizing multiple item types
   discountPercent: 0,
   allowOwnerMint: false,
   useReserveBeneficiaryAsDefault: false,
@@ -406,9 +406,9 @@ const artTiers = await client.readContract({
 ```
 
 **When adding tiers:**
-1. Choose appropriate category based on what's being sold
-2. Use existing category if it fits, or assign next available (0-199)
-3. Update project metadata via `setUriOf` with any new category names
+- **Default to category 0** unless there's a clear need to organize different types of items
+- Only introduce multiple categories if needed (e.g., separating rewards vs merchandise vs services)
+- If using multiple categories, update project metadata via `setUriOf` with category names
 
 ### Composable NFTs (Banny Pattern)
 
