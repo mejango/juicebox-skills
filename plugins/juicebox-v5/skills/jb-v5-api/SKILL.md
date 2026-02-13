@@ -538,7 +538,7 @@ Mint tiered NFTs (ERC-721) when payments are received. Each tier has configurabl
 ### Tier Properties
 
 - **price**: Cost to mint from this tier
-- **initialSupply**: Maximum mintable quantity
+- **initialSupply**: Maximum mintable quantity (max: 999,999,999 = 1 billion - 1, use for "unlimited")
 - **votingUnits**: Governance votes per NFT
 - **reserveFrequency**: Auto-mint 1 bonus per N purchased
 - **category**: Grouping for organization

@@ -5,9 +5,6 @@ description: |
   Use when: (1) building NFT tier displays for Juicebox projects, (2) deciding between encodedIPFSUri
   and tokenUriResolver for tier content, (3) implementing custom on-chain SVG resolvers like Banny,
   (4) debugging tier metadata not loading, (5) understanding the tiersOf() and tokenUriOf() flow.
-author: Claude Code
-version: 1.0.0
-date: 2025-02-06
 ---
 
 # 721 Tier Content Patterns

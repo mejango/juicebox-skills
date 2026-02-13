@@ -1186,7 +1186,7 @@ Plus extends **JBOwnable** for project-based or EOA ownership with permission de
 ```solidity
 struct JB721Tier {
     uint104 price;              // Price in terminal token
-    uint32 initialSupply;       // Starting supply
+    uint32 initialSupply;       // Starting supply (max 999,999,999 = "unlimited")
     uint32 remainingSupply;     // Current available
     uint16 votingUnits;         // Governance weight
     uint16 reserveFrequency;    // Reserved mint ratio (1 in N)
