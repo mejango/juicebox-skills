@@ -363,21 +363,28 @@ const MAINNET_RPC_ENDPOINTS = [
 
 The 721 hook is a **selling machine** - use categories to organize what a project sells.
 
-**Category System:**
-- `category` field is a `uint24` (values 0-16,777,215)
-- Use categories 0-199 for custom selling categories
-- Tiers MUST be sorted by category (lowest to highest) when calling `adjustTiers`
-- UI groups and filters tiers by category
+**Category Namespace (uint24):**
+| Range | Purpose |
+|-------|---------|
+| 0 - 16,777,115 | **User-defined** - Project owners define freely |
+| 16,777,116 - 16,777,215 | **Reserved/Official** - Apps recognize these (last 100) |
 
-**Common Category Patterns:**
+**Official Categories (apps should recognize):**
+| Category | Purpose |
+|----------|---------|
+| 16,777,215 | Content/Updates (posts, articles, announcements) |
+| 16,777,214 | Membership (access passes, subscriptions) |
+| 16,777,213 | Governance (voting NFTs) |
+
+**User-defined Categories (start at 0):**
 | Category | Use Case |
 |----------|----------|
-| 0 | Rewards (thank-you perks for supporters) |
-| 1 | Merchandise (t-shirts, stickers, hats) |
-| 2 | Digital Goods (downloads, access codes, exclusive content) |
-| 3 | Services (consultations, lessons, commissioned work) |
-| 4 | Memberships (access passes, subscriptions, VIP tiers) |
-| 5 | Collectibles (limited edition items, art, memorabilia) |
+| 0 | Default (use for most items) |
+| 1+ | Additional categories as needed (Merch, Services, etc.) |
+
+**Important:**
+- Tiers MUST be sorted by category (lowest to highest) when calling `adjustTiers`
+- UI groups and filters tiers by category
 
 **Store category names in project metadata:**
 
