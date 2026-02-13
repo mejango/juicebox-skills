@@ -361,16 +361,54 @@ const MAINNET_RPC_ENDPOINTS = [
 
 ### Category-Based Organization
 
-Tiers can be organized by category for filtering:
+The 721 hook is a **selling machine** - use categories to organize what a project sells.
 
+**Category System:**
+- `category` field is a `uint24` (values 0-16,777,215)
+- Use categories 0-199 for custom selling categories
+- Tiers MUST be sorted by category (lowest to highest) when calling `adjustTiers`
+- UI groups and filters tiers by category
+
+**Common Category Patterns:**
+| Category | Use Case |
+|----------|----------|
+| 0 | Rewards (thank-you perks for supporters) |
+| 1 | Merchandise (t-shirts, stickers, hats) |
+| 2 | Digital Goods (downloads, access codes, exclusive content) |
+| 3 | Services (consultations, lessons, commissioned work) |
+| 4 | Memberships (access passes, subscriptions, VIP tiers) |
+| 5 | Collectibles (limited edition items, art, memorabilia) |
+
+**Store category names in project metadata:**
+
+The project's `projectUri` should include a `721Categories` field mapping integers to human-readable names:
+
+```json
+{
+  "name": "My Project",
+  "description": "...",
+  "721Categories": {
+    "0": "Rewards",
+    "1": "Merch",
+    "2": "Digital",
+    "3": "Services"
+  }
+}
+```
+
+**Fetch tiers by category:**
 ```typescript
-// Fetch tiers by category
 const artTiers = await client.readContract({
   address: storeAddress,
   functionName: 'tiersOf',
   args: [hookAddress, [1n], false, 0n, 100n], // Category 1 only
 })
 ```
+
+**When adding tiers:**
+1. Choose appropriate category based on what's being sold
+2. Use existing category if it fits, or assign next available (0-199)
+3. Update project metadata via `setUriOf` with any new category names
 
 ### Composable NFTs (Banny Pattern)
 

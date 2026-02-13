@@ -541,7 +541,7 @@ Mint tiered NFTs (ERC-721) when payments are received. Each tier has configurabl
 - **initialSupply**: Maximum mintable quantity (max: 999,999,999 = 1 billion - 1, use for "unlimited")
 - **votingUnits**: Governance votes per NFT
 - **reserveFrequency**: Auto-mint 1 bonus per N purchased
-- **category**: Grouping for organization
+- **category**: Grouping for organizing sales (uint24, use 0-199 for custom categories like Rewards=0, Merch=1, Digital=2, Services=3; store names in projectUri `721Categories` field)
 - **encodedIPFSUri**: Artwork/metadata location
 - **allowOwnerMint**: Owner can mint directly
 - **transfersPausable**: Can restrict transfers
