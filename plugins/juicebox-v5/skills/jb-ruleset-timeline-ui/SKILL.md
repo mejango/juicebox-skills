@@ -1,6 +1,10 @@
 ---
 name: jb-ruleset-timeline-ui
-description: Visual timeline explorer for Juicebox project ruleset history. Shows configuration evolution, upcoming changes, and enables ruleset comparison.
+description: |
+  Visual timeline UI for ruleset history. Use when: (1) showing how a project's
+  configuration evolved over time, (2) displaying upcoming queued ruleset changes,
+  (3) comparing ruleset parameters across cycles, (4) building governance dashboards
+  that show configuration history.
 ---
 
 # Juicebox V5 Ruleset Timeline UI

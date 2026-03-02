@@ -1,6 +1,10 @@
 ---
 name: jb-decode
-description: Decode and analyze Juicebox V5 transaction calldata. Explain what a transaction does, decode function parameters, and analyze historical transactions using cast or ethers.js.
+description: |
+  Decode and analyze Juicebox V5 transaction calldata. Use when: (1) explaining what
+  a pending transaction will do before signing, (2) analyzing historical transactions
+  from block explorer, (3) debugging failed transactions by decoding revert data,
+  (4) reverse-engineering transaction parameters from raw calldata.
 ---
 
 # Juicebox V5 Transaction Decoder

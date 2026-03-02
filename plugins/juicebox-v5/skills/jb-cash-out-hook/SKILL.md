@@ -1,6 +1,11 @@
 ---
 name: jb-cash-out-hook
-description: Generate custom Juicebox V5 cash out hooks from natural language specifications. Creates Solidity contracts implementing IJBCashOutHook and/or IJBRulesetDataHook with Foundry tests. First evaluates if off-the-shelf solutions (721 hook, Revnet) fit the use case.
+description: |
+  Generate custom Juicebox V5 cash out hooks. Use when: (1) redemption value must
+  come from external source (not project surplus), (2) implementing custom bonding
+  curves beyond cashOutTaxRate, (3) redemption requires interaction with external
+  protocols, (4) need redemption restrictions or conditions. First evaluates if
+  native cashOutTaxRate or 721-hook suffice before generating custom Solidity.
 ---
 
 # Juicebox V5 Cash Out Hook Generator

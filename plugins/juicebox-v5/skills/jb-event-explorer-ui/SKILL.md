@@ -1,6 +1,10 @@
 ---
 name: jb-event-explorer-ui
-description: Browse and decode Juicebox project events. Filter by type, project, time. Decode Pay, CashOut, DistributePayouts, and all JB events.
+description: |
+  Event browser UI for Juicebox projects. Use when: (1) building activity feeds
+  showing payments and redemptions, (2) debugging transactions by viewing emitted
+  events, (3) creating historical views of project activity, (4) need filtered
+  event lists by type/project/time with decoded parameters.
 ---
 
 # Juicebox V5 Event Explorer UI

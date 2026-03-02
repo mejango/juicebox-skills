@@ -1,6 +1,11 @@
 ---
 name: jb-split-hook
-description: Generate custom Juicebox V5 split hooks from natural language specifications. Creates Solidity contracts implementing IJBSplitHook with Foundry tests. Split hooks process individual payout or reserved token splits with custom logic like DeFi integrations.
+description: |
+  Generate custom Juicebox V5 split hooks. Use when: (1) need to transform tokens
+  before forwarding (swap, LP deposit), (2) integrating payouts with DeFi protocols
+  (Aave, Uniswap), (3) complex multi-recipient routing beyond native splits,
+  (4) yield generation on distributed funds. Creates Solidity implementing
+  IJBSplitHook with Foundry tests.
 ---
 
 # Juicebox V5 Split Hook Generator

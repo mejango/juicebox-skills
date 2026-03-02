@@ -1,6 +1,10 @@
 ---
 name: jb-hook-deploy-ui
-description: Deploy custom Juicebox hooks from browser. Compile Solidity, deploy contracts, verify on explorers, and attach to projects. Works with Claude-generated hooks.
+description: |
+  Browser-based hook deployment UI. Use when: (1) deploying Claude-generated custom
+  hooks without CLI, (2) need in-browser Solidity compilation with solc.js,
+  (3) deploying and verifying hooks in one flow, (4) attaching deployed hooks
+  to existing projects. Single HTML file deployment interface.
 ---
 
 # Juicebox V5 Hook Deployment UI

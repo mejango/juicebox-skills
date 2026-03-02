@@ -1,6 +1,10 @@
 ---
 name: jb-v5-api
-description: Juicebox V5 protocol API reference. Function signatures, parameters, and return values for all contracts. Use for "what functions exist?" and "what are the signatures?" questions. For internal mechanics and tradeoffs, use /jb-v5-impl instead.
+description: |
+  Juicebox V5 protocol API reference. Use when: (1) looking up function signatures
+  or parameters, (2) checking return types for contract calls, (3) finding available
+  functions on JBController/JBMultiTerminal/etc, (4) "what functions exist" questions.
+  For internal mechanics and tradeoffs, use /jb-v5-impl instead.
 ---
 
 # Juicebox V5 API Reference

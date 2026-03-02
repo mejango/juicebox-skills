@@ -1,6 +1,11 @@
 ---
 name: jb-query
-description: Query Juicebox V5 project state from the blockchain. Read project configurations, rulesets, terminal balances, token holder data, and splits using cast or ethers.js. Supports mainnet and testnets.
+description: |
+  Query Juicebox V5 project state directly from the blockchain. Use when: (1) need
+  current ruleset, token supply, or terminal balance for a project, (2) checking
+  split configurations or payout limits, (3) verifying on-chain state vs expected
+  configuration, (4) debugging why a transaction reverted by inspecting current
+  state. Covers cast commands and ethers.js patterns for all JB contracts.
 ---
 
 # Juicebox V5 Chain Queries

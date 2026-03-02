@@ -1,6 +1,11 @@
 ---
 name: jb-relayr
-description: Relayr API reference for multi-chain transaction bundling. Pay gas on one chain, execute on many. Used for omnichain deployments, cross-chain operations, and meta-transactions.
+description: |
+  Relayr API for multi-chain transaction bundling. Use when: (1) deploying omnichain
+  projects (pay gas once, deploy to all chains), (2) implementing meta-transactions
+  with ERC2771, (3) debugging Relayr 502 or bundle status errors, (4) understanding
+  quote/execute/status API flow, (5) building cross-chain UX where user pays on
+  preferred chain. Covers ForwardRequest signing, bundle polling, and error handling.
 ---
 
 # Relayr: Multi-Chain Transaction Bundling

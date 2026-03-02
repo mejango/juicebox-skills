@@ -1,6 +1,10 @@
 ---
 name: jb-ruleset
-description: Configure and queue Juicebox V5 rulesets. Design ruleset parameters including issuance rate, reserved rate, cash out tax rate, splits, payout limits, and approval hooks. Generate scripts for queueing new rulesets.
+description: |
+  Configure and queue Juicebox V5 rulesets. Use when: (1) designing token economics
+  (weight, reserved rate, cash out tax rate), (2) setting up payout limits or surplus
+  allowances, (3) queueing future ruleset changes, (4) understanding ruleset cycling
+  and duration, (5) configuring approval hooks for governance-controlled changes.
 ---
 
 # Juicebox V5 Ruleset Configuration

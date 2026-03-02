@@ -1,6 +1,10 @@
 ---
 name: jb-explorer-ui
-description: Etherscan-like contract explorer for Juicebox projects. Read contract state, write transactions, and decode events.
+description: |
+  Etherscan-like contract explorer UI for Juicebox. Use when: (1) building admin
+  tools to inspect project state, (2) creating debug interfaces for contract reads,
+  (3) need write transaction forms for project operations, (4) exploring events
+  and historical data for a project.
 ---
 
 # Juicebox V5 Contract Explorer UI

@@ -1,6 +1,10 @@
 ---
 name: jb-interact-ui
-description: Generate minimal frontends for interacting with existing Juicebox V5 projects. Pay, cash out, claim tokens, view project state - all in standalone HTML files.
+description: |
+  Generate interaction UIs for existing Juicebox projects. Use when: (1) building a
+  custom pay form for a specific project, (2) creating cash out or claim interfaces,
+  (3) need standalone HTML for project supporters, (4) building demo pages without
+  full app infrastructure. Single-file HTML with viem.
 ---
 
 # Juicebox V5 Interaction UI Generator

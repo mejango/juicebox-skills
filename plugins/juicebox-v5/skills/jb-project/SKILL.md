@@ -1,6 +1,10 @@
 ---
 name: jb-project
-description: Create and configure Juicebox V5 projects. Generate deployment scripts for launching projects with rulesets, terminals, and splits using JBController. Also helps with project ownership transfer and metadata updates.
+description: |
+  Create and configure Juicebox V5 projects. Use when: (1) deploying a new project
+  with launchProjectFor, (2) transferring project ownership, (3) updating project
+  metadata URI, (4) understanding project identity (projectId + chainId + version),
+  (5) generating deployment scripts with proper terminal and split configuration.
 ---
 
 # Juicebox V5 Project Management

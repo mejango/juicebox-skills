@@ -1,6 +1,11 @@
 ---
 name: jb-pay-hook
-description: Generate custom Juicebox V5 pay hooks from natural language specifications. Creates Solidity contracts implementing IJBPayHook and/or IJBRulesetDataHook with Foundry tests. First evaluates if off-the-shelf solutions (buyback hook, 721 hook, Revnet) fit the use case.
+description: |
+  Generate custom Juicebox V5 pay hooks. Use when: (1) need custom logic on payment
+  that buyback-hook or 721-hook can't handle, (2) implementing payment restrictions
+  or allowlists, (3) triggering external contract calls on pay, (4) modifying token
+  minting behavior. First evaluates if off-the-shelf hooks suffice before generating
+  custom Solidity implementing IJBPayHook/IJBRulesetDataHook with Foundry tests.
 ---
 
 # Juicebox V5 Pay Hook Generator

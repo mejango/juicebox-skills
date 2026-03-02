@@ -1,6 +1,10 @@
 ---
 name: jb-deploy-ui
-description: Generate minimal frontends for deploying Juicebox V5 projects and hooks. Creates standalone HTML files with wallet connection, transaction forms, and live status updates.
+description: |
+  Generate minimal deployment UIs for Juicebox V5. Use when: (1) need a standalone
+  HTML page for deploying a project or hook, (2) building quick demo UIs for testing,
+  (3) creating admin tools for project configuration, (4) want wallet connection
+  and transaction status in a single file. No build step - viem from CDN.
 ---
 
 # Juicebox V5 Deployment UI Generator

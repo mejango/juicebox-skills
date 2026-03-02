@@ -1,6 +1,10 @@
 ---
 name: jb-omnichain-ui
-description: Build omnichain UIs for Juicebox projects. Deploy to multiple chains with single payment, display unified cross-chain data.
+description: |
+  Omnichain UI patterns for Juicebox. Use when: (1) building deploy flows that
+  target multiple chains with single gas payment, (2) displaying unified cross-chain
+  project data, (3) implementing chain-selection for payments, (4) showing aggregate
+  balances and activity across all project chains.
 ---
 
 # Juicebox V5 Omnichain UI Development

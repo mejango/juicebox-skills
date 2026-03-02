@@ -1,6 +1,11 @@
 ---
 name: jb-simplify
-description: Checklist to simplify Juicebox project designs. Reduce custom contracts by leveraging native protocol mechanics.
+description: |
+  Avoid over-engineering Juicebox V5 projects by using native mechanics. Use when:
+  (1) considering writing a custom hook when native config might suffice, (2) planning
+  complex multi-ruleset configurations, (3) designing NFT or redemption systems,
+  (4) tempted to wrap existing hooks. Checklist format to find simpler solutions
+  before writing custom contracts.
 ---
 
 # Juicebox V5 Simplification Checklist

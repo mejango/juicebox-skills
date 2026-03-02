@@ -1,6 +1,11 @@
 ---
 name: jb-docs
-description: Query Juicebox V5 documentation via REST API or MCP server. Search docs, get contract addresses, and find implementation guides.
+description: |
+  Query Juicebox V5 documentation and contract addresses. Use when: (1) need deployed
+  contract addresses for any chain (mainnet, Optimism, Base, Arbitrum, testnets),
+  (2) looking up interface definitions, struct schemas, or event signatures,
+  (3) finding implementation guides for hooks, terminals, or project configuration,
+  (4) searching docs for specific protocol concepts or patterns.
 ---
 
 # Juicebox V5 Documentation Lookup

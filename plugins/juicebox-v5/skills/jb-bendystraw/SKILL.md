@@ -1,6 +1,11 @@
 ---
 name: jb-bendystraw
-description: Bendystraw GraphQL API reference for querying Juicebox project data across all chains. Get project stats, payments, token holders, loans, NFT tiers, unified activity feeds, historical snapshots, and cross-chain aggregations.
+description: |
+  Bendystraw GraphQL API for querying Juicebox data. Use when: (1) need cross-chain
+  aggregated project stats, (2) querying payment history or token holder lists,
+  (3) fetching NFT tier data or mint history, (4) getting unified activity feeds,
+  (5) historical snapshots or time-series data, (6) loan data from REVLoans.
+  Faster than on-chain queries for read-heavy operations.
 ---
 
 # Bendystraw: Cross-Chain Juicebox Data API
