@@ -2,7 +2,7 @@
 
 ## Scope: What Belongs Here
 
-Juicebox-skills contains **objective protocol knowledge** for building with Juicebox V5:
+Juicebox-skills contains **objective protocol knowledge** for building with Juicebox V6:
 
 **Include:**
 - Contract addresses and ABIs
