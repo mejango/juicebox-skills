@@ -17,12 +17,12 @@ version: 6.0.0
 An omnichain project that accepts an ERC-20 (USDC is the common case) needs THREE things to differ per chain, because the token contract lives at a different address on each chain:
 
 1. **Terminal accounting contexts** — each chain's `JBTerminalConfig` must list that chain's token address.
-2. **Sucker token mappings** — each chain's `JBTokenMapping` must pair its local address with the peer chain's address.
+2. **Sucker token mappings** — each chain's `JBTokenMapping` must name the exact local and remote assets delivered or burned by the selected lane.
 3. **Currency IDs** — the accounting context `currency` is derived from the token address, so it differs per chain too.
 
 ## Canonical USDC addresses
 
-These are the canonical (Circle-native) USDC addresses the protocol deployment allowlists for sucker bridging:
+These are the canonical (Circle-native) USDC addresses used in terminal configurations and pre-approved as economically equivalent mappings. Registry approval does not make them compatible with every sucker lane:
 
 | Chain | USDC |
 |-------|------|
@@ -79,6 +79,8 @@ There is no `minBridgeAmount` field. Currency by convention is `uint32(uint160(t
 
 So a revert at `deploySuckersFor` with `JBSuckerRegistry_TokenMappingNotAllowed` means either (a) a wrong/non-canonical token address on one side, or (b) a pair that hasn't been allowlisted. Check `tokenMappingIsAllowed(localToken, remoteChainId, remoteToken)` first.
 
+Passing this gate proves only that the mapping is permitted. It does not query the selected bridge or prove transport compatibility. Same-address mappings bypass the owner gate entirely, and an allowlisted differing-address pair can still name a token which the native bridge does not deliver or burn. Verify the exact bridge pair in both directions before deploying an OP Stack or Arbitrum ERC-20 lane.
+
 Other mapping reverts to check: `JBSucker_BelowMinGas` (ERC-20 `minGas < 200_000`) and `JBSucker_InvalidNativeRemoteAddress` (native mapped to a non-native remote).
 
 ## Per-chain configuration pattern
@@ -104,7 +106,7 @@ function terminalConfigsFor(chainId: number) {
 function suckerConfigFor(chainId: number, remoteChainIds: number[]) {
   return {
     deployerConfigurations: remoteChainIds.map((remote) => ({
-      deployer: laneDeployerFor(chainId, remote),  // see below
+      deployer: ccipLaneDeployerFor(chainId, remote),  // canonical USDC must use CCIP
       peer: '0x' + '0'.repeat(64),
       mappings: [{
         localToken: USDC[chainId],
@@ -126,7 +128,7 @@ Deployer addresses come from `shared/chain-config.json` and are **chain-specific
 - Ethereum↔L2 native-bridge deployers: `JBOptimismSuckerDeployer`, `JBBaseSuckerDeployer`, `JBArbitrumSuckerDeployer`.
 - CCIP lane deployers: `JBCCIPSuckerDeployer__{PEER}` (e.g. on Base: `__ETH`, `__OP`, `__ARB`). Each lane's deployer has the same address on both ends of its pair, but different lanes have different addresses.
 
-**USDC trap**: L2 native bridges deliver the bridged variant (USDC.e), not canonical USDC — the delivered token would not match the mapped remote token. Bridge canonical USDC over CCIP suckers (CCIP lanes transfer canonical USDC). Native ETH between Ethereum and an OP-stack/Arbitrum L2 can use the native-bridge deployers.
+**USDC trap**: a native bridge's registered ERC-20 pair can differ from the canonical tokens in the table. On OP Stack, mapping canonical L1 USDC directly to native L2 USDC can escrow the source funds before the destination bridge rejects the pair. On Arbitrum, the gateway router can deliver or burn its paired legacy token (USDC.e) independently of `remoteToken`. Bridge canonical USDC over CCIP suckers. Native ETH can use the native-bridge deployers; use a native bridge for an ERC-20 only after verifying the exact delivered and burned tokens in both directions and configuring the destination terminal for that asset.
 
 ## Preview vs launch data separation
 
@@ -142,7 +144,7 @@ Project IDs differ per chain. Read them from each chain's receipt (the project-c
 - **Same `currency` value on every chain.** `currency = uint32(uint160(token))` differs per chain for the same asset.
 - **`minBridgeAmount` in the mapping.** The field does not exist; `JBTokenMapping` is `{localToken, minGas, remoteToken}`.
 - **`remoteToken` as `address`.** It's `bytes32` (left-padded).
-- **USDC over a native-bridge sucker.** Delivers USDC.e, not canonical USDC. Use the CCIP lane deployer.
+- **Canonical USDC over a native-bridge sucker.** Mapping and allowlist checks do not validate the bridge pair. OP Stack delivery can reject after source escrow, and Arbitrum can select a legacy paired token. Use the CCIP lane deployer.
 - **Different senders or salts per chain.** `deploySuckersFor` hashes `(sender, salt)` into the CREATE2 salt; mismatches break the same-address peer assumption.
 - **Fixing a wrong mapping in place.** Once a token's outbox has entries, the mapping can only be disabled, never remapped — a misconfigured lane requires a new sucker.
 

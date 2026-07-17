@@ -135,6 +135,10 @@ function mapTokens(JBTokenMapping[] calldata maps) external payable;
   - `remoteToken == bytes32(0)` (disable): always allowed.
   - Non-native token mapped to the SAME address on the remote chain: allowed without approval.
   - Native↔native and any differing-address mapping (e.g. Ethereum USDC ↔ Base USDC): must be allowlisted. The protocol deployment pre-allowlists native↔native and canonical-USDC pairs for the supported chains.
+- **Native-bridge compatibility is a separate invariant.** Mapping validation and the registry allowlist do not query an external bridge's registered ERC-20 pair. For every OP Stack or Arbitrum ERC-20 route, verify both directions against the live bridge and map the exact token delivered or burned. The destination terminal must account for that same token. Canonical issuer status, equal addresses, and registry approval do not prove bridge compatibility.
+  - OP Stack requires the destination token to be the bridge-compatible mintable counterpart for the source token and bridge. A bad pair can escrow the source token before destination delivery rejects.
+  - Arbitrum's gateway router chooses the counterpart independently of `remoteToken`: L1→L2 can deliver a legacy bridged token while the root names a canonical token, and L2→L1 can try to burn the paired legacy token while the sucker holds the canonical token.
+- Bridge canonical USDC over a CCIP sucker. Use native-bridge suckers for native ETH unless an ERC-20's exact bridge pair and destination terminal accounting have been verified explicitly.
 - Native token (`0xEeee…EEeE`) may only map to the native token or `bytes32(0)`.
 - Once a token's outbox tree has entries it can never be remapped to a different remote token — only disabled (mapping to `bytes32(0)` triggers a final root flush; attach transport payment via `msg.value`). A misconfigured mapping requires deploying a new sucker.
 - One remote token can back only one local token per sucker (reverse reservation).
@@ -225,6 +229,7 @@ query SuckerTransactions($suckerGroupId: String!, $status: suckerTransactionStat
 - **Claiming with the source chain's token address.** The destination inbox is keyed by the destination chain's local token.
 - **Omitting `metadata` from the leaf hash.** Proofs are over `(projectTokenCount, terminalTokenAmount, beneficiary, metadata)`; a claim with the wrong metadata fails validation.
 - **Assuming a `minBridgeAmount` field.** `JBTokenMapping` is `{localToken, minGas, remoteToken}` — there is no minimum bridge amount.
+- **Treating registry approval as bridge-pair validation.** The allowlist asserts economic equivalence only. Verify the exact OP Stack or Arbitrum token delivered and burned in both directions; use CCIP for canonical USDC.
 - **Deploying suckers from different senders per chain.** The salt binds `msg.sender`; mismatched senders produce mismatched addresses and the default peer check fails. Use the same EOA (e.g. via Relayr) with the same salt everywhere.
 - **Expecting sequential nonces.** `fromRemote` accepts any strictly-greater nonce (CCIP is unordered). Earlier leaves stay provable but need proofs regenerated against the latest delivered root (or one of the 4 retained roots).
 - **Bridging without a project ERC-20.** `prepare` reverts `JBSucker_ZeroERC20Token` if the project hasn't deployed its ERC-20 on the source chain; claims revert if the controller/project is missing on the destination.

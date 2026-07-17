@@ -63,6 +63,8 @@ struct JBTokenMapping {
 
 Sucker deployers are per chain-pair; read them from `shared/chain-config.json`: `JBOptimismSuckerDeployer` / `JBBaseSuckerDeployer` / `JBArbitrumSuckerDeployer` (native bridges, on both endpoints of each pair) and `JBCCIPSuckerDeployer__{ETH,OP,BASE,ARB}` (CCIP, keyed by the remote chain). Chain-specific — never assume one address across chains.
 
+Lane selection is asset-specific. Route canonical USDC through the corresponding CCIP deployer. Native-bridge deployers are the default for native ETH only; an OP Stack or Arbitrum ERC-20 route must map the exact token the live bridge delivers or burns in both directions, and the destination terminal must account for that token. Registry approval and same-address mapping do not validate the bridge pair.
+
 ## Verified meta-transaction facts (Relayr signing)
 
 The canonical forwarder is OpenZeppelin's `ERC2771Forwarder`, deployed as `ERC2771Forwarder` in `shared/chain-config.json`.
@@ -580,6 +582,7 @@ A 10 ETH payout limit on a 4-chain project allows up to 40 ETH of payouts total 
 - **Forgetting the creation fee** — `launchProjectFor` reverts unless the forwarded `value` equals `JBProjects.creationFee()` exactly (per chain).
 - **Different senders per chain** — sucker salts mix in the sender; a different signer on one chain produces mismatched sucker addresses and the suckers never pair.
 - **Same ERC-20 address on all chains** — token mappings need each chain's own token address (USDC differs per chain). See `/jb-omnichain-erc20-config`.
+- **Canonical USDC on a native-bridge deployer** — the mapping allowlist does not validate the bridge's registered pair. Select the CCIP deployer for canonical USDC.
 - **Keyless Bendystraw endpoint** — CORS-locked; always use the keyed route (proxied server-side).
 - **Omitting `version: 6`** in Bendystraw project queries.
 - **Assuming a shared project ID across chains** — resolve per-chain IDs via the sucker group.

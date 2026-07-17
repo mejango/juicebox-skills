@@ -854,6 +854,9 @@ function claim(JBClaim[] calldata claims) external;
 // (with override for the registry during authorized deployment). The registry
 // owner must have allowed the mapping (requireTokenMappingAllowed) when it
 // asserts economic equivalence across distinct chain assets.
+// Mapping and allowlist checks do not validate an external native bridge's
+// ERC-20 pair; OP Stack and Arbitrum routes must name the exact token delivered
+// or burned by the live bridge in both directions.
 function mapToken(JBTokenMapping calldata map) external payable;
 function mapTokens(JBTokenMapping[] calldata maps) external payable;
 
