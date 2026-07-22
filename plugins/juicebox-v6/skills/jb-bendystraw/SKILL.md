@@ -5,9 +5,9 @@ description: |
   cross-chain aggregated project stats, (2) querying payment history or token holder
   lists, (3) fetching NFT tier data or mint history, (4) building unified activity
   feeds, (5) historical snapshots or time-series data, (6) loan data from REVLoans,
-  (7) tracking cross-chain bridging or accounting sync status. Faster than on-chain
+  (7) tracking cross-chain bridging or accounting sync status, (8) querying buyback
+  AMM pool registrations and exact Uniswap V4 price history. Faster than on-chain
   queries for read-heavy operations.
-version: 6.0.0
 ---
 
 # Bendystraw: Cross-Chain Juicebox Data API
@@ -613,11 +613,17 @@ type swapEvent {           # + common event columns — buyback hook AMM trades
   poolId: String
   terminalTokenAmount: BigInt!   # terminal-token side of the trade
   projectTokenAmount: BigInt!    # project-token side of the trade
+  sqrtPriceX96: BigInt            # exact post-swap V4 spot; null for mint/legacy rows
+  projectTokenIsCurrency0: Boolean # token ordering needed to orient sqrtPriceX96
 }
 
 type buybackPoolEvent {    # + common event columns — pool registrations
   terminalToken: String!
   poolId: String!          # Uniswap V4 pool backing the project's buyback
+  currency0: String
+  currency1: String
+  projectTokenIsCurrency0: Boolean
+  initialSqrtPriceX96: BigInt      # Initialize/slot0 price at registration; nullable on legacy rows
 }
 ```
 
@@ -867,6 +873,69 @@ query ListCashOuts($projectId: Int!, $chainId: Int!, $limit: Int!) {
 }
 ```
 
+### Buyback AMM price history
+
+Query pool registrations and swaps separately so a coordinated schema rollout can fall back on one stream without discarding the other:
+
+```graphql
+query BuybackPoolRegistrations(
+  $suckerGroupId: String!
+  $chainIds: [Int!]
+  $limit: Int!
+  $offset: Int!
+) {
+  buybackPoolEvents(
+    where: { version: 6, suckerGroupId: $suckerGroupId, chainId_in: $chainIds }
+    orderBy: "timestamp"
+    orderDirection: "asc"
+    limit: $limit
+    offset: $offset
+  ) {
+    items {
+      timestamp chainId txHash terminalToken poolId currency0 currency1
+      projectTokenIsCurrency0 initialSqrtPriceX96
+    }
+    totalCount
+  }
+}
+```
+
+```graphql
+query BuybackSwapHistory(
+  $suckerGroupId: String!
+  $chainIds: [Int!]
+  $limit: Int!
+  $offset: Int!
+) {
+  swapEvents(
+    where: { version: 6, suckerGroupId: $suckerGroupId, chainId_in: $chainIds }
+    orderBy: "timestamp"
+    orderDirection: "asc"
+    limit: $limit
+    offset: $offset
+  ) {
+    items {
+      timestamp chainId txHash direction poolId
+      terminalTokenAmount projectTokenAmount
+      sqrtPriceX96 projectTokenIsCurrency0
+    }
+    totalCount
+  }
+}
+```
+
+`initialSqrtPriceX96` is the real V4 price at `PoolAdded`: the same-transaction `Initialize` price for a new pool, or pool-manager `slot0` at registration for an existing pool. Each swap row's `sqrtPriceX96` is the exact **post-trade** V4 spot. Both use Uniswap's raw encoding:
+
+```
+r = (sqrtPriceX96 / 2^96)^2  // raw currency1 per raw currency0
+rawTerminalPerProject = projectTokenIsCurrency0 ? r : 1 / r
+terminalPerProject = rawTerminalPerProject * 10^(18 - terminalDecimals)
+```
+
+V6 project tokens use 18 decimals; `terminalDecimals` comes from the project's accounting context (for example, 6 for USDC). Keep the raw GraphQL `BigInt` value exact and use a decimal/bignumber implementation when display precision matters.
+
+A sucker group can span chains and retain superseded pools. Resolve the current onchain pool, then accept only rows matching its exact `chainId` and `poolId`; use a matching pool registration as the first series point, followed by matching swaps in timestamp order. Ignore `direction: "mint"`, which does not touch V4. The new price/order fields are nullable on legacy rows: a swap's `terminalTokenAmount / projectTokenAmount` can be used as a **realized average-price** fallback, never labeled as an exact spot. During rollout, if the server rejects the new swap fields at GraphQL validation time, retry a legacy `swapEvents` selection without `sqrtPriceX96` and `projectTokenIsCurrency0`; do not let a failed pool-registration query erase usable swap history.
+
 ### Unified activity feed
 
 ```graphql
@@ -884,7 +953,10 @@ query ActivityFeed($projectId: Int!, $chainId: Int!, $limit: Int!) {
       mintNftEvent { tierId tokenId totalAmountPaid }
       sendPayoutsEvent { amount amountPaidOut fee }
       borrowLoanEvent { borrowAmount collateral }
-      swapEvent { direction terminalTokenAmount projectTokenAmount }
+      swapEvent {
+        direction poolId terminalTokenAmount projectTokenAmount
+        sqrtPriceX96 projectTokenIsCurrency0
+      }
       rulesetQueuedEvent { rulesetId duration weight cashOutTax }
       projectTransferEvent { previousOwner owner }
     }
@@ -1175,6 +1247,7 @@ function formatUsd(raw) {
 7. **Store only deterministic IDs** — `project.id` and `suckerGroup.id`; event `id`s change on reindex.
 8. **Read `decimals`/`currency` before formatting** amounts.
 9. **Handle nulls** — `name`, `handle`, `token`, `decimals`, `currency` are null until set (e.g. before the first accounting context or metadata resolution).
+10. **For AMM history, match both chain and pool** — sucker groups can contain multiple chains and superseded buyback pools. Prefer `sqrtPriceX96` for exact post-trade spot; amount ratios are realized averages only.
 
 ---
 
@@ -1189,6 +1262,8 @@ function formatUsd(raw) {
 - **`project.currency` is not a small enum.** It is `uint32(uint160(accountingToken))` — `61166` for the native token, `uint32(uint160(USDC_ADDRESS))` for USDC. Do not compare it against 1/2-style price-feed currency IDs.
 - **`participant` has no `redeemCount`, `firstPaidAt`, or `lastPaidAt`** — the timestamp field is `lastPaidTimestamp`.
 - **`payEvent` has no `rulesetId`, `blockNumber`, or `beneficiaryTokenCount`** — token issuance is `newlyIssuedTokenCount`; fee/payout provenance is `feeFromProject` / `distributionFromProjectId`.
+- **Treating swap amounts as the exact AMM spot.** `terminalTokenAmount / projectTokenAmount` is the realized average across the trade. Use `sqrtPriceX96` for the exact post-trade V4 spot when present.
+- **Ignoring `projectTokenIsCurrency0`.** Uniswap's sqrt price is always currency1/currency0. Invert it when the project token is currency1, then apply the project-token (18) and terminal-token decimal adjustment.
 - **`suckerTransaction.status` values are `pending | claimable | claimed`** — there is no `completed`/`failed`.
 - **`suckerGroupMoment` has no `block` field** — it is keyed by `timestamp` (block numbers are not comparable across chains).
 - **`nft.category` is the field name** — there is no `tierCategory`.
