@@ -19,8 +19,25 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 
 ## Regenerating
 
-- Addresses changed? Regenerate `shared/chain-config.json` from `deploy-all-v6/deployments`, then re-check skills that inline core addresses (`jb-decode`, `jb-contracts`, `shared/wallet-utils.js`).
+- Addresses changed? Run `python3 scripts/gen-chain-config.py <path/to/deploy-all-v6/deployments>`, then re-check skills that inline core addresses (`jb-decode`, `jb-contracts`, `shared/wallet-utils.js`).
 - Then run `./build-skills.sh`.
+
+## Start here
+
+Read `jb-contracts` (addresses, which contract does what) and `jb-v6-api` (signatures, structs, permission IDs) first. Then pick a lane:
+
+| Building | Read, in order |
+|----------|----------------|
+| A pay / cash-out / mint button for an existing project | jb-terminal-selection → jb-protocol-fees → jb-cash-out-curve → jb-permit2-metadata → jb-interact-ui. Revnets: add revnet-economics. 721: add jb-721-tier-content. |
+| A webclient that reads project state | jb-query → jb-bendystraw → jb-omnichain-per-chain-projectids → jb-explorer-ui / jb-event-explorer-ui / jb-ruleset-timeline-ui |
+| A pay, cash-out, or split hook | jb-v6-impl → jb-pay-hook / jb-cash-out-hook / jb-split-hook → jb-fee-flows → jb-hook-deploy-ui |
+| A new project or revnet, multi-chain | jb-project → jb-ruleset → jb-fund-access-limits → jb-multi-currency → jb-suckers → jb-relayr → revnet-omnichain-default → jb-deploy-ui / jb-omnichain-ui |
+| A 721 collection | jb-721-tier-content → jb-721-per-chain-config → jb-omnichain-tier-quantity-per-chain → jb-nft-gallery-ui |
+| Loans against revnet tokens | jb-revloans → jb-loan-queries |
+
+Every transaction UI follows CONVENTIONS rule 5: simulate first, nonzero floors, `receipt.status` checked.
+
+**Not deployed** (source exists, no addresses; do not target): `JBDistributor*`, `JBSwapSplitHook`, `JBRouterTerminalGateway`, `JBPayRouteResolver`, `JBRatioPriceFeed`, everything under `extensions/`.
 
 ## Skill index
 
