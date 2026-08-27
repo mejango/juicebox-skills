@@ -119,12 +119,13 @@ Permissions (checked via `JBPermissions`): `cashOutTokensOf` requires the caller
   </div>
 
   <script type="module">
-    import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'https://esm.sh/viem';
-    import { CHAIN_CONFIGS, getContractAddress, truncateAddress, getTxUrl } from '/shared/wallet-utils.js';
+    import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'https://esm.sh/viem@2.55.19';
+    import { CHAIN_CONFIGS, getContractAddress, truncateAddress, getTxUrl, waitForSuccess } from '/shared/wallet-utils.js';
 
     // Configuration
     const PROJECT_ID = 1n;
     const CHAIN_ID = 1;
+    const SLIPPAGE_BPS = 500n; // 5% floor below the simulated result
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
     const TERMINAL_ABI = [
@@ -248,17 +249,20 @@ Permissions (checked via `JBPermissions`): `cashOutTokensOf` requires the caller
       showTxPending('Please confirm in wallet...');
 
       try {
+        // Simulate first: a failing simulation aborts before the wallet prompt, and the simulated
+        // token count sets a nonzero floor so a sandwiched buyback/data-hook path reverts instead of executing.
+        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: address };
+        const { result: expectedTokens } = await publicClient.simulateContract({
+          ...call, args: [PROJECT_ID, NATIVE_TOKEN, value, address, 0n, memo, '0x']
+        });
+        const minReturnedTokens = expectedTokens * (10_000n - SLIPPAGE_BPS) / 10_000n;
+
         const hash = await walletClient.writeContract({
-          address: terminal,
-          abi: TERMINAL_ABI,
-          functionName: 'pay',
-          args: [PROJECT_ID, NATIVE_TOKEN, value, address, 0n, memo, '0x'],
-          value,
-          account: address
+          ...call, args: [PROJECT_ID, NATIVE_TOKEN, value, address, minReturnedTokens, memo, '0x']
         });
 
         showTxSent(hash);
-        await publicClient.waitForTransactionReceipt({ hash });
+        await waitForSuccess(publicClient, hash);
         showTxConfirmed();
       } catch (error) {
         showTxError(error);
@@ -340,11 +344,12 @@ Cash outs burn project tokens to reclaim a pro-rata share of the terminal surplu
   <div id="tx-status" class="card hidden"></div>
 
   <script type="module">
-    import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'https://esm.sh/viem';
-    import { CHAIN_CONFIGS, getContractAddress, getTxUrl } from '/shared/wallet-utils.js';
+    import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'https://esm.sh/viem@2.55.19';
+    import { CHAIN_CONFIGS, getContractAddress, getTxUrl, waitForSuccess } from '/shared/wallet-utils.js';
 
     const PROJECT_ID = 1n;
     const CHAIN_ID = 1;
+    const SLIPPAGE_BPS = 500n; // 5% floor below the simulated result
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
     const TERMINAL_ABI = [
@@ -431,10 +436,13 @@ Cash outs burn project tokens to reclaim a pro-rata share of the terminal surplu
         });
         document.getElementById('reclaim-amount').textContent = parseFloat(formatEther(reclaimAmount)).toFixed(4) + ' ETH';
         window._previewReclaim = reclaimAmount;
+        document.getElementById('cashout-btn').disabled = false;
       } catch {
-        // Preview can revert (e.g. an active cash-out delay). Show unknown; keep tx submittable with no floor.
-        document.getElementById('reclaim-amount').textContent = '?';
-        window._previewReclaim = 0n;
+        // Preview reverts (e.g. an active cash-out delay) mean the cash-out would revert too.
+        // Never submit without a floor derived from a successful preview.
+        document.getElementById('reclaim-amount').textContent = 'Unavailable';
+        window._previewReclaim = null;
+        document.getElementById('cashout-btn').disabled = true;
       }
     };
 
@@ -442,9 +450,12 @@ Cash outs burn project tokens to reclaim a pro-rata share of the terminal surplu
       const amount = document.getElementById('cash-out-amount').value;
       const terminal = getContractAddress(CHAIN_ID, 'JBMultiTerminal');
 
-      // Slippage floor: 95% of the previewed reclaim. minTokensReclaimed is denominated in the
+      // Re-run the preview immediately before submitting so the floor reflects current state.
+      await updateCashOutPreview();
+      if (window._previewReclaim == null) { alert('Cash-out preview failed; not submitting.'); return; }
+      // Slippage floor on the previewed reclaim. minTokensReclaimed is denominated in the
       // TERMINAL token's accounting-context decimals (18 for ETH; 6 for USDC).
-      const minReclaimed = (window._previewReclaim || 0n) * 95n / 100n;
+      const minReclaimed = window._previewReclaim * (10_000n - SLIPPAGE_BPS) / 10_000n;
 
       document.getElementById('tx-status').classList.remove('hidden');
       document.getElementById('tx-status').textContent = 'Please confirm in wallet...';
@@ -459,7 +470,7 @@ Cash outs burn project tokens to reclaim a pro-rata share of the terminal surplu
         });
 
         document.getElementById('tx-status').innerHTML = `Transaction sent... <a href="${getTxUrl(CHAIN_ID, hash)}" target="_blank">View</a>`;
-        await publicClient.waitForTransactionReceipt({ hash });
+        await waitForSuccess(publicClient, hash);
         document.getElementById('tx-status').textContent = 'Cash out successful!';
       } catch (error) {
         document.getElementById('tx-status').textContent = error.shortMessage || error.message;
@@ -483,7 +494,7 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
 
 ```html
 <script type="module">
-  import { createPublicClient, createWalletClient, http, custom, parseEther, encodeAbiParameters, keccak256 } from 'https://esm.sh/viem';
+  import { createPublicClient, createWalletClient, http, custom, parseEther, encodeAbiParameters, keccak256 } from 'https://esm.sh/viem@2.55.19';
   import { CHAIN_CONFIGS, getContractAddress } from '/shared/wallet-utils.js';
 
   const PROJECT_ID = 1n;
@@ -534,14 +545,20 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
     const metadata = buildTierMintMetadata(idTarget, tierIds);
     const terminal = getContractAddress(CHAIN_ID, 'JBMultiTerminal');
 
-    return walletClient.writeContract({
-      address: terminal,
-      abi: TERMINAL_ABI,
-      functionName: 'pay',
-      args: [PROJECT_ID, NATIVE_TOKEN, totalPriceWei, address, 0n, '', metadata],
-      value: totalPriceWei,
-      account: address
+    // Simulate first: surfaces a wrong envelope / sold-out tier / bad price before the wallet prompt,
+    // and the simulated token count becomes the floor for the real call.
+    const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value: totalPriceWei, account: address };
+    const { result: expectedTokens } = await publicClient.simulateContract({
+      ...call, args: [PROJECT_ID, NATIVE_TOKEN, totalPriceWei, address, 0n, '', metadata]
     });
+    const minReturnedTokens = expectedTokens * 95n / 100n;
+
+    const hash = await walletClient.writeContract({
+      ...call, args: [PROJECT_ID, NATIVE_TOKEN, totalPriceWei, address, minReturnedTokens, '', metadata]
+    });
+    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+    if (receipt.status !== 'success') throw new Error(`Mint reverted: ${hash}`);
+    return hash;
   }
 </script>
 ```
@@ -623,11 +640,12 @@ Tier prices come from `JB721TiersHookStore.tiersOf(...)` (see `/jb-nft-gallery-u
   </div>
 
   <script type="module">
-    import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'https://esm.sh/viem';
-    import { CHAIN_CONFIGS, getContractAddress, truncateAddress, getTxUrl } from '/shared/wallet-utils.js';
+    import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther } from 'https://esm.sh/viem@2.55.19';
+    import { CHAIN_CONFIGS, getContractAddress, truncateAddress, getTxUrl, waitForSuccess } from '/shared/wallet-utils.js';
 
     const PROJECT_ID = 1n;
     const CHAIN_ID = 1;
+    const SLIPPAGE_BPS = 500n; // 5% floor below the simulated result
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
     // Currency for native-token payout limits / allowances: uint32(uint160(NATIVE_TOKEN)).
     // Must match the currency the project configured in its fund access limit groups.
@@ -734,15 +752,16 @@ Tier prices come from `JB721TiersHookStore.tiersOf(...)` (see `/jb-nft-gallery-u
       try {
         // `amount` is denominated in `currency` (here: native-token accounting currency).
         // The terminal auto-caps at the remaining payout limit. Empty fund access limits = zero payouts.
+        // Simulate first; the simulated amountPaidOut sets the floor (guards a moved price feed).
+        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'sendPayoutsOf', account: address };
+        const { result: expectedOut } = await publicClient.simulateContract({
+          ...call, args: [PROJECT_ID, NATIVE_TOKEN, parseEther(amount), NATIVE_TOKEN_CURRENCY, 0n]
+        });
         const hash = await walletClient.writeContract({
-          address: terminal,
-          abi: TERMINAL_ABI,
-          functionName: 'sendPayoutsOf',
-          args: [PROJECT_ID, NATIVE_TOKEN, parseEther(amount), NATIVE_TOKEN_CURRENCY, 0n],
-          account: address
+          ...call, args: [PROJECT_ID, NATIVE_TOKEN, parseEther(amount), NATIVE_TOKEN_CURRENCY, expectedOut * (10_000n - SLIPPAGE_BPS) / 10_000n]
         });
         showTxSent(hash);
-        await publicClient.waitForTransactionReceipt({ hash });
+        await waitForSuccess(publicClient, hash);
         showTxConfirmed();
         await loadTreasuryStats();
       } catch (error) { showTxError(error); }
@@ -758,15 +777,15 @@ Tier prices come from `JB721TiersHookStore.tiersOf(...)` (see `/jb-nft-gallery-u
 
       try {
         // feeBeneficiary receives the fee project's tokens minted in exchange for the 2.5% fee.
+        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'useAllowanceOf', account: address };
+        const { result: expectedOut } = await publicClient.simulateContract({
+          ...call, args: [PROJECT_ID, NATIVE_TOKEN, parseEther(amount), NATIVE_TOKEN_CURRENCY, 0n, beneficiary, address, 'Surplus allowance withdrawal']
+        });
         const hash = await walletClient.writeContract({
-          address: terminal,
-          abi: TERMINAL_ABI,
-          functionName: 'useAllowanceOf',
-          args: [PROJECT_ID, NATIVE_TOKEN, parseEther(amount), NATIVE_TOKEN_CURRENCY, 0n, beneficiary, address, 'Surplus allowance withdrawal'],
-          account: address
+          ...call, args: [PROJECT_ID, NATIVE_TOKEN, parseEther(amount), NATIVE_TOKEN_CURRENCY, expectedOut * (10_000n - SLIPPAGE_BPS) / 10_000n, beneficiary, address, 'Surplus allowance withdrawal']
         });
         showTxSent(hash);
-        await publicClient.waitForTransactionReceipt({ hash });
+        await waitForSuccess(publicClient, hash);
         showTxConfirmed();
         await loadTreasuryStats();
       } catch (error) { showTxError(error); }
@@ -785,7 +804,7 @@ Tier prices come from `JB721TiersHookStore.tiersOf(...)` (see `/jb-nft-gallery-u
           account: address
         });
         showTxSent(hash);
-        await publicClient.waitForTransactionReceipt({ hash });
+        await waitForSuccess(publicClient, hash);
         showTxConfirmed();
         await loadTreasuryStats();
       } catch (error) { showTxError(error); }
@@ -815,7 +834,7 @@ Credits (unclaimed token balances tracked by `JBTokens`) convert to ERC-20 token
 
 ```html
 <script type="module">
-  import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther, zeroAddress } from 'https://esm.sh/viem';
+  import { createPublicClient, createWalletClient, http, custom, formatEther, parseEther, zeroAddress } from 'https://esm.sh/viem@2.55.19';
   import { CHAIN_CONFIGS, getContractAddress } from '/shared/wallet-utils.js';
 
   const PROJECT_ID = 1n;

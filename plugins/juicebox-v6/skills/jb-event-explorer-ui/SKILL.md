@@ -184,7 +184,7 @@ event SendReservedTokensToSplits(uint256 indexed rulesetId, uint256 indexed rule
   </div>
 
   <script type="module">
-    import { createPublicClient, http, parseAbiItem, decodeEventLog } from 'https://esm.sh/viem';
+    import { createPublicClient, http, parseAbiItem, decodeEventLog } from 'https://esm.sh/viem@2.55.19';
     import {
       CHAIN_CONFIGS,
       CHAINS,

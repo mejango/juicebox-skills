@@ -177,7 +177,7 @@ Data sources on `JBController`:
   </div>
 
   <script type="module">
-    import { createPublicClient, http, getContract, zeroAddress } from 'https://esm.sh/viem';
+    import { createPublicClient, http, getContract, zeroAddress } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, loadChainConfig } from '/shared/wallet-utils.js';
 
     // Exact V6 tuple shapes. Prefer loadABI('JBController') from shared/wallet-utils.js;

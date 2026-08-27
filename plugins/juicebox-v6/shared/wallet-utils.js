@@ -5,8 +5,8 @@
  *
  * Usage in HTML:
  * <script type="module">
- *   import { createPublicClient, http } from 'https://esm.sh/viem'
- *   import { mainnet, optimism, base, arbitrum, sepolia } from 'https://esm.sh/viem/chains'
+ *   import { createPublicClient, http } from 'https://esm.sh/viem@2.55.19'
+ *   import { mainnet, optimism, base, arbitrum, sepolia } from 'https://esm.sh/viem@2.55.19/chains'
  * </script>
  */
 
@@ -196,7 +196,7 @@ class JBWallet {
 
     // Dynamic import if viem not passed
     if (!viem) {
-      viem = await import('https://esm.sh/viem');
+      viem = await import('https://esm.sh/viem@2.55.19');
     }
 
     const { createWalletClient, createPublicClient, custom, http } = viem;
@@ -393,7 +393,7 @@ function formatDate(timestamp) {
  */
 async function createReadClient(chainId, viem = null) {
   if (!viem) {
-    viem = await import('https://esm.sh/viem');
+    viem = await import('https://esm.sh/viem@2.55.19');
   }
 
   const { createPublicClient, http } = viem;
@@ -444,34 +444,30 @@ function getContractAddress(chainId, contractName) {
 }
 
 /**
- * Load chain configuration from shared config
+ * Load chain configuration from shared config.
+ * Fails closed: transaction targets come from the reviewed manifest or not at all.
  */
 async function loadChainConfig() {
-  try {
-    const res = await fetch(new URL('./chain-config.json', import.meta.url));
-    if (res.ok) return res.json();
-  } catch (e) {
-    // Try relative path
+  for (const url of [new URL('./chain-config.json', import.meta.url), '/shared/chain-config.json']) {
     try {
-      const res = await fetch('/shared/chain-config.json');
+      const res = await fetch(url);
       if (res.ok) return res.json();
-    } catch (e2) {
-      // Fall through to inline config
-    }
+    } catch (e) { /* try next */ }
   }
+  throw new Error('chain-config.json could not be loaded. Refusing to fall back to inline addresses.');
+}
 
-  // Inline fallback: core contracts share the same address on every chain
-  const chains = {};
-  for (const [chainId, info] of Object.entries(CHAINS)) {
-    chains[chainId] = {
-      name: info.name,
-      rpc: CHAIN_CONFIGS[chainId].rpcUrls.default.http[0],
-      explorer: info.explorer,
-      testnet: info.testnet,
-      contracts: { ...CORE_CONTRACTS }
-    };
-  }
-  return { _version: '6', chains };
+/**
+ * Wait for a receipt and require it to have succeeded.
+ * A mined transaction can still have reverted; never report success on a bare receipt.
+ * @param {object} publicClient - viem public client
+ * @param {`0x${string}`} hash - Transaction hash
+ * @returns {Promise<object>} The successful receipt
+ */
+async function waitForSuccess(publicClient, hash) {
+  const receipt = await publicClient.waitForTransactionReceipt({ hash });
+  if (receipt.status !== 'success') throw new Error(`Transaction reverted on-chain: ${hash}`);
+  return receipt;
 }
 
 // Export for ES modules
@@ -490,7 +486,8 @@ export {
   createReadClient,
   loadChainConfig,
   loadABI,
-  getContractAddress
+  getContractAddress,
+  waitForSuccess
 };
 
 // Also expose on window for script tag usage
@@ -510,6 +507,7 @@ if (typeof window !== 'undefined') {
     createReadClient,
     loadChainConfig,
     loadABI,
-    getContractAddress
+    getContractAddress,
+    waitForSuccess
   };
 }

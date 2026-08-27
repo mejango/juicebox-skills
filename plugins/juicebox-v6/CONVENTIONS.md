@@ -8,6 +8,7 @@ Skills in this folder teach AI agents (Claude Console skills + Claude Code) how 
 2. **Ground truth is code.** Every contract fact (function signature, struct field order, permission ID, constant, fee value, event shape, address) must be verified against the `nana-*-v6` / `revnet-core-v6` / `croptop-core-v6` / `bendystraw-v6` repos or `shared/chain-config.json`. Never carry a fact over from a V5 skill without re-verifying it in V6 source.
 3. **Addresses come from `shared/chain-config.json`** (generated from `deploy-all-v6/deployments`). Do not hand-type addresses from anywhere else. Core contracts share one address across all chains — say so once instead of repeating per-chain tables.
 4. **No hedging, no marketing.** State facts. If something is unknown, omit it.
+5. **Generated transaction UIs fail closed.** Pin `viem` to an exact version (`https://esm.sh/viem@2.55.19`). Simulate every write with `publicClient.simulateContract` immediately before the wallet prompt and derive a nonzero `min*` floor from the simulated result; if simulation or preview fails, disable the action instead of submitting with a zero floor. Require `receipt.status === 'success'` (`waitForSuccess` in `shared/wallet-utils.js`) plus the operation's own evidence (event, new address, state change) before reporting success. Load addresses only from `shared/chain-config.json`; never fall back to inline addresses.
 
 ## Format
 

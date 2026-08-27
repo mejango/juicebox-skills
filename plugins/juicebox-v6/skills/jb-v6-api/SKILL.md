@@ -1278,7 +1278,7 @@ terminal.pay{value: 1 ether}({
     token: JBConstants.NATIVE_TOKEN,
     amount: 1 ether,
     beneficiary: msg.sender,
-    minReturnedTokens: 0,
+    minReturnedTokens: minTokens,  // floor from a prior simulation; 0 accepts any execution
     memo: "",
     metadata: ""
 });
@@ -1290,7 +1290,7 @@ terminal.pay({
     token: usdc,
     amount: 1_000e6,      // in the token's decimals
     beneficiary: msg.sender,
-    minReturnedTokens: 0,
+    minReturnedTokens: minTokens,  // floor from a prior simulation; 0 accepts any execution
     memo: "",
     metadata: ""
 });
@@ -1332,7 +1332,7 @@ terminal.sendPayoutsOf({
     token: usdc,
     amount: 10_000e6,
     currency: uint32(uint160(usdc)),
-    minTokensPaidOut: 0
+    minTokensPaidOut: minOut   // guards a moved price feed; 0 accepts any execution
 });
 ```
 

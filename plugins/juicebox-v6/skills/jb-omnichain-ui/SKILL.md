@@ -166,10 +166,12 @@ const RELAYR_API = 'https://api.relayr.ba5ed.com';
   </div>
 
   <script type="module">
-    import { createPublicClient, createWalletClient, custom, http, formatEther, encodeFunctionData } from 'https://esm.sh/viem';
-    import { CHAIN_CONFIGS, getContractAddress, truncateAddress } from '/shared/wallet-utils.js';
+    import { createPublicClient, createWalletClient, custom, http, formatEther, encodeFunctionData } from 'https://esm.sh/viem@2.55.19';
+    import { CHAIN_CONFIGS, getContractAddress, truncateAddress, createReadClient } from '/shared/wallet-utils.js';
 
     const RELAYR_API = 'https://api.relayr.ba5ed.com';
+    const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
+    const MAX_PAYMENT_WEI = 50_000_000_000_000_000n; // 0.05 ETH — refuse any Relayr quote above this
 
     const FORWARDER_ABI = [
       { name: 'nonces', type: 'function', stateMutability: 'view',
@@ -373,6 +375,14 @@ const RELAYR_API = 'https://api.relayr.ba5ed.com';
       btn.textContent = 'Confirm in wallet...';
 
       try {
+        // The Relayr response is untrusted input. Only pay what the UI displayed and only in native token.
+        if (!CHAIN_CONFIGS[payment.chain]) throw new Error(`Unknown payment chain ${payment.chain}`);
+        if (payment.token !== NATIVE_TOKEN && payment.token !== '0x0000000000000000000000000000000000000000') throw new Error('Only native-token payment is supported');
+        if (payment.payment_deadline && Date.parse(payment.payment_deadline) < Date.now()) throw new Error('Quote expired; request a new one');
+        const amount = BigInt(payment.amount);
+        if (amount > MAX_PAYMENT_WEI) throw new Error(`Payment ${formatEther(amount)} ETH exceeds cap ${formatEther(MAX_PAYMENT_WEI)} ETH`);
+        if (!confirm(`Pay ${formatEther(amount)} ETH on ${CHAIN_CONFIGS[payment.chain].name} to ${payment.target}?`)) throw new Error('Cancelled');
+
         await walletClient.switchChain({ id: payment.chain });
         const hash = await walletClient.sendTransaction({
           account: address,
@@ -413,25 +423,30 @@ const RELAYR_API = 'https://api.relayr.ba5ed.com';
           const response = await fetch(`${RELAYR_API}/v1/bundle/${bundleUuid}`);
           const status = await response.json();
 
-          status.transactions.forEach((tx, i) => {
-            const chainId = Array.from(selectedChains)[i];
-            const statusEl = document.querySelector(`#status-${chainId} .status-badge`);
-            if (!statusEl) return;
+          const chainIds = Array.from(selectedChains);
+          const results = await Promise.all(status.transactions.map(async (tx, i) => {
+            const state = tx.status?.state;
+            if (state !== 'Success') return state;
+            // Relayr says Success; confirm on the destination chain itself before calling it complete.
+            const client = await createReadClient(parseInt(chainIds[i]));
+            const receipt = await client.getTransactionReceipt({ hash: tx.status.data.hash });
+            return receipt.status === 'success' ? 'Success' : 'Failed';
+          }));
 
-            if (tx.status === 'Success' || tx.status === 'Completed') {
-              statusEl.textContent = 'Complete';
-              statusEl.style.color = 'var(--success)';
-            } else if (tx.status === 'Failed') {
-              statusEl.textContent = 'Failed';
-              statusEl.style.color = 'var(--error)';
-            } else {
-              statusEl.textContent = tx.status;
-            }
+          results.forEach((state, i) => {
+            const statusEl = document.querySelector(`#status-${chainIds[i]} .status-badge`);
+            if (!statusEl) return;
+            if (state === 'Success') { statusEl.textContent = 'Complete'; statusEl.style.color = 'var(--success)'; }
+            else if (state === 'Failed') { statusEl.textContent = 'Failed'; statusEl.style.color = 'var(--error)'; }
+            else statusEl.textContent = state || 'Pending';
           });
 
-          const allDone = status.transactions.every(tx => ['Success', 'Completed', 'Failed'].includes(tx.status));
-          if (!allDone) setTimeout(poll, 2000);
-          else document.getElementById('deploy-btn').textContent = 'Deployment Complete!';
+          const failed = results.filter(r => r === 'Failed').length;
+          const allDone = results.every(r => r === 'Success' || r === 'Failed');
+          if (!allDone) setTimeout(poll, 2500);
+          else document.getElementById('deploy-btn').textContent = failed
+            ? `Failed on ${failed} chain(s) — partial deployment, reconcile before use`
+            : 'Deployment Complete!';
 
         } catch (error) {
           console.error('Poll error:', error);
