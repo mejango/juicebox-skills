@@ -1,10 +1,12 @@
 # Regenerates shared/chain-config.json from deploy-all-v6/deployments.
-# Usage: python3 scripts/gen-chain-config.py [path/to/deploy-all-v6/deployments]
+# Usage: python3 scripts/gen-chain-config.py [path/to/deploy-all-v6/deployments] [--check]
+#   --check: exit 1 if the committed file differs from what the artifacts produce (CI parity gate).
 # Sources: every non-_deprecated artifact per chain; USDC from script/libraries/JBChainTokens.sol;
 # Permit2 from the JBMultiTerminal artifact constructor args (chain-same).
 import json,os,glob,sys
 HERE=os.path.dirname(os.path.abspath(__file__))
-D=sys.argv[1] if len(sys.argv)>1 else os.path.join(HERE,'..','..','..','..','v6','evm','deploy-all-v6','deployments')
+CHECK='--check' in sys.argv; argv=[a for a in sys.argv[1:] if a!='--check']
+D=argv[0] if argv else os.path.join(HERE,'..','..','..','..','v6','evm','deploy-all-v6','deployments')
 cfgp=os.path.join(HERE,'..','shared','chain-config.json')
 cfg=json.load(open(cfgp))
 dirs={'1':'ethereum','10':'optimism','8453':'base','42161':'arbitrum','11155111':'sepolia','11155420':'optimism_sepolia','84532':'base_sepolia','421614':'arbitrum_sepolia'}
@@ -23,5 +25,8 @@ for cid,d in dirs.items():
     contracts['Permit2']=p2
     contracts['USDC']=USDC[cid].lower()
     out['chains'][cid]={'name':old['name'],'rpc':old['rpc'],'explorer':old['explorer'],'testnet':old['testnet'],'contracts':dict(sorted(contracts.items()))}
-json.dump(out,open(cfgp,'w'),indent=2,ensure_ascii=False); open(cfgp,'a').write('\n')
-print('ok')
+new=json.dumps(out,indent=2,ensure_ascii=False)+'\n'
+if CHECK:
+    if open(cfgp).read()!=new: print('chain-config.json is out of date; run without --check'); sys.exit(1)
+    print('chain-config.json matches deploy-all artifacts'); sys.exit(0)
+open(cfgp,'w').write(new); print('ok')

@@ -10,7 +10,7 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 
 ## Layout
 
-- `skills/<name>/SKILL.md` — one skill per directory (46 skills)
+- `skills/<name>/SKILL.md` — one skill per directory (53 skills)
 - `shared/chain-config.json` — canonical per-chain V6 addresses, generated from `deploy-all-v6/deployments`
 - `shared/abis/*.json` — verified ABIs from deployment artifacts
 - `shared/wallet-utils.js`, `shared/styles.css` — helpers bundled into UI skills
@@ -28,10 +28,10 @@ Read `jb-contracts` (addresses, which contract does what) and `jb-v6-api` (signa
 
 | Building | Read, in order |
 |----------|----------------|
-| A pay / cash-out / mint button for an existing project | jb-terminal-selection → jb-protocol-fees → jb-cash-out-curve → jb-permit2-metadata → jb-interact-ui. Revnets: add revnet-economics. 721: add jb-721-tier-content. |
+| A pay / cash-out / mint button for an existing project | jb-sdk → jb-tx-safety → jb-terminal-selection → jb-data-hook-resolution → jb-protocol-fees → jb-cash-out-curve → jb-permit2-metadata → jb-interact-ui. Revnets: add revnet-economics. 721: add jb-721-tier-content. |
 | A webclient that reads project state | jb-query → jb-bendystraw → jb-omnichain-per-chain-projectids → jb-explorer-ui / jb-event-explorer-ui / jb-ruleset-timeline-ui |
-| A pay, cash-out, or split hook | jb-v6-impl → jb-pay-hook / jb-cash-out-hook / jb-split-hook → jb-fee-flows → jb-hook-deploy-ui |
-| A new project or revnet, multi-chain | jb-project → jb-ruleset → jb-fund-access-limits → jb-multi-currency → jb-suckers → jb-relayr → revnet-omnichain-default → jb-deploy-ui / jb-omnichain-ui |
+| A pay, cash-out, or split hook | jb-v6-impl → jb-buyback-hook / jb-lp-split-hook (reference implementations) → jb-pay-hook / jb-cash-out-hook / jb-split-hook → jb-fee-flows → jb-hook-deploy-ui |
+| A new project or revnet, multi-chain | jb-project → jb-revnet-deploy → jb-ruleset → jb-fund-access-limits → jb-multi-currency → jb-suckers → jb-relayr → jb-safe-and-relayr-execution → revnet-omnichain-default → jb-deploy-ui / jb-omnichain-ui |
 | A 721 collection | jb-721-tier-content → jb-721-per-chain-config → jb-omnichain-tier-quantity-per-chain → jb-nft-gallery-ui |
 | Loans against revnet tokens | jb-revloans → jb-loan-queries |
 
@@ -43,10 +43,10 @@ Every transaction UI follows CONVENTIONS rule 5: simulate first, nonzero floors,
 
 | Domain | Skills |
 |--------|--------|
-| Core API / reference | jb-v6-api, jb-v6-impl, jb-contracts, jb-currency-types, jb-project, jb-ruleset, jb-multi-currency, jb-query, jb-decode, jb-patterns, jb-simplify, jb-docs |
-| Terminals / fees | jb-terminal-selection, jb-terminal-wrapper, jb-protocol-fees, jb-fee-flows, jb-fund-access-limits, jb-cash-out-curve, jb-permit2-metadata |
-| Hooks / 721 | jb-pay-hook, jb-cash-out-hook, jb-split-hook, jb-721-per-chain-config, jb-721-tier-content |
-| Omnichain / suckers | jb-suckers, jb-relayr, jb-omnichain-erc20-config, jb-omnichain-payout-limits, jb-omnichain-per-chain-projectids, jb-omnichain-tier-quantity-per-chain |
-| Revnets / loans / croptop | revnet-economics, revnet-modeler, revnet-omnichain-default, jb-reserved-rate-offchain-revenue, jb-revloans, jb-loan-queries, jb-croptop |
+| Core API / reference | jb-sdk, jb-v6-api, jb-v6-impl, jb-contracts, jb-currency-types, jb-project, jb-ruleset, jb-multi-currency, jb-query, jb-decode, jb-patterns, jb-simplify, jb-docs |
+| Terminals / fees | jb-tx-safety, jb-terminal-selection, jb-data-hook-resolution, jb-terminal-wrapper, jb-protocol-fees, jb-fee-flows, jb-fund-access-limits, jb-cash-out-curve, jb-permit2-metadata |
+| Hooks / 721 | jb-pay-hook, jb-cash-out-hook, jb-split-hook, jb-buyback-hook, jb-lp-split-hook, jb-721-per-chain-config, jb-721-tier-content |
+| Omnichain / suckers | jb-suckers, jb-relayr, jb-safe-and-relayr-execution, jb-omnichain-erc20-config, jb-omnichain-payout-limits, jb-omnichain-per-chain-projectids, jb-omnichain-tier-quantity-per-chain |
+| Revnets / loans / croptop | jb-revnet-deploy, revnet-economics, revnet-modeler, revnet-omnichain-default, jb-reserved-rate-offchain-revenue, jb-revloans, jb-loan-queries, jb-croptop |
 | Data | jb-bendystraw |
 | UI generators | jb-deploy-ui, jb-explorer-ui, jb-event-explorer-ui, jb-ruleset-timeline-ui, jb-interact-ui, jb-hook-deploy-ui, jb-nft-gallery-ui, jb-omnichain-ui |
