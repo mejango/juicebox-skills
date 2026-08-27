@@ -155,14 +155,26 @@ Core contracts share the same address on every chain (CREATE2), so a single look
       JBRulesets: '0x26f2228a4e8b0079ed1c2a3d22f12ff7f83cdfba',
       JBTokens: '0x1f80d8f057ee36b4c2656d107e4e4558b71ba7d9',
       JBPermissions: '0xf92ac1ab5a00033e35a3975739124f61928c36b0',
-      JBTerminalStore: '0x7497ae014a60561925b51c0a3b4ade7460b9927c'
+      JBTerminalStore: '0x7497ae014a60561925b51c0a3b4ade7460b9927c',
+      JBFundAccessLimits: '0xc93360158f187fc8fc8f1062a1b31d06f185dbab',
+      JBPrices: '0xad45e4627f068d1e6b21e5301870d807543a8401',
+      JBSplits: '0x28b3d11fcb8d2ad0a143c5b193cd9f2e4d43f4c3',
+      JBSuckerRegistry: '0x7903a854ae91eaf635430d120a1a434085cef297',
+      JBOmnichainDeployer: '0xb853758a70a6b4216c09f1d071ea2344aba0a34f',
+      JB721TiersHookStore: '0x69913acf79dbba170d9efafe605ee62b42164f9c',
+      REVDeployer: '0xb552eb94284f94b833837d4b2cbb237128415d4e',
+      REVLoans: '0x056265c31157748818f0910d1859acd2f7d427de'
     };
 
+    // Etherscan V2 requires an API key (keyless calls return "Missing/Invalid API Key"). One key serves all chains.
+    const ETHERSCAN_API_KEY = '';
+
+    // Keyless, CORS-open public RPCs (same set as shared/wallet-utils.js CHAIN_CONFIGS).
     const CHAIN_RPC = {
-      1: 'https://eth.llamarpc.com',
-      10: 'https://mainnet.optimism.io',
-      8453: 'https://mainnet.base.org',
-      42161: 'https://arb1.arbitrum.io/rpc',
+      1: 'https://ethereum-rpc.publicnode.com',
+      10: 'https://optimism-rpc.publicnode.com',
+      8453: 'https://base-rpc.publicnode.com',
+      42161: 'https://arbitrum-one-rpc.publicnode.com',
       11155111: 'https://ethereum-sepolia-rpc.publicnode.com',
       11155420: 'https://sepolia.optimism.io',
       84532: 'https://sepolia.base.org',
@@ -202,8 +214,9 @@ Core contracts share the same address on every chain (CREATE2), so a single look
             } catch (e) {}
           }
         }
-        // Fallback: Etherscan multichain V2 API (one host, chainid parameter; API key recommended).
-        const url = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getabi&address=${address}`;
+        // Fallback: Etherscan multichain V2 API (one host, chainid parameter). Fails closed without a key.
+        if (!ETHERSCAN_API_KEY) throw new Error('ABI not in shared/abis and no ETHERSCAN_API_KEY set');
+        const url = `https://api.etherscan.io/v2/api?chainid=${chainId}&module=contract&action=getabi&address=${address}&apikey=${ETHERSCAN_API_KEY}`;
         const data = await (await fetch(url)).json();
         if (data.status === '1') return JSON.parse(data.result);
         throw new Error('ABI not found - contract may not be verified');
@@ -380,7 +393,7 @@ Core contracts share the same address on every chain (CREATE2), so a single look
 
 ## Common mistakes
 
-- **Deprecated per-chain Etherscan hosts**: `api-optimistic.etherscan.io`-style V1 hosts are retired. Use the multichain V2 endpoint `https://api.etherscan.io/v2/api?chainid={chainId}&...` (API key recommended for reliability).
+- **Deprecated per-chain Etherscan hosts**: `api-optimistic.etherscan.io`-style V1 hosts are retired. Use the multichain V2 endpoint `https://api.etherscan.io/v2/api?chainid={chainId}&...&apikey=...` — the key is required, not optional (keyless requests return `Missing/Invalid API Key`).
 - **Payable writes to `launchProjectFor`**: `msg.value` must equal `JBProjects.creationFee()` exactly — surface a value input for payable functions.
 - **`pendingReservedTokenBalanceOf` is a mapping getter**: it takes `uint256 projectId` and returns `uint256`; there is no separate "reserved token balance" function.
 

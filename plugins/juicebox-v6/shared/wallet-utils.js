@@ -11,7 +11,9 @@
  */
 
 /**
- * Chain configurations for viem (all 8 supported chains)
+ * Chain configurations for viem (all 8 supported chains).
+ * Mainnet RPCs are the keyless CORS-open publicnode endpoints the production
+ * webclients use for browser reads; testnets use the chains' own public nodes.
  */
 const CHAIN_CONFIGS = {
   1: {
@@ -20,8 +22,8 @@ const CHAIN_CONFIGS = {
     network: 'mainnet',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
-      default: { http: ['https://eth.llamarpc.com'] },
-      public: { http: ['https://eth.llamarpc.com'] }
+      default: { http: ['https://ethereum-rpc.publicnode.com'] },
+      public: { http: ['https://ethereum-rpc.publicnode.com'] }
     },
     blockExplorers: {
       default: { name: 'Etherscan', url: 'https://etherscan.io' }
@@ -33,8 +35,8 @@ const CHAIN_CONFIGS = {
     network: 'optimism',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
-      default: { http: ['https://mainnet.optimism.io'] },
-      public: { http: ['https://mainnet.optimism.io'] }
+      default: { http: ['https://optimism-rpc.publicnode.com'] },
+      public: { http: ['https://optimism-rpc.publicnode.com'] }
     },
     blockExplorers: {
       default: { name: 'Optimistic Etherscan', url: 'https://optimistic.etherscan.io' }
@@ -46,8 +48,8 @@ const CHAIN_CONFIGS = {
     network: 'base',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
-      default: { http: ['https://mainnet.base.org'] },
-      public: { http: ['https://mainnet.base.org'] }
+      default: { http: ['https://base-rpc.publicnode.com'] },
+      public: { http: ['https://base-rpc.publicnode.com'] }
     },
     blockExplorers: {
       default: { name: 'Basescan', url: 'https://basescan.org' }
@@ -59,8 +61,8 @@ const CHAIN_CONFIGS = {
     network: 'arbitrum',
     nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
     rpcUrls: {
-      default: { http: ['https://arb1.arbitrum.io/rpc'] },
-      public: { http: ['https://arb1.arbitrum.io/rpc'] }
+      default: { http: ['https://arbitrum-one-rpc.publicnode.com'] },
+      public: { http: ['https://arbitrum-one-rpc.publicnode.com'] }
     },
     blockExplorers: {
       default: { name: 'Arbiscan', url: 'https://arbiscan.io' }
@@ -142,6 +144,7 @@ const CHAINS = {
  * read from chain-config.json per chain.
  */
 const CORE_CONTRACTS = {
+  ERC2771Forwarder: '0x3ba60b60933916a7c87d0860dcee62a0ce34e3e2',
   JBController: '0x3fcec3572e84b624477bcff4e2cf1f7deab648f1',
   JBDirectory: '0x5aff29060e023e6fb87be5596652b33c65af535b',
   JBFundAccessLimits: '0xc93360158f187fc8fc8f1062a1b31d06f185dbab',
@@ -155,11 +158,27 @@ const CORE_CONTRACTS = {
   JBSuckerRegistry: '0x7903a854ae91eaf635430d120a1a434085cef297',
   JBTerminalStore: '0x7497ae014a60561925b51c0a3b4ade7460b9927c',
   JBTokens: '0x1f80d8f057ee36b4c2656d107e4e4558b71ba7d9',
+  Permit2: '0x000000000022d473030f116ddee9f6b43ac78ba3',
   JB721TiersHookDeployer: '0xb7b8ec35e2dd84afff04ee769c6189e7a4d44a78',
   JB721TiersHookProjectDeployer: '0x3ffdc94e7f1de4b74c52158ec9dd3b965585f451',
   JB721TiersHookStore: '0x69913acf79dbba170d9efafe605ee62b42164f9c',
   REVDeployer: '0xb552eb94284f94b833837d4b2cbb237128415d4e',
   REVLoans: '0x056265c31157748818f0910d1859acd2f7d427de'
+};
+
+/**
+ * Block in which JBDirectory was deployed on each chain (deploy-all-v6/deployments/<chain>/JBDirectory.json).
+ * No V6 event exists before this block; use it as the `fromBlock` floor for eth_getLogs scans.
+ */
+const DEPLOY_BLOCKS = {
+  1: 25327949n,
+  10: 152994072n,
+  8453: 47398796n,
+  42161: 473988207n,
+  11155111: 11070541n,
+  11155420: 44892064n,
+  84532: 42909187n,
+  421614: 277724223n
 };
 
 /**
@@ -457,6 +476,42 @@ async function loadChainConfig() {
   throw new Error('chain-config.json could not be loaded. Refusing to fall back to inline addresses.');
 }
 
+const DIRECTORY_ABI = [
+  { name: 'primaryTerminalOf', type: 'function', stateMutability: 'view',
+    inputs: [{ name: 'projectId', type: 'uint256' }, { name: 'token', type: 'address' }],
+    outputs: [{ type: 'address' }] }
+];
+const ACCOUNTING_CONTEXT_ABI = [
+  { name: 'accountingContextForTokenOf', type: 'function', stateMutability: 'view',
+    inputs: [{ name: 'projectId', type: 'uint256' }, { name: 'token', type: 'address' }],
+    outputs: [{ type: 'tuple', components: [
+      { name: 'token', type: 'address' }, { name: 'decimals', type: 'uint8' }, { name: 'currency', type: 'uint32' }
+    ] }] }
+];
+
+/**
+ * Resolve the terminal a project accepts `token` through. Never hardcode JBMultiTerminal:
+ * projects can use custom terminals, and a project whose accounting context is USDC rejects
+ * native ETH on the multi terminal (`JBMultiTerminal_TokenNotAccepted`).
+ * @param {object} publicClient - viem public client
+ * @param {bigint} projectId
+ * @param {`0x${string}`} token - NATIVE_TOKEN (0x...EEEe) or an ERC-20
+ * @returns {Promise<{terminal: string, context: {token: string, decimals: number, currency: number}}>}
+ */
+async function resolveTerminal(publicClient, projectId, token) {
+  const chainId = publicClient.chain?.id ?? await publicClient.getChainId();
+  const terminal = await publicClient.readContract({
+    address: getContractAddress(chainId, 'JBDirectory'), abi: DIRECTORY_ABI,
+    functionName: 'primaryTerminalOf', args: [projectId, token]
+  });
+  if (!terminal || /^0x0{40}$/.test(terminal)) throw new Error(`Project ${projectId} has no terminal accepting ${token}`);
+  const context = await publicClient.readContract({
+    address: terminal, abi: ACCOUNTING_CONTEXT_ABI, functionName: 'accountingContextForTokenOf', args: [projectId, token]
+  });
+  if (/^0x0{40}$/.test(context.token)) throw new Error(`Terminal ${terminal} has no accounting context for ${token}`);
+  return { terminal, context };
+}
+
 /**
  * Wait for a receipt and require it to have succeeded.
  * A mined transaction can still have reverted; never report success on a bare receipt.
@@ -476,6 +531,7 @@ export {
   CHAINS,
   CHAIN_CONFIGS,
   CORE_CONTRACTS,
+  DEPLOY_BLOCKS,
   getTxUrl,
   getAddressUrl,
   truncateAddress,
@@ -487,6 +543,7 @@ export {
   loadChainConfig,
   loadABI,
   getContractAddress,
+  resolveTerminal,
   waitForSuccess
 };
 
@@ -497,6 +554,7 @@ if (typeof window !== 'undefined') {
     CHAINS,
     CHAIN_CONFIGS,
     CORE_CONTRACTS,
+    DEPLOY_BLOCKS,
     getTxUrl,
     getAddressUrl,
     truncateAddress,
@@ -508,6 +566,7 @@ if (typeof window !== 'undefined') {
     loadChainConfig,
     loadABI,
     getContractAddress,
+    resolveTerminal,
     waitForSuccess
   };
 }
