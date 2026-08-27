@@ -126,8 +126,8 @@ Verified against `nana-721-hook-v6`.
   </div>
 
   <script type="module">
-    import { createPublicClient, http, formatUnits, isAddress, createWalletClient, custom, encodeAbiParameters, keccak256, parseAbiItem } from 'https://esm.sh/viem';
-    import { CHAIN_CONFIGS, getContractAddress, truncateAddress } from '/shared/wallet-utils.js';
+    import { createPublicClient, http, formatUnits, isAddress, createWalletClient, custom, encodeAbiParameters, keccak256, parseAbiItem } from 'https://esm.sh/viem@2.55.19';
+    import { CHAIN_CONFIGS, getContractAddress, truncateAddress, waitForSuccess } from '/shared/wallet-utils.js';
 
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
@@ -434,14 +434,17 @@ Verified against `nana-721-hook-v6`.
 
         // Assumes an ETH-priced hook (pricingContext currency = native). For other pricing
         // currencies, convert the tier price to the payment terminal's token first.
+        // Simulate first: a sold-out tier, wrong envelope, or wrong price aborts before the wallet
+        // prompt, and the simulated token count sets a nonzero floor for the real call.
+        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: connectedAddress };
+        const { result: expectedTokens } = await publicClient.simulateContract({
+          ...call, args: [projectId, NATIVE_TOKEN, value, connectedAddress, 0n, '', metadata]
+        });
         const hash = await walletClient.writeContract({
-          address: terminal, abi: TERMINAL_ABI, functionName: 'pay',
-          args: [projectId, NATIVE_TOKEN, value, connectedAddress, 0n, '', metadata],
-          value,
-          account: connectedAddress
+          ...call, args: [projectId, NATIVE_TOKEN, value, connectedAddress, expectedTokens * 95n / 100n, '', metadata]
         });
         alert('Mint transaction sent: ' + hash);
-        await publicClient.waitForTransactionReceipt({ hash });
+        await waitForSuccess(publicClient, hash);
         alert('NFT minted!');
         await loadOwnedNFTs(connectedAddress);
       } catch (error) { console.error(error); alert('Minting failed: ' + (error.shortMessage || error.message)); }
@@ -457,7 +460,7 @@ Verified against `nana-721-hook-v6`.
           address: hookAddress, abi: HOOK_ABI, functionName: 'transferFrom',
           args: [connectedAddress, recipient, BigInt(tokenId)], account: connectedAddress
         });
-        await publicClient.waitForTransactionReceipt({ hash });
+        await waitForSuccess(publicClient, hash);
         alert('Transfer successful!');
         await loadOwnedNFTs(connectedAddress);
       } catch (error) { console.error(error); alert('Transfer failed: ' + (error.shortMessage || error.message)); }

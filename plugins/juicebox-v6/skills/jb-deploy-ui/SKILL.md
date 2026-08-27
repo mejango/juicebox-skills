@@ -167,15 +167,18 @@ Currency IDs (`JBCurrencyIds`) — used for `baseCurrency` and price-feed lookup
   </div>
 
   <script type="module">
-    import { createWalletClient, createPublicClient, custom, http, parseEther, zeroAddress } from 'https://esm.sh/viem';
-    import { CHAIN_CONFIGS, loadChainConfig, loadABI, truncateAddress, getTxUrl } from '/shared/wallet-utils.js';
+    import { createWalletClient, createPublicClient, custom, http, parseEther, zeroAddress, parseEventLogs } from 'https://esm.sh/viem@2.55.19';
+    import { CHAIN_CONFIGS, loadChainConfig, loadABI, truncateAddress, getTxUrl, waitForSuccess } from '/shared/wallet-utils.js';
 
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
     const NATIVE_TOKEN_CURRENCY = 61166; // uint32(uint160(NATIVE_TOKEN))
     const ETH_CURRENCY = 1;              // JBCurrencyIds.ETH (baseCurrency)
 
     const PROJECTS_ABI = [
-      { name: 'creationFee', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] }
+      { name: 'creationFee', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
+      { name: 'Transfer', type: 'event', inputs: [
+        { name: 'from', type: 'address', indexed: true }, { name: 'to', type: 'address', indexed: true }, { name: 'tokenId', type: 'uint256', indexed: true }
+      ] }
     ];
 
     let walletClient = null;
@@ -283,8 +286,14 @@ Currency IDs (`JBCurrencyIds`) — used for `baseCurrency` and price-feed lookup
         });
 
         showStatus('info', `Transaction sent: ${truncateAddress(hash)}`);
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
-        showStatus('success', `Project deployed! <a href="${getTxUrl(chainId, hash)}" target="_blank">View tx</a>`);
+        const receipt = await waitForSuccess(publicClient, hash);
+
+        // Prove the project exists: JBProjects mints the project NFT (Transfer from 0x0) to `owner`.
+        const [minted] = parseEventLogs({
+          abi: PROJECTS_ABI, eventName: 'Transfer', logs: receipt.logs.filter(l => l.address.toLowerCase() === addresses.JBProjects.toLowerCase())
+        });
+        if (!minted || minted.args.to.toLowerCase() !== config.owner.toLowerCase()) throw new Error('No project NFT minted to owner in receipt');
+        showStatus('success', `Project #${minted.args.tokenId} deployed! <a href="${getTxUrl(chainId, hash)}" target="_blank">View tx</a>`);
       } catch (error) {
         showStatus('error', `Failed: ${error.message}`);
       }

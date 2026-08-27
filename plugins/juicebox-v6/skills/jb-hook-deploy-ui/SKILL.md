@@ -225,7 +225,7 @@ import {IJBPayHook} from '@bananapus/core-v6/src/interfaces/IJBPayHook.sol';
   </div>
 
   <script type="module">
-    import { createWalletClient, custom } from 'https://esm.sh/viem';
+    import { createWalletClient, custom } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, truncateAddress } from '/shared/wallet-utils.js';
 
     const EXPLORERS = {
@@ -471,6 +471,7 @@ contract FeeExtractionHook is IJBCashOutHook {
         showStatus('deploy-status', 'info', 'Waiting for confirmation...');
 
         const receipt = await pollForReceipt(hash);
+        if (receipt.status !== '0x1' || !receipt.contractAddress) throw new Error(`Deployment reverted: ${hash}`);
         deployedAddress = receipt.contractAddress;
 
         document.getElementById('deployed-address').textContent = deployedAddress;
