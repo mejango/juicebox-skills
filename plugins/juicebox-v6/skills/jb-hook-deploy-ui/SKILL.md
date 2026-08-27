@@ -228,12 +228,15 @@ import {IJBPayHook} from '@bananapus/core-v6/src/interfaces/IJBPayHook.sol';
     import { createWalletClient, custom } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, truncateAddress } from '/shared/wallet-utils.js';
 
+    // Per-chain V1 API hosts (api-optimistic.etherscan.io, api.basescan.org, ...) are retired.
+    // Etherscan V2 is one host with a chainid parameter; one API key works for every chain.
+    const ETHERSCAN_V2_API = 'https://api.etherscan.io/v2/api';
     const EXPLORERS = {
-      1: { name: 'Etherscan', url: 'https://etherscan.io', api: 'https://api.etherscan.io' },
-      11155111: { name: 'Sepolia', url: 'https://sepolia.etherscan.io', api: 'https://api-sepolia.etherscan.io' },
-      10: { name: 'Optimism', url: 'https://optimistic.etherscan.io', api: 'https://api-optimistic.etherscan.io' },
-      8453: { name: 'Basescan', url: 'https://basescan.org', api: 'https://api.basescan.org' },
-      42161: { name: 'Arbiscan', url: 'https://arbiscan.io', api: 'https://api.arbiscan.io' }
+      1: { name: 'Etherscan', url: 'https://etherscan.io' },
+      11155111: { name: 'Sepolia', url: 'https://sepolia.etherscan.io' },
+      10: { name: 'Optimism', url: 'https://optimistic.etherscan.io' },
+      8453: { name: 'Basescan', url: 'https://basescan.org' },
+      42161: { name: 'Arbiscan', url: 'https://arbiscan.io' }
     };
 
     const HOOK_CATALOG = {
@@ -512,7 +515,7 @@ contract FeeExtractionHook is IJBCashOutHook {
       showStatus('verify-status', 'info', 'Submitting verification...');
 
       try {
-        const response = await fetch(`${EXPLORERS[selectedChainId].api}/api`, {
+        const response = await fetch(`${ETHERSCAN_V2_API}?chainid=${selectedChainId}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
@@ -600,7 +603,7 @@ const IMPORT_MAPPINGS = {
   '@bananapus/core-v6/': 'https://raw.githubusercontent.com/Bananapus/nana-core-v6/main/',
   '@bananapus/721-hook-v6/': 'https://raw.githubusercontent.com/Bananapus/nana-721-hook-v6/main/',
   '@bananapus/suckers-v6/': 'https://raw.githubusercontent.com/Bananapus/nana-suckers-v6/main/',
-  '@openzeppelin/contracts/': 'https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/v5.0.0/contracts/'
+  '@openzeppelin/contracts/': 'https://raw.githubusercontent.com/OpenZeppelin/openzeppelin-contracts/v5.6.1/contracts/' // nana-core-v6 pins @openzeppelin/contracts 5.6.1
 };
 ```
 
@@ -620,7 +623,7 @@ Non-zero `salt` gives a deterministic clone address; the effective salt mixes in
 
 - **Attaching a pay/cash-out hook directly as `dataHook`** — the `dataHook` must implement `IJBRulesetDataHook`; it decides which pay/cash-out hooks run and with what amounts. A bare `IJBPayHook` set as `dataHook` reverts every pay. Either implement both interfaces in one contract (return itself as the hook specification) or write a small data hook that specifies your pay hook.
 - **Forgetting `useDataHookForPay` / `useDataHookForCashOut`** — with the flags false, the `dataHook` address is ignored.
-- **Missing `supportsInterface`** — terminals check ERC-165 support; hooks without it are rejected.
+- **ERC-165 is only checked for approval hooks (`JBRulesets`, `JBRulesets_InvalidRulesetApprovalHook`) and split hooks (`JBMultiTerminal`)** — pay and cash-out hooks are called without any interface check, so a wrong callback signature reverts at call time instead of at configuration time. Keep `supportsInterface` anyway; tooling relies on it.
 - **`payable` callbacks** — `afterPayRecordedWith`/`afterCashOutRecordedWith` must be `payable`: forwarded native token amounts arrive as `msg.value`.
 - **Trusting `context` without checking the caller** — anyone can call your hook. Validate `msg.sender` is a terminal registered in `JBDirectory` (`isTerminalOf(projectId, msg.sender)`) before acting on the context.
 

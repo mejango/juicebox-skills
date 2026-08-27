@@ -38,8 +38,8 @@ Verified against `nana-omnichain-deployers-v6`, `nana-suckers-v6`, and `nana-cor
 | Launch (default 721 config) | Same name, without `deploy721Config` — deploys an empty-tier hook using the first ruleset's `baseCurrency` |
 | Creation fee | `payable` — `msg.value` MUST equal `JBProjects.creationFee()` EXACTLY (capped at 0.001 ether; can be 0) |
 | Add suckers to existing project | `deploySuckersFor(uint256 projectId, JBSuckerDeploymentConfig suckerDeploymentConfiguration)` — requires `DEPLOY_SUCKERS` permission from the project owner |
-| Deterministic sucker addresses | The registry salt is `keccak256(abi.encode(config.salt, msgSender))` — the SAME sender must submit on every chain for sucker addresses to match, which is what makes each sucker find its cross-chain peer |
-| 721 hook lookup | `JBOmnichainDeployer.tiered721HookOf(projectId, rulesetId)` — the deployer is the project's data hook and proxies to the real 721 hook |
+| Deterministic sucker addresses | The registry salt is `keccak256(abi.encode(msgSender, config.salt))` (`JBSuckerRegistry.sol`) — the SAME sender must submit on every chain for sucker addresses to match, which is what makes each sucker find its cross-chain peer |
+| 721 hook lookup | `JBOmnichainDeployer.tiered721HookOf(projectId, rulesetId)` returns `(IJB721TiersHook hook, bool useDataHookForCashOut)` (viem: `[hook, bool]`) — the deployer is the project's data hook and proxies to the real 721 hook; its other data hook (buyback etc.) is `extraDataHookOf(projectId, rulesetId)` |
 | Meta-tx support | `JBOmnichainDeployer`, `JBController`, and `JBMultiTerminal` are `ERC2771Context` contracts trusting the canonical `ERC2771Forwarder` |
 
 Sucker config structs (ABI order):
@@ -98,7 +98,7 @@ const RELAYR_API = 'https://api.relayr.ba5ed.com';
 ### Bendystraw (data)
 
 ```javascript
-// Mainnet chains: https://bendystraw.xyz/{API_KEY}/graphql
+// Mainnet chains: https://bendystraw.up.railway.app/{API_KEY}/graphql (production host; bendystraw.xyz lags)
 // Testnet chains: https://testnet.bendystraw.xyz/{API_KEY}/graphql
 // The keyed route is REQUIRED in browsers — the keyless /graphql endpoint is CORS-locked.
 // Contact @peripheralist on X for a key. Use a server-side proxy to keep it secret.
@@ -376,6 +376,7 @@ const RELAYR_API = 'https://api.relayr.ba5ed.com';
 
       try {
         // The Relayr response is untrusted input. Only pay what the UI displayed and only in native token.
+        // Production additionally pins payment.target to Relayr's known payment contract; pin it here too when known.
         if (!CHAIN_CONFIGS[payment.chain]) throw new Error(`Unknown payment chain ${payment.chain}`);
         if (payment.token !== NATIVE_TOKEN && payment.token !== '0x0000000000000000000000000000000000000000') throw new Error('Only native-token payment is supported');
         if (payment.payment_deadline && Date.parse(payment.payment_deadline) < Date.now()) throw new Error('Quote expired; request a new one');
@@ -547,7 +548,7 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const response = await fetch(
-    `https://bendystraw.xyz/${process.env.BENDYSTRAW_API_KEY}/graphql`,
+    `https://bendystraw.up.railway.app/${process.env.BENDYSTRAW_API_KEY}/graphql`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

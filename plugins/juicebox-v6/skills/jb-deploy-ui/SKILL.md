@@ -104,6 +104,8 @@ Currency IDs (`JBCurrencyIds`) — used for `baseCurrency` and price-feed lookup
 | `terminal` | `address` (`JBMultiTerminal` from chain-config) |
 | `accountingContextsToAccept` | `JBAccountingContext[]` |
 
+To let the project accept any token by swap, add a second entry `{ terminal: JBRouterTerminalRegistry, accountingContextsToAccept: [] }` (the SDK's `buildTerminalConfigurations` emits exactly this pair; the production create flow gates it on an "allow any token" option). Production launches go through `JB721TiersHookProjectDeployer.launchProjectFor` rather than `JBController.launchProjectFor` directly so a 721 store hook exists from day one.
+
 `JBAccountingContext`: `{ token: address, decimals: uint8, currency: uint32 }`
 
 `JBSplitGroup`: `{ groupId: uint256, splits: JBSplit[] }`
@@ -353,7 +355,7 @@ function encodeIpfsUri(cid) {
 - New revnet: pass `revnetId = 0` and `msg.value = JBProjects.creationFee()`.
 - Pre-reserved project ID: pass the ID and `msg.value = 0` (non-zero reverts with `REVDeployer_ProjectCreationFeeNotNeeded`).
 
-Overloads: a base variant `deployFor(revnetId, configuration, accountingContextsToAccept, suckerDeploymentConfiguration)` and a 721 variant adding `tiered721HookConfiguration` and `allowedPosts`. Load the exact structs with `loadABI('REVDeployer')`. Revnet configuration is permanent after deployment — surface a warning in the UI.
+Overloads: a base variant `deployFor(revnetId, configuration, accountingContextsToAccept, suckerDeploymentConfiguration)` and a 721 variant adding `tiered721HookConfiguration` and `allowedPosts`. Production always uses the 721 variant with its own `tiered721Config`: the base variant deploys an empty hook that hardcodes 18 price decimals (mis-prices USD/USDC stores) and grants the operator all four 721 permissions (`ADJUST_721_TIERS`, `SET_721_METADATA`, `MINT_721`, `SET_721_DISCOUNT_PERCENT`). Load the exact structs with `loadABI('REVDeployer')`, then filter the ABI to the one overload you encode — viem mis-disambiguates the two tuple-heavy `deployFor`s. Revnet configuration is permanent after deployment — surface a warning in the UI.
 
 ## Common mistakes
 
