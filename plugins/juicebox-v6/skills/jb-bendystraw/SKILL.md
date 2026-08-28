@@ -1161,6 +1161,36 @@ query LpPositions($chainId: Int!, $poolId: String!, $limit: Int!, $offset: Int!)
 }
 ```
 
+### Current pool reserves without an RPC call
+
+"How much liquidity is in the pool right now?" needs no `slot0` read and no `ModifyLiquidity` log scan. Three indexed entities carry everything: the pool row gives `poolId` and `projectTokenIsCurrency0`; the latest non-`mint` swap row gives the current `sqrtPriceX96` (fall back to the pool's `initialSqrtPriceX96` when there are no trades); the positions above give every active range. Value each position at that price and sum — this is what revnet.money's price chart tooltip shows as "Pool liquidity now".
+
+```ts
+import {
+  uniswapV4AmountsForLiquidity,
+  uniswapV4SqrtPriceX96AtTick,
+} from "@bananapus/nana-sdk-core/v6";
+
+const sqrtP = BigInt(lastTrade?.sqrtPriceX96 ?? pool.initialSqrtPriceX96);
+let amount0 = 0n, amount1 = 0n;
+for (const p of positions) {
+  const liquidity = BigInt(p.liquidity);
+  if (liquidity <= 0n) continue;
+  const a = uniswapV4AmountsForLiquidity(
+    sqrtP,
+    uniswapV4SqrtPriceX96AtTick(p.tickLower),
+    uniswapV4SqrtPriceX96AtTick(p.tickUpper),
+    liquidity,
+  );
+  amount0 += a.amount0; amount1 += a.amount1;
+}
+const reserves = pool.projectTokenIsCurrency0
+  ? { tokenAmount: amount0, pairAmount: amount1 }
+  : { tokenAmount: amount1, pairAmount: amount0 };
+```
+
+Rules: fees are excluded (they sit outside the range math); an empty `items` list reads the same as "not indexed yet", so render nothing rather than "0"; and do the whole thing in the same fetch as the price history so the reserves paint with the chart instead of seconds later over RPC. Reference: `revnet-money/src/app/[slug]/components/TokenPrice/getV4AmmPriceHistory.ts`.
+
 ### Cross-chain bridge tracking
 
 ```graphql
