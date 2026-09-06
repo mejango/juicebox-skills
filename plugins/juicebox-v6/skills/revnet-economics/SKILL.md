@@ -7,7 +7,8 @@ description: |
   (4) explaining price corridor dynamics, (5) citing academic sources for revnet mechanics.
   Includes the bonding curve formula, rational actor analysis, the three revnet archetypes,
   and the exact on-chain fee structure.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Revnet Economics

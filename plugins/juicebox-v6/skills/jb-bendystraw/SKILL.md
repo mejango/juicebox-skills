@@ -71,7 +71,7 @@ const response = await fetch(`https://bendystraw.up.railway.app/${API_KEY}/graph
 
 ## The `version: 6` Rule
 
-For name, handle, and URL lookup, follow `/jb-project-identity`: return V6 candidates with their chain and ID, preserve ambiguity, and verify the selected candidate against the V6 contracts. An empty or unavailable V6 search is not permission to query another deployment.
+For name, handle, and URL lookup, follow `jb-project-identity`: return V6 candidates with their chain and ID, preserve ambiguity, and verify the selected candidate against the V6 contracts. An empty or unavailable V6 search is not permission to query another deployment.
 
 **Juicebox V6 data is `version: 6`. Every query with a version argument or filter MUST use the literal `version: 6`; select and validate returned version fields, including nested project rows.** Some singleton or opaque-ID queries do not expose a version argument; use their actual schema below and validate the returned project context. Do not invent arguments. The same database contains rows from other protocol deployments tagged with other version values; combining them mixes unrelated projects. The tag is decided by which contract address emitted the event; V6-only singletons (buyback hook, V4 hook, suckers registry) always write 6.
 

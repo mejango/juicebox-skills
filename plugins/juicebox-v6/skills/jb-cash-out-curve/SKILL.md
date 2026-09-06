@@ -5,7 +5,8 @@ description: |
   values in UI, (2) explaining reclaim amounts to users, (3) calculating what share of surplus a
   cash out returns. The simple "X% of proportional share" is WRONG — the return depends on what
   fraction of supply is being cashed out.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Cash-Out Bonding Curve

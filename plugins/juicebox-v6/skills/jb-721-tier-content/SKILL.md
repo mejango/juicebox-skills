@@ -6,7 +6,8 @@ description: |
   between encodedIpfsUri and tokenUriResolver, (3) implementing custom on-chain SVG
   resolvers like Banny, (4) debugging tier metadata not loading, (5) understanding the
   tiersOf() / tokenURI() / tokenUriOf() flow.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # 721 Tier Content Patterns

@@ -8,7 +8,8 @@ description: |
   ownership/revenue-sharing projects. Key rule: for off-chain revenue, reserved percent
   should be 0 — the owner controls what enters the project. Reserved percent only matters
   for revenue that flows to the project automatically.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Reserved Percent for Off-Chain vs On-Chain Revenue

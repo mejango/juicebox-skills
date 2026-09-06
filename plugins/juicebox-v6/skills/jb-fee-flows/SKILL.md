@@ -5,7 +5,8 @@ description: |
   to NANA (project 1), (2) explaining how revnet fees route to REV (project 3), (3) describing the
   NANA-REV feedback loop, (4) explaining what fee payers receive in return, (5) explaining layered
   fees on revnet cash outs and loans.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Ecosystem Fee Flows

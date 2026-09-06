@@ -6,7 +6,8 @@ description: |
   complex multi-ruleset configurations, (3) designing NFT or cash-out systems,
   (4) tempted to wrap existing hooks. Checklist format to find simpler solutions
   before writing custom contracts.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox Simplification Checklist
@@ -275,8 +276,8 @@ If all boxes are checked and you still need custom code, proceed with confidence
 
 ## Related Skills
 
-- `/jb-patterns` - Common design patterns with examples
-- `/jb-project` - Project deployment
-- `/jb-pay-hook` - When you DO need a custom pay hook
-- `/jb-cash-out-hook` - When you DO need a custom cash out hook
-- `/jb-split-hook` - When you DO need a custom split hook
+- `jb-patterns` - Common design patterns with examples
+- `jb-project` - Project deployment
+- `jb-pay-hook` - When you DO need a custom pay hook
+- `jb-cash-out-hook` - When you DO need a custom cash out hook
+- `jb-split-hook` - When you DO need a custom split hook

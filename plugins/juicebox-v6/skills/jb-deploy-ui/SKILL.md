@@ -5,20 +5,21 @@ description: |
   HTML page for deploying a project or hook, (2) building quick demo UIs for testing,
   (3) creating admin tools for project configuration, (4) want wallet connection
   and transaction status in a single file. No build step - viem from CDN.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Deployment UI Generator
 
 Generate single-file frontends for deploying Juicebox projects, 721 collections, and revnets. Uses shared styles and viem for blockchain interactions.
 
-Before finalizing deployment, use `/jb-project-metadata` to review and pin the complete metadata JSON through `https://juicebox.center/mcp`. Use the actual returned `metadataUri`; a local image requires a separate authorized upload. Keep the metadata review and public upload outcome visible alongside the later unsigned launch plan.
+Before finalizing deployment, use `jb-project-metadata` to review and pin the complete metadata JSON through `https://juicebox.center/mcp`. Use the actual returned `metadataUri`; a local image requires a separate authorized upload. Keep the metadata review and public upload outcome visible alongside the later unsigned launch plan.
 
 When connected to **https://juicebox.center/mcp**, use `jb_plan_integration` and
 `jb_list_webclient_references` / `jb_get_webclient_reference` for applicable
 Juicescan, Juicebox Money, and Revnet Money examples. Discover schemas first;
 these tools provide references to adapt, not a generated or deployed application.
-See `/jb-sdk` for the MCP development workflow. A missing connection does not
+See `jb-sdk` for the MCP development workflow. A missing connection does not
 prevent using the V6 template below.
 
 ## Philosophy
@@ -377,6 +378,6 @@ Overloads: a base variant `deployFor(revnetId, configuration, accountingContexts
 
 ## Related skills
 
-- `/jb-explorer-ui` - Contract read/write interface for deployed projects
-- `/jb-ruleset-timeline-ui` - Ruleset history visualization
-- `/jb-event-explorer-ui` - Event browsing
+- `jb-explorer-ui` - Contract read/write interface for deployed projects
+- `jb-ruleset-timeline-ui` - Ruleset history visualization
+- `jb-event-explorer-ui` - Event browsing

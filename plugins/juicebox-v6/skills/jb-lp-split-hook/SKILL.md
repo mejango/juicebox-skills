@@ -9,7 +9,8 @@ description: |
   `AccumulationBelowThreshold`, (5) reasoning about the floor/ceiling tick corridor, single-sided asks,
   the fee-project cut, or Permit2 approvals, (6) choosing the right `deployPool` selector for a given
   deployed hook, (7) indexing LP positions via bendystraw `buybackPoolPositions`.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Uniswap V4 LP Split Hook

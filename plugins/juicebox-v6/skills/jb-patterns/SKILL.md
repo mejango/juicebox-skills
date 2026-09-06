@@ -9,7 +9,8 @@ description: |
   games with outcome-based payouts, (7) deciding between native mechanics and custom code.
   Covers 11 patterns plus a decision tree. Golden rule: prefer configuration over custom
   contracts.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox Design Patterns

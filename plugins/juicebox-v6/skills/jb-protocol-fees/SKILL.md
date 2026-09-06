@@ -5,7 +5,8 @@ description: |
   amounts after fees for payouts, surplus allowance, or cash outs, (2) building cash out or loan
   UIs for revnets, (3) determining when the 2.5% protocol fee applies and who is exempt,
   (4) working with held fees (28-day hold, processing, returning), (5) displaying fee breakdowns.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox & Revnet Protocol Fees

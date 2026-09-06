@@ -6,7 +6,8 @@ description: |
   (2) deciding which contract handles a task (payments, rulesets, tokens, splits, NFTs,
   cross-chain bridging, loans, publishing), (3) building cast/viem calls against Juicebox,
   (4) checking whether a contract exists on a given chain.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Contract Inventory

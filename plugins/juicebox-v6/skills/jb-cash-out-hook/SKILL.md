@@ -7,7 +7,8 @@ description: |
   (4) omnichain supply must be considered when pricing cash outs. Covers
   IJBRulesetDataHook's beforeCashOutRecordedWith (5 return values), IJBCashOutHook,
   context structs, fees on forwarded amounts, and access control.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Cash Out Hook Generator

@@ -7,7 +7,8 @@ description: |
   SimulationReverted, (4) bundling sequential same-chain transactions (virtual nonces),
   (5) building cross-chain UX where the user pays on one preferred chain. Covers ForwardRequest
   signing, bundle polling, and error handling.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Relayr — Multi-Chain Transaction Bundling

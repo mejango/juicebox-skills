@@ -6,7 +6,8 @@ description: |
   with a token it doesn't list in its accounting contexts, (4) deciding between JBMultiTerminal,
   JBRouterTerminalRegistry, and JBRouterTerminal for a payment, (5) wiring permit2 with the correct
   spender for the terminal being called.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Dynamic Terminal Selection for Juicebox Payments

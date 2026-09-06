@@ -7,7 +7,8 @@ description: |
   payout limits / surplus allowances (JBCurrencyAmount), (4) debugging JBPrices_PriceFeedNotFound
   reverts, (5) reasoning about cross-chain issuance consistency, (6) getting decimals right for
   currency-denominated amounts.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Currency Types

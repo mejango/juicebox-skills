@@ -7,7 +7,8 @@ description: |
   (2) you need a verified ABI or contract address without hand-typing one, (3) you need a pay or
   cash-out preview with the correct fee/hook/route handling, (4) deciding whether to call the SDK
   or fall back to a hand-rolled ABI from the `*-ui` skills.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # `@bananapus/nana-sdk-core`
@@ -65,7 +66,7 @@ Supported `JBChainId`: `1 | 10 | 8453 | 42161 | 11155111 | 11155420 | 84532 | 42
 
 ## Project identity is explicitly V6
 
-Resolve names and URLs with `/jb-project-identity` before constructing calls. The root SDK URN helpers do not default to V6: use `jbUrn("v6:base:42")` and `toJbUrn(chainId, projectId, 6)`, then require `parsed.version === 6`. Never pass a versionless URN to `jbUrn`, silently rewrite an explicitly unsupported version, or choose the first matching project name. Keep `{ version: 6, chainId, projectId }` together in cache keys, reads, and transactions.
+Resolve names and URLs with `jb-project-identity` before constructing calls. The root SDK URN helpers do not default to V6: use `jbUrn("v6:base:42")` and `toJbUrn(chainId, projectId, 6)`, then require `parsed.version === 6`. Never pass a versionless URN to `jbUrn`, silently rewrite an explicitly unsupported version, or choose the first matching project name. Keep `{ version: 6, chainId, projectId }` together in cache keys, reads, and transactions.
 
 ## Addresses and ABIs
 
@@ -161,7 +162,7 @@ await send(prepared.transaction)
 
 ## Launch, rulesets, splits
 
-Obtain a real metadata JSON URI with `/jb-project-metadata` before finalizing launch calldata. The hosted MCP at `https://juicebox.center/mcp` provides `jb_prepare_project_metadata` followed by authorized `jb_pin_project_metadata`; use the returned `metadataUri`. The SDK Center client also exposes `pinJson`, `pinImage`, and `pinMedia` for actually approved integrations, but public RPC access does not grant upload access and JSON pinning does not upload a referenced logo.
+Obtain a real metadata JSON URI with `jb-project-metadata` before finalizing launch calldata. The hosted MCP at `https://juicebox.center/mcp` provides `jb_prepare_project_metadata` followed by authorized `jb_pin_project_metadata`; use the returned `metadataUri`. The SDK Center client also exposes `pinJson`, `pinImage`, and `pinMedia` for actually approved integrations, but public RPC access does not grant upload access and JSON pinning does not upload a referenced logo.
 
 | Export | Signature |
 |--------|-----------|

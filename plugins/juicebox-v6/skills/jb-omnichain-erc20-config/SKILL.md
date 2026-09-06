@@ -9,7 +9,8 @@ description: |
   per-chain token addresses, (5) choosing CCIP vs native-bridge suckers for USDC. Covers
   JBOmnichainDeployer configs, JBTokenMapping, the registry mapping allowlist, and per-chain
   terminal configuration overrides.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Omnichain ERC-20 Token Configuration

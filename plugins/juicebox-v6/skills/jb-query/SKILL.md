@@ -6,12 +6,13 @@ description: |
   split configurations or payout limits, (3) verifying on-chain state vs expected
   configuration, (4) debugging why a transaction reverted by inspecting current
   state. Covers cast commands and viem/ethers patterns for all JB contracts.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Chain Queries
 
-Query on-chain state for Juicebox V6 projects only. Resolve `{ version: 6, chainId, projectId }` first using `/jb-project-identity`; a parsed URL or matching numeric ID is not proof of the intended project. Use only the V6 contract set from `shared/chain-config.json`, then read its live `JBDirectory` for project-specific contracts. Never fall back to another protocol deployment when a lookup fails.
+Query on-chain state for Juicebox V6 projects only. Resolve `{ version: 6, chainId, projectId }` first using `jb-project-identity`; a parsed URL or matching numeric ID is not proof of the intended project. Use only the V6 contract set from `shared/chain-config.json`, then read its live `JBDirectory` for project-specific contracts. Never fall back to another protocol deployment when a lookup fails.
 
 ## Read through the hosted MCP
 

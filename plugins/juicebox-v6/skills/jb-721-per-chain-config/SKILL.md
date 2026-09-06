@@ -6,7 +6,8 @@ description: |
   NFT supply across chains, (2) building UI that displays aggregate supply, (3)
   explaining why supply "multiplies" on multi-chain projects, (4) deciding between
   single-chain and multi-chain NFT deployment.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Per-Chain 721 Tier Configuration

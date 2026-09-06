@@ -7,7 +7,8 @@ description: |
   PermitAllowanceNotEnough errors, (2) metadata extraction returns exists=false or zeros,
   (3) specifying NFT tiers to mint on pay, (4) supplying swap quotes to the buyback hook or router
   terminal, (5) combining several metadata entries in one payment.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # JBMetadataResolver: Terminal Metadata Encoding

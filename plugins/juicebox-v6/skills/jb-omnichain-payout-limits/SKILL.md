@@ -7,7 +7,8 @@ description: |
   constraints, (4) exploring monitoring or oracle approaches for cross-chain caps. Covers the
   limitation, what V6's cross-chain accounting does and does not solve, and practical
   approaches with tradeoffs.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Omnichain Payout Limit Constraints

@@ -5,7 +5,8 @@ description: |
   custom pay/cash-out hooks without CLI, (2) need in-browser Solidity compilation
   via a compile API, (3) deploying and verifying hooks in one flow, (4) attaching
   deployed hooks to existing projects. Single HTML file deployment interface.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Hook Deployment UI
@@ -620,7 +621,7 @@ Do not compile a tiered NFT hook by hand. The canonical `JB721TiersHook` deploys
 |------|------|
 | Add an NFT hook to an existing project | `JB721TiersHookDeployer.deployHookFor(uint256 projectId, JBDeploy721TiersHookConfig config, bytes32 salt) returns (IJB721TiersHook)` |
 | New project + NFT hook in one tx | `JB721TiersHookProjectDeployer.launchProjectFor(address owner, JBDeploy721TiersHookConfig deployTiersHookConfig, JBLaunchProjectConfig launchProjectConfig, IJBController controller, bytes32 salt) payable returns (uint256 projectId, IJB721TiersHook hook)` — `msg.value` must equal `JBProjects.creationFee()` exactly |
-| Omnichain project + hook + suckers | `JBOmnichainDeployer.launchProjectFor(...)` — see `/jb-omnichain-ui` |
+| Omnichain project + hook + suckers | `JBOmnichainDeployer.launchProjectFor(...)` — see `jb-omnichain-ui` |
 
 Non-zero `salt` gives a deterministic clone address; the effective salt mixes in `msg.sender`, so use the same sender on every chain for matching addresses.
 
@@ -634,8 +635,8 @@ Non-zero `salt` gives a deterministic clone address; the effective salt mixes in
 
 ## Related skills
 
-- `/jb-pay-hook` — Generate pay hook Solidity code
-- `/jb-cash-out-hook` — Generate cash out hook Solidity code
-- `/jb-split-hook` — Generate split hook Solidity code
-- `/jb-ruleset` — Ruleset configuration for attaching hooks
-- `/jb-interact-ui` — Project interaction UIs
+- `jb-pay-hook` — Generate pay hook Solidity code
+- `jb-cash-out-hook` — Generate cash out hook Solidity code
+- `jb-split-hook` — Generate split hook Solidity code
+- `jb-ruleset` — Ruleset configuration for attaching hooks
+- `jb-interact-ui` — Project interaction UIs

@@ -9,7 +9,8 @@ description: |
   (3) decoding previewPayFor / previewCashOutFrom hook-spec metadata to show the mint-vs-swap route,
   (4) a pay reverts JBBuybackHook_SpecifiedSlippageExceeded or a cash out ignores its floor,
   (5) deciding between pay-with-quote and a direct AMM swap in a frontend.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # JBBuybackHook and JBBuybackHookRegistry

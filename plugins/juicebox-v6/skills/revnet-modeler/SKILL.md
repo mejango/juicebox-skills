@@ -5,7 +5,8 @@ description: |
   Use when: (1) planning revnet stage parameters, (2) visualizing treasury/token dynamics
   over time, (3) comparing scenarios (loans, cash-outs, investments), (4) interpreting
   chart outputs, (5) sanity-checking simulation math against Juicebox V6 contract behavior.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Revnet Modeler: Simulation Tool

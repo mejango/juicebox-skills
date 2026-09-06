@@ -5,20 +5,21 @@ description: |
   showing payments and cash outs, (2) debugging transactions by viewing emitted
   events, (3) creating historical views of project activity, (4) need filtered
   event lists by type/project/time with decoded parameters.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Event Explorer UI
 
 Browse, filter, and decode Juicebox protocol events. See payment history, cash outs, payouts, and configuration changes.
 
-Resolve existing project names, handles, URLs, and IDs with `/jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
+Resolve existing project names, handles, URLs, and IDs with `jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
 
 When connected to **https://juicebox.center/mcp**, use `jb_plan_integration` and
 `jb_list_webclient_references` / `jb_get_webclient_reference` for applicable
 Juicescan, Juicebox Money, and Revnet Money examples. Discover schemas first;
 these tools provide references to adapt, not a generated or deployed application.
-See `/jb-sdk` for the MCP development workflow. A missing connection does not
+See `jb-sdk` for the MCP development workflow. A missing connection does not
 prevent using the V6 template below.
 
 ## Uses shared components
@@ -580,6 +581,6 @@ event SendReservedTokensToSplits(uint256 indexed rulesetId, uint256 indexed rule
 
 ## Related skills
 
-- `/jb-explorer-ui` - Contract read/write interface
-- `/jb-ruleset-timeline-ui` - Ruleset history
-- `/jb-bendystraw` - Indexed event queries (preferred for deep history)
+- `jb-explorer-ui` - Contract read/write interface
+- `jb-ruleset-timeline-ui` - Ruleset history
+- `jb-bendystraw` - Indexed event queries (preferred for deep history)

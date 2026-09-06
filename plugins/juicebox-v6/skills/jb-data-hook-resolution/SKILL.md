@@ -7,7 +7,8 @@ description: |
   ruleset `dataHook` is a wrapper singleton, (2) finding a project's buyback pool or 721 shop,
   (3) deciding whether NFTs price cash-outs, (4) a UI shows the wrong pool / no shop for a
   revnet or omnichain project, (5) building `pay`/`cashOut` metadata for the right hook ID.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Data hook resolution

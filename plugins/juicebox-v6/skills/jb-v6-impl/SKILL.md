@@ -7,7 +7,8 @@ description: |
   about why something works a certain way, (4) building integrations or hooks that depend on
   internals (buyback hook, 721 hook, data hooks, split hooks), (5) verifying signatures, struct
   layouts, permission IDs, constants, or storage packing against source.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Implementation Deep Dive

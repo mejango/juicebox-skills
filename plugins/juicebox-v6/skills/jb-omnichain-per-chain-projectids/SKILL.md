@@ -8,7 +8,8 @@ description: |
   multiple chains for the same "project", (4) controllerOf(projectId) returns the zero address
   on some chains. Each chain mints its own JBProjects NFT with an incrementing ID — query
   per-chain projectIds from the Bendystraw suckerGroup before any omnichain operation.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Omnichain Projects Have Different ProjectIds Per Chain

@@ -6,7 +6,8 @@ description: |
   (3) transferring project ownership or updating the project metadata URI, (4) deploying
   or attaching a project ERC-20, (5) reading project state (owner, controller, terminals,
   token), (6) generating deployment scripts with proper terminal and split configuration.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox Project Management
@@ -15,7 +16,7 @@ Create and manage Juicebox projects: deployment, configuration, tokens, and owne
 
 ## Project Identity
 
-Use `{ version: 6, chainId, projectId }` everywhere. For an existing name, handle, URL, or ID, follow `/jb-project-identity` before reading state or preparing a transaction. Search V6 only; do not substitute the same ID from another deployment.
+Use `{ version: 6, chainId, projectId }` everywhere. For an existing name, handle, URL, or ID, follow `jb-project-identity` before reading state or preparing a transaction. Search V6 only; do not substitute the same ID from another deployment.
 
 **A Juicebox project is an ERC-721 NFT minted by `JBProjects`. The token ID is the project ID, used across the entire protocol. Whoever holds the NFT owns the project.**
 
@@ -86,7 +87,7 @@ Check whether native mechanics achieve the goal first:
 | One-time treasury access | Surplus allowance (does not reset each cycle) |
 | Custom token mechanics | Custom ERC-20 via `setTokenFor` (requires `allowSetCustomToken`) |
 
-See `/jb-simplify` for the full checklist.
+See `jb-simplify` for the full checklist.
 
 ## launchProjectFor
 
@@ -119,7 +120,7 @@ Points to a JSON file (typically IPFS):
 }
 ```
 
-Use `/jb-project-metadata` to obtain the actual URI: connect to `https://juicebox.center/mcp`, prepare the complete document with `jb_prepare_project_metadata`, then publish the reviewed JSON with `jb_pin_project_metadata` after authorization for that public upload. Use its returned `metadataUri` as `projectUri`. The example URIs above are notation only; replace them with real existing content or omit optional fields. A local logo needs a separate authorized image upload first.
+Use `jb-project-metadata` to obtain the actual URI: connect to `https://juicebox.center/mcp`, prepare the complete document with `jb_prepare_project_metadata`, then publish the reviewed JSON with `jb_pin_project_metadata` after authorization for that public upload. Use its returned `metadataUri` as `projectUri`. The example URIs above are notation only; replace them with real existing content or omit optional fields. A local logo needs a separate authorized image upload first.
 
 The URI is stored in `JBController.uriOf[projectId]` and updated via `JBController.setUriOf(projectId, uri)` (owner or `SET_PROJECT_URI` operator). The ERC-721 `tokenURI` is separate — it is rendered by a protocol-owned `tokenUriResolver` on `JBProjects`, which individual project owners do not control.
 
@@ -599,4 +600,4 @@ DIRECTORY.setTerminalsOf(projectId, terminals);             // SET_TERMINALS + r
 
 ## Related Skills
 
-- `/jb-simplify` — checklist to avoid custom code
+- `jb-simplify` — checklist to avoid custom code

@@ -5,22 +5,23 @@ description: |
   target multiple chains with single gas payment, (2) displaying unified cross-chain
   project data, (3) implementing chain-selection for payments, (4) showing aggregate
   balances and activity across all project chains.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Omnichain UI Development
 
 Build frontends that deploy and interact with Juicebox projects across multiple chains using viem and shared styles.
 
-Resolve existing project names, handles, URLs, and IDs with `/jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
+Resolve existing project names, handles, URLs, and IDs with `jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
 
-For new launches, use `/jb-project-metadata` to obtain a real pinned JSON URI before finalizing per-chain launch calls. The same reviewed metadata URI can be used across chains; each launch still produces its own V6 project ID.
+For new launches, use `jb-project-metadata` to obtain a real pinned JSON URI before finalizing per-chain launch calls. The same reviewed metadata URI can be used across chains; each launch still produces its own V6 project ID.
 
 When connected to **https://juicebox.center/mcp**, use `jb_plan_integration` and
 `jb_list_webclient_references` / `jb_get_webclient_reference` for applicable
 Juicescan, Juicebox Money, and Revnet Money examples. Discover schemas first;
 these tools provide references to adapt, not a generated or deployed application.
-See `/jb-sdk` for the MCP development workflow. A missing connection does not
+See `jb-sdk` for the MCP development workflow. A missing connection does not
 prevent using the V6 template below.
 
 ## Philosophy
@@ -90,8 +91,8 @@ The canonical forwarder is OpenZeppelin's `ERC2771Forwarder`, deployed as `ERC27
 
 ## Tool references
 
-- `/jb-relayr` — Multi-chain transaction bundling API
-- `/jb-bendystraw` — Cross-chain data aggregation API
+- `jb-relayr` — Multi-chain transaction bundling API
+- `jb-bendystraw` — Cross-chain data aggregation API
 
 ### Relayr (transactions)
 
@@ -592,7 +593,7 @@ async function deployAndWaitForIndex(bundleUuid) {
 
 ### Per-chain project IDs
 
-After an omnichain deploy, resolve each chain's project ID from the sucker group (`suckerGroup.projects` is an array of per-chain project row IDs; the `projects` query above returns `projectId` + `chainId` pairs). Never assume the same project ID across chains — see `/jb-omnichain-per-chain-projectids`.
+After an omnichain deploy, resolve each chain's project ID from the sucker group (`suckerGroup.projects` is an array of per-chain project row IDs; the `projects` query above returns `projectId` + `chainId` pairs). Never assume the same project ID across chains — see `jb-omnichain-per-chain-projectids`.
 
 ## Important limitation: aggregate payout limits
 
@@ -600,7 +601,7 @@ After an omnichain deploy, resolve each chain's project ID from the sucker group
 
 A 10 ETH payout limit on a 4-chain project allows up to 40 ETH of payouts total (10 ETH × 4 chains). There is no atomic way to enforce aggregate limits across chains.
 
-**See `/jb-omnichain-payout-limits` for approaches.** Quick guidance:
+**See `jb-omnichain-payout-limits` for approaches.** Quick guidance:
 - Soft caps → set per-chain limits that sum to ~80% of the goal
 - Need automation → cron + Relayr to pause when a threshold approaches
 - Hard compliance limits → single-chain only, or oracle infrastructure
@@ -611,7 +612,7 @@ A 10 ETH payout limit on a 4-chain project allows up to 40 ETH of payouts total 
 - **Hardcoding nonce 0** — reusing or guessing nonces makes the signature invalid; always read `nonces(from)` per chain.
 - **Forgetting the creation fee** — `launchProjectFor` reverts unless the forwarded `value` equals `JBProjects.creationFee()` exactly (per chain).
 - **Different senders per chain** — sucker salts mix in the sender; a different signer on one chain produces mismatched sucker addresses and the suckers never pair.
-- **Same ERC-20 address on all chains** — token mappings need each chain's own token address (USDC differs per chain). See `/jb-omnichain-erc20-config`.
+- **Same ERC-20 address on all chains** — token mappings need each chain's own token address (USDC differs per chain). See `jb-omnichain-erc20-config`.
 - **Canonical USDC on a native-bridge deployer** — the mapping allowlist does not validate the bridge's registered pair. Select the CCIP deployer for canonical USDC.
 - **Keyless Bendystraw endpoint** — CORS-locked; always use the keyed route (proxied server-side).
 - **Omitting `version: 6`** in Bendystraw project queries.
@@ -619,11 +620,11 @@ A 10 ETH payout limit on a 4-chain project allows up to 40 ETH of payouts total 
 
 ## Related skills
 
-- `/jb-omnichain-payout-limits` — Aggregate limit constraints and solutions
-- `/jb-omnichain-erc20-config` — Per-chain token addresses in sucker mappings
-- `/jb-omnichain-per-chain-projectids` — Per-chain project ID resolution
-- `/jb-suckers` — Core sucker mechanics (prepare/toRemote/claim flow)
-- `/jb-relayr` — Complete Relayr API reference
-- `/jb-bendystraw` — Complete Bendystraw GraphQL reference
-- `/jb-deploy-ui` — Single-chain deployment UIs
-- `/jb-interact-ui` — Project interaction UIs
+- `jb-omnichain-payout-limits` — Aggregate limit constraints and solutions
+- `jb-omnichain-erc20-config` — Per-chain token addresses in sucker mappings
+- `jb-omnichain-per-chain-projectids` — Per-chain project ID resolution
+- `jb-suckers` — Core sucker mechanics (prepare/toRemote/claim flow)
+- `jb-relayr` — Complete Relayr API reference
+- `jb-bendystraw` — Complete Bendystraw GraphQL reference
+- `jb-deploy-ui` — Single-chain deployment UIs
+- `jb-interact-ui` — Project interaction UIs

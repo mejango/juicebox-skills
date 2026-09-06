@@ -6,14 +6,15 @@ description: |
   guides for hooks, terminals, or project configuration, (3) searching for
   protocol concepts or patterns, (4) need deployed contract addresses (prefer
   shared/chain-config.json for those).
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Reference Lookup
 
 docs.juicebox.money publishes no V6 pages: `GET /api/mcp/structure` lists no `v6` version, `POST /api/mcp/search` with `"version": "v6"` returns `[]`, and every `/dev/v6/...` URL is 404. Do not fetch it for V6 facts. Ground truth is source.
 
-For an existing project, use `/jb-project-identity` to resolve its V6 chain and ID. Generic web search results and documentation examples do not identify the user's project. For metadata JSON and IPFS publishing, use `/jb-project-metadata`.
+For an existing project, use `jb-project-identity` to resolve its V6 chain and ID. Generic web search results and documentation examples do not identify the user's project. For metadata JSON and IPFS publishing, use `jb-project-metadata`.
 
 When connected to `https://juicebox.center/mcp`, `jb_search_reference` and `jb_get_reference` expose the bundled V6 source references and their provenance. Contract facts still come from source; project identity still requires live verification.
 
@@ -81,7 +82,7 @@ Read `IJBPayHook.sol` and `IJBRulesetDataHook.sol` in `nana-core-v6/src/interfac
 ## Official Resources
 
 - **GitHub**: https://github.com/Bananapus
-- **Indexer**: https://bendystraw.up.railway.app (see `/jb-bendystraw`)
+- **Indexer**: https://bendystraw.up.railway.app (see `jb-bendystraw`)
 
 ## Generation Guidelines
 

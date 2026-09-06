@@ -7,7 +7,8 @@ description: |
   reserved token distributions. Covers IJBSplitHook, JBSplitHookContext, the
   allowance-pull delivery model, partial consumption, fees, and the differences
   between payout splits and reserved token splits.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Split Hook Generator

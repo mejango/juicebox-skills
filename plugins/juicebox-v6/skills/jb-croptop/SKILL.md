@@ -6,7 +6,8 @@ description: |
   per category, (3) deploying a Croptop-ready project, (4) locking a collection's
   ownership, (5) computing post pricing and the 5% fee. Croptop lets anyone mint NFT
   posts onto a Juicebox project's tiered 721 hook, subject to owner-set criteria.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Croptop: Permissionless NFT Posting

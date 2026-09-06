@@ -6,7 +6,8 @@ description: |
   to 10" actually means 40 total (10 per chain × 4 chains), (3) a user has true limited inventory
   but the tier deploys to all chains. Solution: deploy the limited tier to ONE chain only, or
   divide the quantity across chains. initialSupply is per-chain, not global.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Omnichain 721 Tier Quantities Are Per-Chain

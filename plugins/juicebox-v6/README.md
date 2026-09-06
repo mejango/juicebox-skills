@@ -1,8 +1,9 @@
 # Juicebox V6 Skills
 
-AI skills for working with Juicebox V6 — consumed by Claude Console (upload zips from
-`dist/`) and Claude Code (this folder is symlinked as the `juicebox-v6` plugin in
-consuming projects, e.g. `juicy-vision/.claude/plugins/juicebox-v6`).
+Portable Agent Skills for working with Juicebox V6. Extract packaged skill directories
+from `dist/` for an agent that supports `SKILL.md`, or provide the relevant
+instructions and bundled files as task context. The existing Claude plugin and ZIP upload integration are
+optional packaging for the same content.
 
 Every skill was written against V6 source in this workspace (`nana-*-v6`,
 `revnet-core-v6`, `croptop-core-v6`, `bendystraw-v6`, `deploy-all-v6`) — no facts
@@ -14,7 +15,7 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 - `shared/chain-config.json` — canonical per-chain V6 addresses, generated from `deploy-all-v6/deployments`
 - `shared/abis/*.json` — verified ABIs from deployment artifacts
 - `shared/wallet-utils.js`, `shared/styles.css` — helpers bundled into UI skills
-- `build-skills.sh` — packages each skill (+ referenced shared files) into `dist/*.zip` for Claude Console
+- `build-skills.sh` — packages each skill (+ referenced shared files) into portable `dist/*.zip` archives
 - `dist/` — generated; do not edit
 
 ## Regenerating
@@ -25,7 +26,7 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 
 ## Hosted MCP
 
-Connect a remote Streamable HTTP server at **https://juicebox.center/mcp** using the
+Any agent supporting MCP over Streamable HTTP can connect to **https://juicebox.center/mcp** using the
 [repository setup instructions](../../README.md#connect-the-hosted-mcp). Installing
 or uploading a skill alone does not connect the server. When connected, call
 `jb_list_capabilities` to discover supported V6 workflows and their limits.
@@ -34,6 +35,10 @@ Use `jb-query` and `jb-bendystraw` for live/indexed reads, `jb-tx-safety` for th
 unsigned-plan handoff, and the [MCP development guidance in `jb-sdk`](skills/jb-sdk/SKILL.md#develop-with-the-hosted-mcp)
 for SDK, contract, and webclient references. Skills remain usable with the relevant
 V6 SDK/source workflow when an MCP connection is unavailable.
+
+Skill names below identify folders, not universal slash commands. Load or invoke
+them through the host agent's own mechanism. Extracted ZIPs preserve skill-local
+references to addresses, ABIs, and other bundled resources.
 
 ## Start here
 

@@ -8,7 +8,8 @@ description: |
   and the registry mapping allowlist, (8) reading cross-chain accounting gossip (remote surplus,
   supply). Covers JBSucker, JBOptimismSucker, JBBaseSucker, JBArbitrumSucker, JBCCIPSucker, and
   JBSuckerRegistry.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox Suckers — Cross-Chain Token Bridging

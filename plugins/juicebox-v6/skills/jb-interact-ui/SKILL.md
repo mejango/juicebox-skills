@@ -5,20 +5,21 @@ description: |
   custom pay form for a specific project, (2) creating cash out or claim interfaces,
   (3) need standalone HTML for project supporters, (4) building demo pages without
   full app infrastructure. Single-file HTML with viem.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Interaction UI Generator
 
 Generate single-file frontends for interacting with existing Juicebox projects using viem and shared styles. Pay into treasuries, cash out tokens, mint tier NFTs, run owner operations, view project state — no build tools required.
 
-Resolve existing project names, handles, URLs, and IDs with `/jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
+Resolve existing project names, handles, URLs, and IDs with `jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
 
 When connected to **https://juicebox.center/mcp**, use `jb_plan_integration` and
 `jb_list_webclient_references` / `jb_get_webclient_reference` for applicable
 Juicescan, Juicebox Money, and Revnet Money examples. Discover schemas first;
 these tools provide references to adapt, not a generated or deployed application.
-See `/jb-sdk` for the MCP development workflow. A missing connection does not
+See `jb-sdk` for the MCP development workflow. A missing connection does not
 prevent using the V6 template below.
 
 ## Philosophy
@@ -584,7 +585,7 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
 </script>
 ```
 
-Tier prices come from `JB721TiersHookStore.tiersOf(...)` (see `/jb-nft-gallery-ui` for the full tier struct and gallery). Tier prices are denominated in the hook's pricing context — check `hook.pricingContext()` which returns `(currency, decimals)`; for ETH-priced hooks the paid ETH must cover the sum of tier prices.
+Tier prices come from `JB721TiersHookStore.tiersOf(...)` (see `jb-nft-gallery-ui` for the full tier struct and gallery). Tier prices are denominated in the hook's pricing context — check `hook.pricingContext()` which returns `(currency, decimals)`; for ETH-priced hooks the paid ETH must cover the sum of tier prices.
 
 ## Template: Project Admin UI
 
@@ -989,8 +990,8 @@ async function getProjectStats(projectId, chainId) {
 
 ## Related skills
 
-- `/jb-deploy-ui` — UIs for deploying new projects
-- `/jb-omnichain-ui` — Multi-chain UIs with Relayr & Bendystraw
-- `/jb-nft-gallery-ui` — Tier browsing and NFT galleries
-- `/jb-query` — Direct contract queries
-- `/jb-v6-api` — Contract function signatures
+- `jb-deploy-ui` — UIs for deploying new projects
+- `jb-omnichain-ui` — Multi-chain UIs with Relayr & Bendystraw
+- `jb-nft-gallery-ui` — Tier browsing and NFT galleries
+- `jb-query` — Direct contract queries
+- `jb-v6-api` — Contract function signatures

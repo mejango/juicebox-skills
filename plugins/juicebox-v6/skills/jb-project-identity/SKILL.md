@@ -84,7 +84,7 @@ V6 `nana-core-v6/src/JBProjects.sol` and `JBDirectory.sol`.
 Every supported Bendystraw query must use the literal `version: 6` wherever its
 schema exposes a version argument or filter. Include `version` in selected rows
 and reject a row whose value is not `6`; apply the same check to nested project
-relations. Repeat the filter inside each `OR` branch. See `/jb-bendystraw` for
+relations. Repeat the filter inside each `OR` branch. See `jb-bendystraw` for
 the exact schema and pagination; do not add nonexistent version arguments to
 queries keyed only by an opaque ID.
 

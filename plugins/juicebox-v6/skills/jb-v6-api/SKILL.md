@@ -7,7 +7,8 @@ description: |
   permission ID gates a function, (4) looking up protocol constants, currency IDs,
   or contract addresses, (5) "what functions exist" questions about core or ecosystem
   contracts (suckers, buyback hook, 721 hook, router terminal, revnets, croptop).
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 API Reference

@@ -128,7 +128,7 @@ Verified first-party image workflows: Juicebox Money
 
 ## Use the returned URI in V6
 
-Resolve existing projects with `/jb-project-identity`; new launches have no
+Resolve existing projects with `jb-project-identity`; new launches have no
 project ID until their chain receipts establish one. Pass the returned
 `metadataUri` as `projectUri` in `jb_prepare_launch` or `jb_prepare_721_launch`, or
 as `config.description.uri` in `jb_prepare_revnet_deploy`. Review and simulate

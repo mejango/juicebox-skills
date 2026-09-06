@@ -7,7 +7,8 @@ description: |
   (5) explaining loan solvency or liquidation. Covers borrowFrom, repayLoan,
   reallocateCollateralFromLoan, liquidateExpiredLoansFrom, borrowableAmountFrom,
   permissions, and the exact fee schedule.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # REVLoans Contract Mechanics

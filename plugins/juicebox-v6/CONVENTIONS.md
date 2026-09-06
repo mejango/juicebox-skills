@@ -1,6 +1,6 @@
 # Juicebox V6 Skills — Authoring Conventions
 
-Skills in this folder teach AI agents (Claude Console skills + Claude Code) how to work with Juicebox V6. They are consumed by machines: optimize for parseability and lookup speed, not narrative.
+Skills in this folder teach AI agents how to work with Juicebox V6. Keep the instructions portable across agents; Claude plugin metadata is an optional distribution wrapper. Optimize for parseability and lookup speed.
 
 ## Hard rules
 
@@ -12,7 +12,8 @@ Skills in this folder teach AI agents (Claude Console skills + Claude Code) how 
 
 ## Format
 
-- YAML frontmatter: `name`, `description` (trigger conditions: "Use when: (1)…, (2)…"), and `metadata.version: 6.0.0`. Existing Console skills may retain top-level `version`; new skills use `metadata` for Codex compatibility.
+- Follow the open [Agent Skills format](https://agentskills.io/specification): `name`, `description` (trigger conditions: "Use when: (1)…, (2)…"), and optional string metadata such as `metadata.version: "6.0.0"`. Put version metadata inside `metadata`, not in a custom top-level field.
+- Refer to another skill by name. Invocation syntax and discovery paths belong in client-specific setup examples. Lead MCP instructions with the shared URL and Streamable HTTP transport, then label any client-specific command or configuration.
 - Tables over prose for enumerable facts (addresses, IDs, fields, enums).
 - Fenced code blocks for every calldata/encoding/query example, tagged with language.
 - Struct/field tables MUST show fields in ABI order with types.

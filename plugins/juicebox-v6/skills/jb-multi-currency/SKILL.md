@@ -11,7 +11,8 @@ description: |
   (5) reasoning about how pay/cash-out/payout convert between currencies via weight and
   baseCurrency, (6) picking the right feed adapter on L2s (sequencer-guarded Chainlink),
   (7) computing worked conversions across 6-decimal and 18-decimal tokens.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 Multi-Currency Accounting

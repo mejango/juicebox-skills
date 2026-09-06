@@ -6,7 +6,8 @@ description: |
   allowlists, (3) triggering external contract calls on pay, (4) overriding token
   minting weight. Covers IJBRulesetDataHook + IJBPayHook interfaces, context
   structs, fund forwarding mechanics, and access-control requirements.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Pay Hook Generator

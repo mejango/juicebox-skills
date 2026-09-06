@@ -5,7 +5,8 @@ description: |
   targets a single chain without sucker configuration, (2) building deployRevnet
   transactions and deciding chain coverage, (3) an existing revnet needs to expand to a
   new chain, (4) verifying cross-chain config-hash consistency for sucker deployment.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Revnets Default to Omnichain

@@ -7,7 +7,8 @@ description: |
   surplusAllowancesOf returns empty when values are expected, (3) detecting "unlimited"
   (uint224.max) values, (4) querying limits for ERC-20-accounting projects, (5) choosing between
   payout limits and surplus allowance.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Fund Access Limits

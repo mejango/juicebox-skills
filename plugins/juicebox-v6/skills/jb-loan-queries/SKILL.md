@@ -5,7 +5,8 @@ description: |
   across all revnets, (2) showing all loans for a specific revnet/project, (3) checking
   borrow permissions, (4) calculating loan headroom, (5) multi-chain loan aggregation.
   Covers the loan entity, permissionHolder checks, and sucker-group filtering.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Querying REVLoans via Bendystraw

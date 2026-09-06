@@ -6,7 +6,8 @@ description: |
   from block explorer, (3) debugging failed transactions by decoding revert data,
   (4) reverse-engineering transaction parameters from raw calldata, (5) decoding
   hook metadata (buyback quotes, 721 tier mints) embedded in pay/cashOut calls.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox Transaction Decoder

@@ -7,7 +7,8 @@ description: |
   for governance-delayed changes, (4) reading current/upcoming/latest rulesets or
   decoding packed ruleset metadata, (5) understanding ruleset cycling, weight decay,
   and the weight cache.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox Rulesets

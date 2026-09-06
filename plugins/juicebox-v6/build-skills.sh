@@ -1,6 +1,6 @@
 #!/bin/bash
-# Build individual skill zips for Claude Console upload
-# Each zip is self-contained and ready for drag-and-drop
+# Build portable Agent Skills archives, also usable for Claude Console upload
+# Each archive contains its SKILL.md and referenced shared resources
 
 set -e
 
@@ -14,7 +14,7 @@ OUTPUT_DIR="$SCRIPT_DIR/dist"
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
-echo "Building skills for Claude Console..."
+echo "Building portable Agent Skills archives..."
 echo "Output: $OUTPUT_DIR"
 echo ""
 
@@ -71,4 +71,5 @@ done
 echo ""
 echo "✅ Done! All skill zips ready in: $OUTPUT_DIR"
 echo ""
-echo "To upload: Drag any .zip file into Claude Console's skill upload dialog"
+echo "Extract the desired archive into your agent's skill directory, preserving its inner folder."
+echo "For clients with ZIP import, upload the archive directly."

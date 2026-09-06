@@ -9,7 +9,8 @@ description: |
   every chain, or resuming one after a reload, (5) a same-address Safe fails a cross-chain
   authority check. Request/response shapes for Relayr live in `jb-relayr`; this skill is the
   execution layer around them.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Safe and Relayr execution

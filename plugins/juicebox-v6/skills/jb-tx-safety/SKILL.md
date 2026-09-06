@@ -7,7 +7,8 @@ description: |
   send and where it comes from, (3) choosing a gas limit for a wallet send, (4) reporting
   success or failure after a transaction, (5) building a multi-transaction flow with approval
   pre-steps, (6) auditing a client for floorless or blind-signed writes.
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Juicebox V6 transaction write boundary
@@ -31,7 +32,7 @@ operation. Supply the actual confirmed prerequisite step hashes when simulating
 later steps. Missing prerequisites or failed simulation block signing.
 
 Metadata review tokens and `jb_prepare_intent` signing messages are not transaction
-plans. Follow `/jb-project-metadata` for public JSON publication. The MCP never
+plans. Follow `jb-project-metadata` for public JSON publication. The MCP never
 signs or broadcasts blockchain transactions; the wallet flow below still applies.
 
 Every write passes through one pipeline, in this order. No step is skippable.

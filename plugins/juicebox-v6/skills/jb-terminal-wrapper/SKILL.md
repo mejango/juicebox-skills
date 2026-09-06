@@ -6,7 +6,8 @@ description: |
   pay + follow-on operations, (3) intercepting/redirecting project tokens or reclaimed funds,
   (4) understanding how JBRouterTerminalRegistry and JBRouterTerminal implement wrapping in
   production, (5) propagating the original payer through a forwarding chain (IJBPayerTracker).
-version: 6.0.0
+metadata:
+  version: "6.0.0"
 ---
 
 # Terminal Wrapper Pattern
