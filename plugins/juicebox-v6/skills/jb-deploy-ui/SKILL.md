@@ -14,6 +14,13 @@ Generate single-file frontends for deploying Juicebox projects, 721 collections,
 
 Before finalizing deployment, use `/jb-project-metadata` to review and pin the complete metadata JSON through `https://juicebox.center/mcp`. Use the actual returned `metadataUri`; a local image requires a separate authorized upload. Keep the metadata review and public upload outcome visible alongside the later unsigned launch plan.
 
+When connected to **https://juicebox.center/mcp**, use `jb_plan_integration` and
+`jb_list_webclient_references` / `jb_get_webclient_reference` for applicable
+Juicescan, Juicebox Money, and Revnet Money examples. Discover schemas first;
+these tools provide references to adapt, not a generated or deployed application.
+See `/jb-sdk` for the MCP development workflow. A missing connection does not
+prevent using the V6 template below.
+
 ## Philosophy
 
 > **Show users exactly what they're doing. Make wallet connection trivial. Display transactions in flight.**

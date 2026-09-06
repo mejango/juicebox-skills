@@ -12,6 +12,11 @@ version: 6.0.0
 
 Deploy custom hooks directly from the browser. Compile Solidity code, deploy to any chain, verify on block explorers, and attach to a Juicebox project.
 
+When connected to **https://juicebox.center/mcp**, use `jb_search_reference` and
+`jb_get_reference` for the relevant V6 hook interfaces and implementations, with
+their source provenance. The MCP does not compile or deploy arbitrary custom
+hooks; the compilation and external-wallet flow below remain necessary.
+
 ## Overview
 
 ```

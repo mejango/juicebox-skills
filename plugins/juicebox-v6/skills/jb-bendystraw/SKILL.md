@@ -14,6 +14,19 @@ description: |
 
 Bendystraw is a GraphQL indexer (built on [Ponder](https://ponder.sh)) for Juicebox events across all supported chains. It aggregates data into two databases with identical schemas — one for mainnets, one for testnets.
 
+## Indexed workflows through the hosted MCP
+
+When connected to **https://juicebox.center/mcp**, `jb_list_capabilities` describes
+the supported V6 indexed operations. Use `jb_search_projects`, `jb_get_account`,
+`jb_get_activity`, `jb_get_omnichain_group`, and `jb_get_indexer_status` as
+appropriate, following their discovered schemas and pagination. The hosted
+service owns its indexer configuration; callers do not supply a private indexer
+URL or arbitrary GraphQL. Indexed records retain their freshness and coverage
+limits and do not establish current on-chain balances. Mainnet and testnet are
+configured independently; `NOT_CONFIGURED` is not permission to change network or
+protocol version. For queries outside this tool coverage, use the authorized V6
+GraphQL integration described below.
+
 ## API Base URLs
 
 ```

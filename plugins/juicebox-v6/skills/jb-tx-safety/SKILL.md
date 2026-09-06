@@ -17,6 +17,23 @@ Source of truth: `juicebox-money/src/hooks/useSafeTx.ts`, `lib/transaction-revie
 `revnet-money/src/hooks/useReviewedWriteContract.ts`; `juicescan/src/component-base.js` (`sendContractAndConfirm`), `src/gas.js`.
 `@bananapus/nana-sdk-core/v6` supplies `slippageFloor`, `resolveCashOutRoute`, `cashOutProtocolFee`, `buildCashOutTx`.
 
+## Prepared transactions from the hosted MCP
+
+When connected to **https://juicebox.center/mcp**, discover supported operations
+with `jb_list_capabilities`. For a transaction plan returned by a supported
+preparation tool, use `jb_inspect_plan` to inspect its authenticated payload and
+`jb_simulate_plan` immediately before each external-wallet step. Keep the exact
+reviewed account, chain, destination, calldata, value, and prerequisites intact.
+After the wallet submits, use `jb_verify_plan` with the actual step indices and
+transaction hashes. A returned plan is not proof that preflight passed; a token
+is not user approval, and a successful outer receipt is not proof of the inner
+operation. Supply the actual confirmed prerequisite step hashes when simulating
+later steps. Missing prerequisites or failed simulation block signing.
+
+Metadata review tokens and `jb_prepare_intent` signing messages are not transaction
+plans. Follow `/jb-project-metadata` for public JSON publication. The MCP never
+signs or broadcasts blockchain transactions; the wallet flow below still applies.
+
 Every write passes through one pipeline, in this order. No step is skippable.
 
 | Step | What happens | Failure behavior |

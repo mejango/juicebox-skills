@@ -16,6 +16,13 @@ Resolve existing project names, handles, URLs, and IDs with `/jb-project-identit
 
 For new launches, use `/jb-project-metadata` to obtain a real pinned JSON URI before finalizing per-chain launch calls. The same reviewed metadata URI can be used across chains; each launch still produces its own V6 project ID.
 
+When connected to **https://juicebox.center/mcp**, use `jb_plan_integration` and
+`jb_list_webclient_references` / `jb_get_webclient_reference` for applicable
+Juicescan, Juicebox Money, and Revnet Money examples. Discover schemas first;
+these tools provide references to adapt, not a generated or deployed application.
+See `/jb-sdk` for the MCP development workflow. A missing connection does not
+prevent using the V6 template below.
+
 ## Philosophy
 
 > **Pay once on any chain. Deploy everywhere. Query unified data.**

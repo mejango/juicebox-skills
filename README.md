@@ -25,6 +25,41 @@ For Claude Console: upload any zip from `plugins/juicebox-v6/dist/`.
 
 This plugin operates on V6 only. Keep `{ version: 6, chainId, projectId }` together; reject explicit unsupported versions and never use a name or ID alone as a transaction target. The hosted MCP at `https://juicebox.center/mcp` provides project resolution, live reads, unsigned plans, and reviewed project metadata publishing. Wallet signatures remain external.
 
+### Connect the hosted MCP
+
+The skills provide instructions and examples; the MCP provides callable V6 tools.
+Installing this skills plugin does not connect an MCP server. For Claude Code, run
+this in the project where you want to use it:
+
+```bash
+claude mcp add --transport http juicebox https://juicebox.center/mcp
+```
+
+Then use `/mcp` in Claude Code to check the connection. The command uses local
+project scope by default; see the [Claude Code MCP setup guide](https://code.claude.com/docs/en/mcp#option-1-add-a-remote-http-server)
+for other scopes. In another client, add `https://juicebox.center/mcp` as a remote
+Streamable HTTP MCP server using that client's settings. No private Bendystraw or
+pinning-provider key belongs in the client configuration.
+
+Once connected, start with `jb_list_capabilities` and the client's tool discovery.
+Use the returned tool names and input schemas; clients may prefix server tool names.
+
+| Work | MCP starting points |
+|------|---------------------|
+| Resolve and inspect a V6 project | `jb_resolve_project`, `jb_search_projects`, `jb_get_project` |
+| Inspect buyback/router, 721, or revnet state | `jb_get_routing`, `jb_get_721_shop`, `jb_get_revnet` |
+| Review a prepared transaction | `jb_inspect_plan`, `jb_simulate_plan`, `jb_verify_plan` |
+| Prepare and publish project metadata | `jb_prepare_project_metadata`, then authorized `jb_pin_project_metadata` |
+| Build against the SDK and webclients | `jb_plan_integration`, `jb_list_webclient_references`, `jb_get_webclient_reference` |
+| Investigate V6 source and skills | `jb_search_reference`, `jb_get_reference` |
+
+Read the MCP's [user journeys](https://github.com/mejango/jbcenter/blob/main/mcp/docs/USER_JOURNEYS.md)
+for complete workflows and coverage. Transaction plans stay unsigned until an
+external wallet executes them. Metadata pinning is a separate public upload that
+requires authorization for the exact document. If the MCP is unavailable, continue
+with the applicable V6 SDK/source workflow; do not claim a tool ran or substitute
+another protocol version. An unconfigured network remains unavailable.
+
 ### Common Workflows
 
 | I want to... | Use this skill |

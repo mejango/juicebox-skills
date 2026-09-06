@@ -20,6 +20,37 @@ npm i @bananapus/nana-sdk-core@2.3.2 viem@2.55.19
 
 juicebox.money and revnet.money declare `"^2.3.2"` and lock `2.3.2`; juicebox.money pins `viem` `2.55.19`, revnet.money `2.55.8`. juicescan does not depend on the package; it references it in generated build prompts only.
 
+## Develop with the hosted MCP
+
+When connected to **https://juicebox.center/mcp** (Streamable HTTP), start with
+`jb_list_capabilities` and inspect the relevant tool's input schema. Use its V6
+reads and unsigned preparation tools for supported operations; keep the SDK in
+the application for its own reads, builders, and wallet integration. The MCP does
+not install dependencies or implement the application for you.
+
+For examples grounded in Juicescan, Juicebox Money, and Revnet Money, call
+`jb_plan_integration` with the intended framework and features. For example:
+
+```json
+{
+  "framework": "react",
+  "features": ["payments", "721-storefront", "review-pipeline"],
+  "projectType": "project",
+  "chainIds": [8453]
+}
+```
+
+Page through `jb_list_webclient_references` and read selected IDs with
+`jb_get_webclient_reference`; use `jb_search_reference` and `jb_get_reference`
+for V6 contract, SDK, and skill source. Preserve the returned revisions, hashes,
+and coverage. Examples may retain app-specific imports and require adaptation;
+a reference is not proof of deployed bytecode or current state. Do not assume the
+MCP's pinned SDK or a bundled example matches the application's lockfile.
+
+The client must already expose these tools before they can be called. Installing
+a skill alone does not connect the server. If unavailable, continue the applicable
+V6 SDK/source workflow below and report missing live evidence explicitly.
+
 ## Entry points
 
 | Import path | Contents |

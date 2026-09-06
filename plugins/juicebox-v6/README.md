@@ -23,6 +23,18 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 - Run `node scripts/test-project-identity.mjs` after changing identity guidance or the NFT/omnichain examples. It executes the examples with mocked contract/indexer responses, including wrong-deployment, wrong-chain, and missing-project cases.
 - Then run `./build-skills.sh`.
 
+## Hosted MCP
+
+Connect a remote Streamable HTTP server at **https://juicebox.center/mcp** using the
+[repository setup instructions](../../README.md#connect-the-hosted-mcp). Installing
+or uploading a skill alone does not connect the server. When connected, call
+`jb_list_capabilities` to discover supported V6 workflows and their limits.
+
+Use `jb-query` and `jb-bendystraw` for live/indexed reads, `jb-tx-safety` for the
+unsigned-plan handoff, and the [MCP development guidance in `jb-sdk`](skills/jb-sdk/SKILL.md#develop-with-the-hosted-mcp)
+for SDK, contract, and webclient references. Skills remain usable with the relevant
+V6 SDK/source workflow when an MCP connection is unavailable.
+
 ## Start here
 
 For existing projects, start with `jb-project-identity`: every selection is `{ version: 6, chainId, projectId }`, never a bare ID or the first name match. For launch metadata, `jb-project-metadata` describes the reviewed IPFS publishing workflow at `https://juicebox.center/mcp`. Read `jb-contracts` (addresses, which contract does what) and `jb-v6-api` (signatures, structs, permission IDs) as needed. Then pick a lane:

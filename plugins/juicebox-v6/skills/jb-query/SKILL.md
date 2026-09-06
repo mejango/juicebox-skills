@@ -13,6 +13,16 @@ version: 6.0.0
 
 Query on-chain state for Juicebox V6 projects only. Resolve `{ version: 6, chainId, projectId }` first using `/jb-project-identity`; a parsed URL or matching numeric ID is not proof of the intended project. Use only the V6 contract set from `shared/chain-config.json`, then read its live `JBDirectory` for project-specific contracts. Never fall back to another protocol deployment when a lookup fails.
 
+## Read through the hosted MCP
+
+When connected to **https://juicebox.center/mcp**, discover supported reads with
+`jb_list_capabilities`. Use `jb_get_project`, `jb_get_rulesets`, `jb_get_position`,
+and `jb_get_permissions` for their corresponding V6 state; inspect each tool's
+schema for account and project inputs. Preserve block evidence and known/unknown
+observations. A failed read is not a zero balance or permission to act. Use the
+direct V6 queries below when the MCP is unavailable or the read is outside its
+coverage, retaining the same identity and evidence requirements.
+
 ## Core Addresses (same on all chains)
 
 | Contract | Address |

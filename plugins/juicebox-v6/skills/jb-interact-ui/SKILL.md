@@ -14,6 +14,13 @@ Generate single-file frontends for interacting with existing Juicebox projects u
 
 Resolve existing project names, handles, URLs, and IDs with `/jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
 
+When connected to **https://juicebox.center/mcp**, use `jb_plan_integration` and
+`jb_list_webclient_references` / `jb_get_webclient_reference` for applicable
+Juicescan, Juicebox Money, and Revnet Money examples. Discover schemas first;
+these tools provide references to adapt, not a generated or deployed application.
+See `/jb-sdk` for the MCP development workflow. A missing connection does not
+prevent using the V6 template below.
+
 ## Philosophy
 
 > **Let users interact with Juicebox projects without touching a command line.**
