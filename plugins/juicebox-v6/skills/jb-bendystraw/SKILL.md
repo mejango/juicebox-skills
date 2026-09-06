@@ -58,7 +58,9 @@ const response = await fetch(`https://bendystraw.up.railway.app/${API_KEY}/graph
 
 ## The `version: 6` Rule
 
-**Every table row carries a `version` column. Juicebox V6 data is `version: 6`. Every query MUST filter on the literal `version: 6`** — the same database contains rows from other protocol deployments tagged with other version values, and mixing them produces garbage. The tag is decided by which contract address emitted the event; V6-only singletons (buyback hook, V4 hook, suckers registry) always write 6.
+For name, handle, and URL lookup, follow `/jb-project-identity`: return V6 candidates with their chain and ID, preserve ambiguity, and verify the selected candidate against the V6 contracts. An empty or unavailable V6 search is not permission to query another deployment.
+
+**Juicebox V6 data is `version: 6`. Every query with a version argument or filter MUST use the literal `version: 6`; select and validate returned version fields, including nested project rows.** Some singleton or opaque-ID queries do not expose a version argument; use their actual schema below and validate the returned project context. Do not invent arguments. The same database contains rows from other protocol deployments tagged with other version values; combining them mixes unrelated projects. The tag is decided by which contract address emitted the event; V6-only singletons (buyback hook, V4 hook, suckers registry) always write 6.
 
 - Plural queries: put `version: 6` in the `where` clause.
 - Singular queries: `version` is part of most compound primary keys — pass `version: 6` as the argument.
@@ -809,6 +811,9 @@ All examples filter `version: 6`.
 query GetProject($projectId: Float!, $chainId: Float!) {
   project(projectId: $projectId, chainId: $chainId, version: 6) {
     id
+    version
+    chainId
+    projectId
     name
     handle
     owner
@@ -1297,11 +1302,11 @@ async function getProjectWithGroup(projectId, chainId) {
   const { project } = await bendystrawQuery(`
     query($projectId: Float!, $chainId: Float!) {
       project(projectId: $projectId, chainId: $chainId, version: 6) {
-        name handle owner balance volume volumeUsd tokenSupply
+        id version projectId chainId name handle owner balance volume volumeUsd tokenSupply
         decimals currency suckerGroupId
         suckerGroup {
           volume volumeUsd balance tokenSupply contributorsCount
-          projects(where: { version: 6 }, limit: 100) { items { chainId balance volume } }
+          projects(where: { version: 6 }, limit: 100) { items { id version chainId projectId name handle balance volume } }
         }
       }
     }

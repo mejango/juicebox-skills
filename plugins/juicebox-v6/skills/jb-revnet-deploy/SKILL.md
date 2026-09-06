@@ -23,6 +23,8 @@ A revnet is a Juicebox V6 project whose `JBProjects` NFT is held by `REVOwner` f
 
 Constants: `CASH_OUT_DELAY = 604_800` (7 days), `DEFAULT_BUYBACK_POOL_FEE = 10_000` (1%), `DEFAULT_BUYBACK_TICK_SPACING = 200`, `DEFAULT_BUYBACK_TWAP_WINDOW = 2 days`.
 
+Before finalizing deployment, use `/jb-project-metadata` to review and pin the complete metadata JSON through `https://juicebox.center/mcp`. Use the actual returned `metadataUri`; a local image requires a separate authorized upload. Keep the metadata review and public upload outcome visible alongside the later unsigned launch plan.
+
 ## `deployFor` overloads
 
 ```solidity

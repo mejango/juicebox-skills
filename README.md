@@ -21,10 +21,16 @@ on every supported chain (Ethereum, Optimism, Base, Arbitrum + Sepolia testnets)
 
 For Claude Console: upload any zip from `plugins/juicebox-v6/dist/`.
 
+### V6 identity and hosted MCP
+
+This plugin operates on V6 only. Keep `{ version: 6, chainId, projectId }` together; reject explicit unsupported versions and never use a name or ID alone as a transaction target. The hosted MCP at `https://juicebox.center/mcp` provides project resolution, live reads, unsigned plans, and reviewed project metadata publishing. Wallet signatures remain external.
+
 ### Common Workflows
 
 | I want to... | Use this skill |
 |--------------|----------------|
+| Find the correct V6 project from a name, URL, or ID | `/jb-project-identity` |
+| Prepare and pin project metadata JSON to IPFS | `/jb-project-metadata` |
 | Create a new project | `/jb-project` |
 | Build a custom pay hook | `/jb-pay-hook` |
 | Query project state | `/jb-query` |
@@ -49,6 +55,8 @@ For Claude Console: upload any zip from `plugins/juicebox-v6/dist/`.
 | V6 Implementation | `/jb-v6-impl` | Internal mechanics, fee math, packing, edge cases |
 | Contracts | `/jb-contracts` | Contract inventory and addresses |
 | Currency Types | `/jb-currency-types` | Price-feed IDs vs token-derived accounting currencies |
+| Project Identity | `/jb-project-identity` | Resolve and verify V6 names, URLs, chain IDs, and project IDs |
+| Project Metadata | `/jb-project-metadata` | Review and pin metadata JSON; obtain the real project URI |
 | Project | `/jb-project` | Create projects with rulesets and terminals |
 | Ruleset | `/jb-ruleset` | Design and queue ruleset configurations |
 | Multi-Currency | `/jb-multi-currency` | ETH vs USDC accounting and currency codes |

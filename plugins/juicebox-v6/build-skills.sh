@@ -45,6 +45,12 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     cp "$SHARED_DIR/wallet-utils.js" "$skill_tmp/shared/" 2>/dev/null || true
   fi
 
+  # ABI-dependent skills must include the files their examples and loadABI() read.
+  if grep -Eq "shared/abis/|loadABI\(" "$skill_tmp/SKILL.md" 2>/dev/null; then
+    mkdir -p "$skill_tmp/shared/abis"
+    cp "$SHARED_DIR"/abis/*.json "$skill_tmp/shared/abis/"
+  fi
+
   # Bundle references if skill references them
   if grep -q "references/" "$skill_tmp/SKILL.md" 2>/dev/null; then
     mkdir -p "$skill_tmp/references"

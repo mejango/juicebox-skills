@@ -10,7 +10,7 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 
 ## Layout
 
-- `skills/<name>/SKILL.md` — one skill per directory (53 skills)
+- `skills/<name>/SKILL.md` — one skill per directory (55 skills)
 - `shared/chain-config.json` — canonical per-chain V6 addresses, generated from `deploy-all-v6/deployments`
 - `shared/abis/*.json` — verified ABIs from deployment artifacts
 - `shared/wallet-utils.js`, `shared/styles.css` — helpers bundled into UI skills
@@ -20,11 +20,12 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 ## Regenerating
 
 - Addresses changed? Run `python3 scripts/gen-chain-config.py <path/to/deploy-all-v6/deployments>`, then re-check skills that inline core addresses (`jb-decode`, `jb-contracts`, `shared/wallet-utils.js`).
+- Run `node scripts/test-project-identity.mjs` after changing identity guidance or the NFT/omnichain examples. It executes the examples with mocked contract/indexer responses, including wrong-deployment, wrong-chain, and missing-project cases.
 - Then run `./build-skills.sh`.
 
 ## Start here
 
-Read `jb-contracts` (addresses, which contract does what) and `jb-v6-api` (signatures, structs, permission IDs) first. Then pick a lane:
+For existing projects, start with `jb-project-identity`: every selection is `{ version: 6, chainId, projectId }`, never a bare ID or the first name match. For launch metadata, `jb-project-metadata` describes the reviewed IPFS publishing workflow at `https://juicebox.center/mcp`. Read `jb-contracts` (addresses, which contract does what) and `jb-v6-api` (signatures, structs, permission IDs) as needed. Then pick a lane:
 
 | Building | Read, in order |
 |----------|----------------|
@@ -43,7 +44,7 @@ Every transaction UI follows CONVENTIONS rule 5: simulate first, nonzero floors,
 
 | Domain | Skills |
 |--------|--------|
-| Core API / reference | jb-sdk, jb-v6-api, jb-v6-impl, jb-contracts, jb-currency-types, jb-project, jb-ruleset, jb-multi-currency, jb-query, jb-decode, jb-patterns, jb-simplify, jb-docs |
+| Core API / reference | jb-project-identity, jb-project-metadata, jb-sdk, jb-v6-api, jb-v6-impl, jb-contracts, jb-currency-types, jb-project, jb-ruleset, jb-multi-currency, jb-query, jb-decode, jb-patterns, jb-simplify, jb-docs |
 | Terminals / fees | jb-tx-safety, jb-terminal-selection, jb-data-hook-resolution, jb-terminal-wrapper, jb-protocol-fees, jb-fee-flows, jb-fund-access-limits, jb-cash-out-curve, jb-permit2-metadata |
 | Hooks / 721 | jb-pay-hook, jb-cash-out-hook, jb-split-hook, jb-buyback-hook, jb-lp-split-hook, jb-721-per-chain-config, jb-721-tier-content |
 | Omnichain / suckers | jb-suckers, jb-relayr, jb-safe-and-relayr-execution, jb-omnichain-erc20-config, jb-omnichain-payout-limits, jb-omnichain-per-chain-projectids, jb-omnichain-tier-quantity-per-chain |

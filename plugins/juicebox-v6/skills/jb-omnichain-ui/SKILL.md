@@ -12,6 +12,10 @@ version: 6.0.0
 
 Build frontends that deploy and interact with Juicebox projects across multiple chains using viem and shared styles.
 
+Resolve existing project names, handles, URLs, and IDs with `/jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
+
+For new launches, use `/jb-project-metadata` to obtain a real pinned JSON URI before finalizing per-chain launch calls. The same reviewed metadata URI can be used across chains; each launch still produces its own V6 project ID.
+
 ## Philosophy
 
 > **Pay once on any chain. Deploy everywhere. Query unified data.**
@@ -487,10 +491,13 @@ Display unified stats across all chains using Bendystraw. Group data lives on `s
   async function getSuckerGroupId(projectId, chainId) {
     const data = await query(`
       query($projectId: Float!, $chainId: Float!, $version: Float!) {
-        project(projectId: $projectId, chainId: $chainId, version: $version) { name suckerGroupId }
+        project(projectId: $projectId, chainId: $chainId, version: $version) { version projectId chainId name suckerGroupId }
       }
     `, { projectId, chainId, version: 6 });
-    return data.project?.suckerGroupId ?? null; // null = single-chain project
+    if (!data.project || data.project.version !== 6 || data.project.chainId !== chainId || String(data.project.projectId) !== String(projectId)) {
+      throw new Error('No matching V6 project was resolved');
+    }
+    return data.project.suckerGroupId || null; // existing V6 project; null only means no indexed group
   }
 
   // 2) Group-wide aggregates.
@@ -498,7 +505,7 @@ Display unified stats across all chains using Bendystraw. Group data lives on `s
     const data = await query(`
       query($id: String!) {
         suckerGroup(id: $id) {
-          projects createdAt
+          projects(where: { version: 6 }, limit: 100) { items { version projectId chainId name } pageInfo { endCursor hasNextPage } } createdAt
           volume volumeUsd balance tokenSupply
           paymentsCount contributorsCount nftsMintedCount
         }
@@ -512,7 +519,7 @@ Display unified stats across all chains using Bendystraw. Group data lives on `s
     const data = await query(`
       query($id: String!) {
         projects(where: { suckerGroupId: $id, version: 6 }) {
-          items { projectId chainId name balance volume volumeUsd paymentsCount token tokenSymbol }
+          items { version projectId chainId name balance volume volumeUsd paymentsCount token tokenSymbol }
         }
       }
     `, { id: suckerGroupId });

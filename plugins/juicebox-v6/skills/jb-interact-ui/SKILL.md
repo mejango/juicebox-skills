@@ -12,6 +12,8 @@ version: 6.0.0
 
 Generate single-file frontends for interacting with existing Juicebox projects using viem and shared styles. Pay into treasuries, cash out tokens, mint tier NFTs, run owner operations, view project state — no build tools required.
 
+Resolve existing project names, handles, URLs, and IDs with `/jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
+
 ## Philosophy
 
 > **Let users interact with Juicebox projects without touching a command line.**

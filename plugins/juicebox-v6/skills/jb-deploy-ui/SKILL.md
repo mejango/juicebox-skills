@@ -12,6 +12,8 @@ version: 6.0.0
 
 Generate single-file frontends for deploying Juicebox projects, 721 collections, and revnets. Uses shared styles and viem for blockchain interactions.
 
+Before finalizing deployment, use `/jb-project-metadata` to review and pin the complete metadata JSON through `https://juicebox.center/mcp`. Use the actual returned `metadataUri`; a local image requires a separate authorized upload. Keep the metadata review and public upload outcome visible alongside the later unsigned launch plan.
+
 ## Philosophy
 
 > **Show users exactly what they're doing. Make wallet connection trivial. Display transactions in flight.**

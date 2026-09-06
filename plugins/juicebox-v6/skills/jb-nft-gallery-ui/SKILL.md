@@ -12,6 +12,8 @@ version: 6.0.0
 
 Interactive gallery for browsing and managing NFTs from Juicebox 721 tiers hooks. Displays tier information, owned NFTs, and minting interfaces.
 
+Resolve existing project names, handles, URLs, and IDs with `/jb-project-identity` before generating this UI. Persist `{ version: 6, chainId, projectId }`; query and display V6 only, reject explicit unsupported versions, and preserve ambiguous name matches. Changing the wallet chain does not change the selected project's chain or ID.
+
 ## Verified 721 facts
 
 Verified against `nana-721-hook-v6`.
@@ -127,7 +129,7 @@ Verified against `nana-721-hook-v6`.
 
   <script type="module">
     import { createPublicClient, http, formatUnits, isAddress, createWalletClient, custom, encodeAbiParameters, keccak256, parseAbiItem } from 'https://esm.sh/viem@2.55.19';
-    import { CHAIN_CONFIGS, DEPLOY_BLOCKS, getContractAddress, resolveTerminal, truncateAddress, waitForSuccess } from '/shared/wallet-utils.js';
+    import { CHAIN_CONFIGS, DEPLOY_BLOCKS, getContractAddress, loadABI, loadChainConfig, resolveTerminal, truncateAddress, waitForSuccess } from '/shared/wallet-utils.js';
 
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
     const NATIVE_TOKEN_CURRENCY = 61166n; // uint32(uint160(NATIVE_TOKEN))
@@ -140,6 +142,7 @@ Verified against `nana-721-hook-v6`.
     ]};
 
     const HOOK_ABI = [
+      { name: 'DIRECTORY', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
       { name: 'STORE', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
       { name: 'projectId', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'uint256' }] },
       { name: 'METADATA_ID_TARGET', type: 'function', stateMutability: 'view', inputs: [], outputs: [{ type: 'address' }] },
@@ -200,6 +203,46 @@ Verified against `nana-721-hook-v6`.
     let hookAddress = '', chainId = 1, connectedAddress = null;
     let priceDecimals = 18, priceCurrency = NATIVE_TOKEN_CURRENCY, metadataIdTarget = null, projectId = null;
 
+    // Validate a supplied hook before interpreting its projectId in the V6 directory.
+    // Getter compatibility alone cannot prove identity; also require canonical deployment.
+    async function verifyV6GalleryHook(client, selectedChain, hook) {
+      const eq = (a, b) => a.toLowerCase() === b.toLowerCase();
+      const contracts = (await loadChainConfig()).chains[String(selectedChain)]?.contracts;
+      const address = (name) => {
+        if (!contracts?.[name]) throw new Error('V6 address missing for ' + name);
+        return contracts[name];
+      };
+      const blockNumber = await client.getBlockNumber();
+      const read = (address, abi, functionName, args = []) =>
+        client.readContract({ address, abi, functionName, args, blockNumber });
+      const directory = address('JBDirectory');
+      const hookDirectory = await read(hook, HOOK_ABI, 'DIRECTORY');
+      if (!eq(hookDirectory, directory)) throw new Error('This hook does not belong to Juicebox V6');
+      const deployer = await read(
+        address('JBAddressRegistry'),
+        await loadABI('JBAddressRegistry'), 'deployerOf', [hook]
+      );
+      if (!eq(deployer, address('JB721TiersHookDeployer'))) {
+        throw new Error('The supplied hook is not a verified V6 tiered hook');
+      }
+      const pid = await read(hook, HOOK_ABI, 'projectId');
+      await read(address('JBProjects'), await loadABI('JBProjects'), 'ownerOf', [pid]);
+      const controller = await read(directory, await loadABI('JBDirectory'), 'controllerOf', [pid]);
+      if (!eq(controller, address('JBController'))) {
+        throw new Error('This gallery cannot verify the project’s custom controller');
+      }
+      const [ruleset, metadata] = await read(controller, await loadABI('JBController'), 'currentRulesetOf', [pid]);
+      if (!metadata.useDataHookForPay) throw new Error('This project has no active NFT payment hook');
+      let activeHook = metadata.dataHook;
+      if (eq(activeHook, address('REVOwner'))) {
+        activeHook = await read(activeHook, [parseAbiItem('function tiered721HookOf(uint256) view returns (address)')], 'tiered721HookOf', [pid]);
+      } else if (eq(activeHook, address('JBOmnichainDeployer'))) {
+        [activeHook] = await read(activeHook, await loadABI('JBOmnichainDeployer'), 'tiered721HookOf', [pid, ruleset.id]);
+      }
+      if (!eq(activeHook, hook)) throw new Error('This collection is not the project’s current NFT payment hook');
+      return pid;
+    }
+
     window.loadGallery = async function() {
       hookAddress = document.getElementById('hookAddress').value;
       chainId = parseInt(document.getElementById('chainSelect').value);
@@ -212,9 +255,10 @@ Verified against `nana-721-hook-v6`.
       publicClient = createPublicClient({ chain: CHAIN_CONFIGS[chainId], transport: http() });
 
       try {
-        const [storeAddr, pid, idTarget, pricing] = await Promise.all([
+        projectId = null;
+        const pid = await verifyV6GalleryHook(publicClient, chainId, hookAddress);
+        const [storeAddr, idTarget, pricing] = await Promise.all([
           publicClient.readContract({ address: hookAddress, abi: HOOK_ABI, functionName: 'STORE' }),
-          publicClient.readContract({ address: hookAddress, abi: HOOK_ABI, functionName: 'projectId' }),
           publicClient.readContract({ address: hookAddress, abi: HOOK_ABI, functionName: 'METADATA_ID_TARGET' }),
           publicClient.readContract({ address: hookAddress, abi: HOOK_ABI, functionName: 'pricingContext' })
         ]);
@@ -456,6 +500,9 @@ Verified against `nana-721-hook-v6`.
     window.mintTier = async function(tierId, priceWei) {
       if (!connectedAddress) { alert('Please connect your wallet first'); return; }
       try {
+        const verifiedId = await verifyV6GalleryHook(publicClient, chainId, hookAddress);
+        if (projectId === null || verifiedId !== projectId) throw new Error('Reload the selected V6 collection');
+        if (await walletClient.getChainId() !== chainId) throw new Error('Switch the wallet to the selected project chain');
         const metadata = buildTierMintMetadata(metadataIdTarget, [tierId]);
         // Resolve the terminal that accepts ETH for this project; throws (no mint) if none does.
         const { terminal, context } = await resolveTerminal(publicClient, projectId, NATIVE_TOKEN);
@@ -485,6 +532,9 @@ Verified against `nana-721-hook-v6`.
       if (!recipient || !isAddress(recipient)) { alert('Invalid address'); return; }
 
       try {
+        const verifiedId = await verifyV6GalleryHook(publicClient, chainId, hookAddress);
+        if (projectId === null || verifiedId !== projectId) throw new Error('Reload the selected V6 collection');
+        if (await walletClient.getChainId() !== chainId) throw new Error('Switch the wallet to the selected collection chain');
         const hash = await walletClient.writeContract({
           address: hookAddress, abi: HOOK_ABI, functionName: 'transferFrom',
           args: [connectedAddress, recipient, BigInt(tokenId)], account: connectedAddress

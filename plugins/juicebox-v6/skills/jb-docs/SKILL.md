@@ -13,6 +13,10 @@ version: 6.0.0
 
 docs.juicebox.money publishes no V6 pages: `GET /api/mcp/structure` lists no `v6` version, `POST /api/mcp/search` with `"version": "v6"` returns `[]`, and every `/dev/v6/...` URL is 404. Do not fetch it for V6 facts. Ground truth is source.
 
+For an existing project, use `/jb-project-identity` to resolve its V6 chain and ID. Generic web search results and documentation examples do not identify the user's project. For metadata JSON and IPFS publishing, use `/jb-project-metadata`.
+
+When connected to `https://juicebox.center/mcp`, `jb_search_reference` and `jb_get_reference` expose the bundled V6 source references and their provenance. Contract facts still come from source; project identity still requires live verification.
+
 ## Sources of Truth, in Order
 
 1. **Contract addresses**: `shared/chain-config.json` (generated from deployment artifacts). Do not take addresses from web pages.

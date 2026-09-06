@@ -1,7 +1,7 @@
 ---
 name: jb-project
 description: |
-  Create and configure Juicebox projects. Use when: (1) deploying a new project with
+  Create and configure Juicebox V6 projects. Use when: (1) deploying a new project with
   launchProjectFor, (2) launching rulesets on a pre-created project with launchRulesetsFor,
   (3) transferring project ownership or updating the project metadata URI, (4) deploying
   or attaching a project ERC-20, (5) reading project state (owner, controller, terminals,
@@ -14,6 +14,8 @@ version: 6.0.0
 Create and manage Juicebox projects: deployment, configuration, tokens, and ownership.
 
 ## Project Identity
+
+Use `{ version: 6, chainId, projectId }` everywhere. For an existing name, handle, URL, or ID, follow `/jb-project-identity` before reading state or preparing a transaction. Search V6 only; do not substitute the same ID from another deployment.
 
 **A Juicebox project is an ERC-721 NFT minted by `JBProjects`. The token ID is the project ID, used across the entire protocol. Whoever holds the NFT owns the project.**
 
@@ -113,11 +115,11 @@ Points to a JSON file (typically IPFS):
   "name": "Project Name",
   "description": "Project description",
   "logoUri": "ipfs://...",
-  "infoUri": "https://...",
-  "twitter": "@handle",
-  "discord": "https://discord.gg/..."
+  "infoUri": "https://..."
 }
 ```
+
+Use `/jb-project-metadata` to obtain the actual URI: connect to `https://juicebox.center/mcp`, prepare the complete document with `jb_prepare_project_metadata`, then publish the reviewed JSON with `jb_pin_project_metadata` after authorization for that public upload. Use its returned `metadataUri` as `projectUri`. The example URIs above are notation only; replace them with real existing content or omit optional fields. A local logo needs a separate authorized image upload first.
 
 The URI is stored in `JBController.uriOf[projectId]` and updated via `JBController.setUriOf(projectId, uri)` (owner or `SET_PROJECT_URI` operator). The ERC-721 `tokenURI` is separate — it is rendered by a protocol-owned `tokenUriResolver` on `JBProjects`, which individual project owners do not control.
 

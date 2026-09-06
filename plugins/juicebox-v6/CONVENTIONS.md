@@ -4,7 +4,7 @@ Skills in this folder teach AI agents (Claude Console skills + Claude Code) how 
 
 ## Hard rules
 
-1. **V6 only.** Never mention V5, V5.1, V4, or version detection. V6 is the only Juicebox. No "migration from" framing, no "unlike previous versions".
+1. **V6 only.** Every project identity is `{ version: 6, chainId, projectId }`. Use explicit V6 SDK entry points and address tables; pass `6` to versioned helpers and filter indexed queries by `6`. Reject explicitly unsupported versions instead of rewriting their IDs. Do not offer version discovery, migration, or fallback to another deployment. See `skills/jb-project-identity/SKILL.md` for name and URL resolution.
 2. **Ground truth is code.** Every contract fact (function signature, struct field order, permission ID, constant, fee value, event shape, address) must be verified against the `nana-*-v6` / `revnet-core-v6` / `croptop-core-v6` / `bendystraw-v6` repos or `shared/chain-config.json`. Never carry a fact over from a V5 skill without re-verifying it in V6 source.
 3. **Addresses come from `shared/chain-config.json`** (generated from `deploy-all-v6/deployments`). Do not hand-type addresses from anywhere else. Core contracts share one address across all chains — say so once instead of repeating per-chain tables.
 4. **No hedging, no marketing.** State facts. If something is unknown, omit it.
@@ -12,12 +12,12 @@ Skills in this folder teach AI agents (Claude Console skills + Claude Code) how 
 
 ## Format
 
-- YAML frontmatter: `name`, `description` (trigger conditions: "Use when: (1)…, (2)…"), `version: 6.0.0`.
+- YAML frontmatter: `name`, `description` (trigger conditions: "Use when: (1)…, (2)…"), and `metadata.version: 6.0.0`. Existing Console skills may retain top-level `version`; new skills use `metadata` for Codex compatibility.
 - Tables over prose for enumerable facts (addresses, IDs, fields, enums).
 - Fenced code blocks for every calldata/encoding/query example, tagged with language.
 - Struct/field tables MUST show fields in ABI order with types.
 - One `## Common mistakes` section at the end if the domain has known traps.
-- Target the V5 skill's scope but cut anything V6 made obsolete (e.g. version detection, dual controller sets).
+- Keep each skill scoped to its V6 capability; do not carry forward unsupported controller sets or version detection.
 
 ## Shared resources
 

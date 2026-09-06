@@ -11,7 +11,7 @@ version: 6.0.0
 
 # Juicebox V6 Chain Queries
 
-Query on-chain state for Juicebox V6 projects. There is a single contract set — no version detection is ever needed. Core contracts share the same address on every supported chain (CREATE2); take addresses from `shared/chain-config.json`.
+Query on-chain state for Juicebox V6 projects only. Resolve `{ version: 6, chainId, projectId }` first using `/jb-project-identity`; a parsed URL or matching numeric ID is not proof of the intended project. Use only the V6 contract set from `shared/chain-config.json`, then read its live `JBDirectory` for project-specific contracts. Never fall back to another protocol deployment when a lookup fails.
 
 ## Core Addresses (same on all chains)
 
@@ -55,7 +55,7 @@ ABIs: `shared/abis/*.json`.
 ```solidity
 count() → uint256                    // Total projects created
 ownerOf(projectId) → address         // Project owner (ERC-721)
-tokenURI(projectId) → string         // Project metadata URI
+tokenURI(projectId) → string         // Protocol-rendered NFT URI; project JSON is JBController.uriOf(projectId)
 ```
 
 ### JBDirectory
