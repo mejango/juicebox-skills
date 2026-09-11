@@ -13,6 +13,8 @@ metadata:
 
 # JBMetadataResolver: Terminal Metadata Encoding
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+
 The `metadata` bytes argument of `pay()`, `addToBalanceOf()`, and `cashOutTokensOf()` is a shared blob multiple contracts read from. `JBMetadataResolver` (nana-core-v6) defines the format:
 
 ```
@@ -43,19 +45,19 @@ id = bytes4(bytes20(target) ^ bytes20(keccak256(bytes(purpose))));  // JBMetadat
 
 `target` is the consuming contract — except the 721 hook, whose clones all use the shared implementation address (`METADATA_ID_TARGET`, baked in the implementation's constructor).
 
-Precomputed IDs for the canonical deployments (same addresses on all chains):
+Precomputed IDs below apply only to the explicitly named stable consumers. Compute router/gateway/buyback IDs from the resolved project route on the active chain:
 
 | Consumer (target) | purpose | ID | Payload (`abi.encode`) |
 |---|---|---|---|
 | `JBMultiTerminal` `0x130f5dd2…7f53` | `permit2` | `0xd260d5c9` | `JBSingleAllowance` tuple |
 | `JBRouterTerminalRegistry` `0xe0427f25…8cbc` | `permit2` | `0x212df73e` | `JBSingleAllowance` tuple |
-| `JBRouterTerminal` `0x0fbcbb3d…18d7` | `permit2` | `0xced33326` | `JBSingleAllowance` tuple |
-| `JBRouterTerminal` | `pay` | `0xa27bedbd` | `(address quotedTokenOut, uint256 quotedMinAmountOut)` swap quote |
-| `JBRouterTerminal` | `cashOut` | `0x890df4c9` | `(uint256 minTokensReclaimed)` reclaim floor |
+| `JBRouterTerminal` or gateway (when called directly) | `permit2` | `computeMetadataId("permit2", calledTerminal)` | `JBSingleAllowance` tuple |
+| Resolved `JBRouterTerminal` | `pay` | `computeMetadataId("pay", router)` | `(address quotedTokenOut, uint256 quotedMinAmountOut)` swap quote |
+| Resolved `JBRouterTerminal` | `cashOut` | `computeMetadataId("cashOut", router)` | `(uint256 minTokensReclaimed)` reclaim floor |
 | `JB721TiersHook` implementation `0xf4a58871…b5ab` | `pay` | `0x5962def1` | `(bool allowOverspending, uint16[] tierIds)` |
 | `JB721TiersHook` implementation | `cashOut` | `0x7214c785` | `(uint256[] tokenIds)` NFTs to burn |
-| `JBBuybackHook` `0x77bee1ad…4948` | `pay` | `0xda79b72d` | `(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — 96 bytes; a 2-word payload makes `abi.decode` revert. `skipSplits = true` opts the swapped tokens out of the project's reserved split; `minimumSwapAmountOut = 0` means "no user quote" (TWAP floor applies) |
-| `JBBuybackHook` | `cashOut` | `0xf10fae59` | `(uint256 minimumSwapAmountOut, bool skip)` |
+| Resolved `JBBuybackHook` | `pay` | `computeMetadataId("pay", hook)` | `(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` |
+| Resolved `JBBuybackHook` | `cashOut` | `computeMetadataId("cashOut", hook)` | `(uint256 minimumSwapAmountOut, bool skip)` |
 
 ```typescript
 import { keccak256, toBytes, type Address } from 'viem'
@@ -66,6 +68,10 @@ function computeMetadataId(purpose: string, target: Address): `0x${string}` {
   return `0x${(xor >> 128n & 0xffffffffn).toString(16).padStart(8, '0')}`
 }
 ```
+
+The current buyback hook requires three pay words; two-word payloads revert. Encode `skipSplits: false` unless the payer opts out of reserved-token participation for purchased tokens. Resolve `registry.terminalOf(projectId)` and, for a gateway, its `ROUTER()` for router quote IDs; Permit2 still targets the directly called contract. Resolve the project's buyback hook rather than the newest artifact.
+
+Gateway retention uses a separate, exact 32-byte raw `sourceProjectId` metadata payload from protocol callers. A `JBMetadataResolver` container with Permit2/quote entries does not opt into retention; keep user payment minimums and normal synchronous failure semantics.
 
 ## Permit2 (gasless ERC-20 payments)
 

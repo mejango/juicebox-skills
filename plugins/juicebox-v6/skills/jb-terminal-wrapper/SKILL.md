@@ -12,12 +12,16 @@ metadata:
 
 # Terminal Wrapper Pattern
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+
 A wrapper is a custom `IJBTerminal` that accepts funds, applies its own logic, then forwards into a real terminal. The production examples are in `nana-router-terminal-v6`:
 
 - **`JBRouterTerminalRegistry`** (`0xe0427f250fdb0379c8e98e884ee4570521208cbc`) — pure forwarding wrapper. Accepts funds, resolves a per-project downstream terminal, approves it, forwards `pay`/`addToBalanceOf` unchanged, revokes leftover allowance.
-- **`JBRouterTerminal`** (`0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7`) — transforming wrapper. Accepts any token, swaps/cashes it into what the destination project accepts, then pays the destination terminal.
+- **`JBRouterTerminal`** (`chains[chainId].contracts.JBRouterTerminal`; resolve the project's generation) — transforming wrapper. Accepts any token, swaps/cashes it into what the destination project accepts, then pays the destination terminal.
 
-Wrappers can chain: caller → registry → router → `JBMultiTerminal`.
+- **`JBRouterTerminalGateway`** — the registry-selectable terminal on upgraded chains, immutable-bound to `ROUTER()`. It takes custody before routing and retains eligible failed fee/protocol calls for permissionless retry or source-project refund. Ordinary user calls with minimums or framed metadata still fail synchronously.
+
+The upgraded chain is caller → registry → gateway → router → `JBMultiTerminal`; existing overrides can still select a retired router. Read `registry.terminalOf(projectId)` and unwrap a recognized gateway via `ROUTER()` before quoting. Read the shared rollout reference for exact custody eligibility and recovery semantics.
 
 ## Critical mental model: wrappers are additive
 
@@ -36,7 +40,7 @@ Anyone can always call `JBMultiTerminal.pay()` directly. A wrapper cannot restri
 | `addToBalanceOf(projectId, token, amount, shouldReturnHeldFees, memo, metadata)` | accept funds → forward |
 | `accountingContextForTokenOf(projectId, token)` | delegate to downstream terminal (registry) or synthesize (router). `JBDirectory.primaryTerminalOf` treats a non-zero `.token` as "accepts this token" |
 | `accountingContextsOf(projectId)` | delegate or return empty array |
-| `currentSurplusOf(projectId, tokens, decimals, currency)` | return 0 (wrapper holds no balances) |
+| `currentSurplusOf(projectId, tokens, decimals, currency)` | return 0 (wrapper holds no project balances; gateway escrow is separate pending-call custody) |
 | `previewPayFor(projectId, token, amount, beneficiary, metadata)` | delegate |
 | `addAccountingContextsFor(projectId, accountingContexts)` | empty body (contexts live downstream) |
 | `migrateBalanceOf(projectId, token, to)` | return 0 (no balances) |
@@ -138,7 +142,7 @@ reclaimAmount = TERMINAL.cashOutTokensOf({
 ## Verification
 
 1. Direct `JBMultiTerminal.pay` still works alongside the wrapper (permissionless).
-2. Wrapper payments produce the enhanced behavior atomically (all-or-revert).
+2. Ordinary wrapper payments produce the enhanced behavior atomically; eligible gateway protocol payments can instead emit a pending call while retaining their input.
 3. Leftover ERC-20 allowances to the downstream terminal are revoked after forwarding.
 4. Nested wrapper chains resolve `originalPayer` to the true payer.
 

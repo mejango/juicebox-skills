@@ -8,62 +8,22 @@
     "internalType": "contract IJBDirectory"
    },
    {
-    "name": "tokens",
-    "type": "address",
-    "internalType": "contract IJBTokens"
-   },
-   {
     "name": "permit2",
     "type": "address",
     "internalType": "contract IPermit2"
    },
    {
-    "name": "buybackHook",
+    "name": "router",
     "type": "address",
-    "internalType": "address"
+    "internalType": "contract IJBRouterTerminal"
    },
    {
     "name": "trustedForwarder",
     "type": "address",
     "internalType": "address"
-   },
-   {
-    "name": "deployer",
-    "type": "address",
-    "internalType": "address"
    }
   ],
   "stateMutability": "nonpayable"
- },
- {
-  "type": "receive",
-  "stateMutability": "payable"
- },
- {
-  "type": "function",
-  "name": "BUYBACK_HOOK",
-  "inputs": [],
-  "outputs": [
-   {
-    "name": "",
-    "type": "address",
-    "internalType": "address"
-   }
-  ],
-  "stateMutability": "view"
- },
- {
-  "type": "function",
-  "name": "DEFAULT_TWAP_WINDOW",
-  "inputs": [],
-  "outputs": [
-   {
-    "name": "",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ],
-  "stateMutability": "view"
  },
  {
   "type": "function",
@@ -80,13 +40,13 @@
  },
  {
   "type": "function",
-  "name": "MIN_TWAP_WINDOW",
+  "name": "FINALIZATION_FAILURE_COUNT",
   "inputs": [],
   "outputs": [
    {
     "name": "",
-    "type": "uint32",
-    "internalType": "uint32"
+    "type": "uint256",
+    "internalType": "uint256"
    }
   ],
   "stateMutability": "view"
@@ -106,13 +66,39 @@
  },
  {
   "type": "function",
-  "name": "TOKENS",
+  "name": "QUALIFIED_CALL_GAS",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "RETRY_DELAY",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "ROUTER",
   "inputs": [],
   "outputs": [
    {
     "name": "",
     "type": "address",
-    "internalType": "contract IJBTokens"
+    "internalType": "contract IJBRouterTerminal"
    }
   ],
   "stateMutability": "view"
@@ -122,7 +108,7 @@
   "name": "accountingContextForTokenOf",
   "inputs": [
    {
-    "name": "",
+    "name": "projectId",
     "type": "uint256",
     "internalType": "uint256"
    },
@@ -134,7 +120,7 @@
   ],
   "outputs": [
    {
-    "name": "",
+    "name": "context",
     "type": "tuple",
     "internalType": "struct JBAccountingContext",
     "components": [
@@ -192,7 +178,7 @@
     ]
    }
   ],
-  "stateMutability": "pure"
+  "stateMutability": "view"
  },
  {
   "type": "function",
@@ -269,30 +255,6 @@
  },
  {
   "type": "function",
-  "name": "bestPoolLiquidityOf",
-  "inputs": [
-   {
-    "name": "tokenA",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "tokenB",
-    "type": "address",
-    "internalType": "address"
-   }
-  ],
-  "outputs": [
-   {
-    "name": "",
-    "type": "uint128",
-    "internalType": "uint128"
-   }
-  ],
-  "stateMutability": "view"
- },
- {
-  "type": "function",
   "name": "currentSurplusOf",
   "inputs": [
    {
@@ -323,7 +285,7 @@
     "internalType": "uint256"
    }
   ],
-  "stateMutability": "pure"
+  "stateMutability": "view"
  },
  {
   "type": "function",
@@ -342,7 +304,7 @@
   ],
   "outputs": [
    {
-    "name": "",
+    "name": "pool",
     "type": "tuple",
     "internalType": "struct PoolInfo",
     "components": [
@@ -419,16 +381,170 @@
  },
  {
   "type": "function",
-  "name": "factory",
-  "inputs": [],
-  "outputs": [
+  "name": "finalizePendingCall",
+  "inputs": [
    {
-    "name": "",
-    "type": "address",
-    "internalType": "contract IUniswapV3Factory"
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
+   },
+   {
+    "name": "call",
+    "type": "tuple",
+    "internalType": "struct JBPendingRouterTerminalCall",
+    "components": [
+     {
+      "name": "amount",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "preferAddToBalance",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "shouldReturnHeldFees",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "beneficiary",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "projectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "refundTo",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "sourceProjectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "token",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
+   },
+   {
+    "name": "memo",
+    "type": "string",
+    "internalType": "string"
+   },
+   {
+    "name": "metadata",
+    "type": "bytes",
+    "internalType": "bytes"
    }
   ],
-  "stateMutability": "view"
+  "outputs": [
+   {
+    "name": "wasRefunded",
+    "type": "bool",
+    "internalType": "bool"
+   },
+   {
+    "name": "beneficiaryTokenCount",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "finalizePendingCallWithGas",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
+   },
+   {
+    "name": "call",
+    "type": "tuple",
+    "internalType": "struct JBPendingRouterTerminalCall",
+    "components": [
+     {
+      "name": "amount",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "preferAddToBalance",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "shouldReturnHeldFees",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "beneficiary",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "projectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "refundTo",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "sourceProjectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "token",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
+   },
+   {
+    "name": "gasLimit",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "memo",
+    "type": "string",
+    "internalType": "string"
+   },
+   {
+    "name": "metadata",
+    "type": "bytes",
+    "internalType": "bytes"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "wasRefunded",
+    "type": "bool",
+    "internalType": "bool"
+   },
+   {
+    "name": "beneficiaryTokenCount",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "nonpayable"
  },
  {
   "type": "function",
@@ -445,6 +561,19 @@
     "name": "",
     "type": "bool",
     "internalType": "bool"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "maximumQualifiedCallGas",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "gasLimit",
+    "type": "uint256",
+    "internalType": "uint256"
    }
   ],
   "stateMutability": "view"
@@ -477,6 +606,19 @@
    }
   ],
   "stateMutability": "pure"
+ },
+ {
+  "type": "function",
+  "name": "originalPayer",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "address"
+   }
+  ],
+  "stateMutability": "view"
  },
  {
   "type": "function",
@@ -529,62 +671,73 @@
  },
  {
   "type": "function",
-  "name": "poolManager",
-  "inputs": [],
+  "name": "pendingCallCommitmentOf",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
+   }
+  ],
   "outputs": [
    {
-    "name": "",
-    "type": "address",
-    "internalType": "contract IPoolManager"
+    "name": "commitment",
+    "type": "bytes32",
+    "internalType": "bytes32"
    }
   ],
   "stateMutability": "view"
  },
  {
   "type": "function",
-  "name": "previewCashOutLoopOf",
+  "name": "pendingCallCount",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "pendingCallFailureOf",
   "inputs": [
    {
-    "name": "destProjectId",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "token",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "amount",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "metadata",
-    "type": "bytes",
-    "internalType": "bytes"
-   },
-   {
-    "name": "preferredToken",
-    "type": "address",
-    "internalType": "address"
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
    }
   ],
   "outputs": [
    {
-    "name": "destTerminal",
-    "type": "address",
-    "internalType": "contract IJBTerminal"
-   },
-   {
-    "name": "finalToken",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "finalAmount",
-    "type": "uint256",
-    "internalType": "uint256"
+    "name": "failure",
+    "type": "tuple",
+    "internalType": "struct JBPendingRouterTerminalCallFailure",
+    "components": [
+     {
+      "name": "errorHash",
+      "type": "bytes32",
+      "internalType": "bytes32"
+     },
+     {
+      "name": "count",
+      "type": "uint32",
+      "internalType": "uint32"
+     },
+     {
+      "name": "lastFailureAt",
+      "type": "uint48",
+      "internalType": "uint48"
+     },
+     {
+      "name": "highestGasLimit",
+      "type": "uint64",
+      "internalType": "uint64"
+     }
+    ]
    }
   ],
   "stateMutability": "view"
@@ -714,192 +867,159 @@
  },
  {
   "type": "function",
-  "name": "previewSwapAmountOutOf",
+  "name": "processPendingCall",
   "inputs": [
    {
-    "name": "tokenIn",
-    "type": "address",
-    "internalType": "address"
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
    },
    {
-    "name": "tokenOut",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "amount",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "metadata",
-    "type": "bytes",
-    "internalType": "bytes"
-   }
-  ],
-  "outputs": [
-   {
-    "name": "amountOut",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ],
-  "stateMutability": "view"
- },
- {
-  "type": "function",
-  "name": "previewTerminalPayOf",
-  "inputs": [
-   {
-    "name": "destTerminal",
-    "type": "address",
-    "internalType": "contract IJBTerminal"
-   },
-   {
-    "name": "projectId",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "token",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "amount",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "beneficiary",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "metadata",
-    "type": "bytes",
-    "internalType": "bytes"
-   }
-  ],
-  "outputs": [
-   {
-    "name": "",
+    "name": "call",
     "type": "tuple",
-    "internalType": "struct JBRuleset",
+    "internalType": "struct JBPendingRouterTerminalCall",
     "components": [
-     {
-      "name": "cycleNumber",
-      "type": "uint48",
-      "internalType": "uint48"
-     },
-     {
-      "name": "id",
-      "type": "uint48",
-      "internalType": "uint48"
-     },
-     {
-      "name": "basedOnId",
-      "type": "uint48",
-      "internalType": "uint48"
-     },
-     {
-      "name": "start",
-      "type": "uint48",
-      "internalType": "uint48"
-     },
-     {
-      "name": "duration",
-      "type": "uint32",
-      "internalType": "uint32"
-     },
-     {
-      "name": "weight",
-      "type": "uint112",
-      "internalType": "uint112"
-     },
-     {
-      "name": "weightCutPercent",
-      "type": "uint32",
-      "internalType": "uint32"
-     },
-     {
-      "name": "approvalHook",
-      "type": "address",
-      "internalType": "contract IJBRulesetApprovalHook"
-     },
-     {
-      "name": "metadata",
-      "type": "uint256",
-      "internalType": "uint256"
-     }
-    ]
-   },
-   {
-    "name": "",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "",
-    "type": "tuple[]",
-    "internalType": "struct JBPayHookSpecification[]",
-    "components": [
-     {
-      "name": "hook",
-      "type": "address",
-      "internalType": "contract IJBPayHook"
-     },
-     {
-      "name": "noop",
-      "type": "bool",
-      "internalType": "bool"
-     },
      {
       "name": "amount",
       "type": "uint256",
       "internalType": "uint256"
      },
      {
-      "name": "metadata",
-      "type": "bytes",
-      "internalType": "bytes"
+      "name": "preferAddToBalance",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "shouldReturnHeldFees",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "beneficiary",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "projectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "refundTo",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "sourceProjectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "token",
+      "type": "address",
+      "internalType": "address"
      }
     ]
+   },
+   {
+    "name": "memo",
+    "type": "string",
+    "internalType": "string"
+   },
+   {
+    "name": "metadata",
+    "type": "bytes",
+    "internalType": "bytes"
    }
   ],
-  "stateMutability": "view"
+  "outputs": [
+   {
+    "name": "beneficiaryTokenCount",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "nonpayable"
  },
  {
   "type": "function",
-  "name": "setChainSpecificConstants",
+  "name": "processPendingCallWithGas",
   "inputs": [
    {
-    "name": "newWrappedNativeToken",
-    "type": "address",
-    "internalType": "contract IWETH9"
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
    },
    {
-    "name": "newFactory",
-    "type": "address",
-    "internalType": "contract IUniswapV3Factory"
+    "name": "call",
+    "type": "tuple",
+    "internalType": "struct JBPendingRouterTerminalCall",
+    "components": [
+     {
+      "name": "amount",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "preferAddToBalance",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "shouldReturnHeldFees",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "beneficiary",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "projectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "refundTo",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "sourceProjectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "token",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
    },
    {
-    "name": "newPoolManager",
-    "type": "address",
-    "internalType": "contract IPoolManager"
+    "name": "gasLimit",
+    "type": "uint256",
+    "internalType": "uint256"
    },
    {
-    "name": "newUniv4Hook",
-    "type": "address",
-    "internalType": "address"
+    "name": "memo",
+    "type": "string",
+    "internalType": "string"
+   },
+   {
+    "name": "metadata",
+    "type": "bytes",
+    "internalType": "bytes"
    }
   ],
-  "outputs": [],
+  "outputs": [
+   {
+    "name": "beneficiaryTokenCount",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
   "stateMutability": "nonpayable"
  },
  {
@@ -914,9 +1034,28 @@
   ],
   "outputs": [
    {
-    "name": "",
+    "name": "supported",
     "type": "bool",
     "internalType": "bool"
+   }
+  ],
+  "stateMutability": "pure"
+ },
+ {
+  "type": "function",
+  "name": "terminalOf",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "terminal",
+    "type": "address",
+    "internalType": "contract IJBTerminal"
    }
   ],
   "stateMutability": "view"
@@ -930,74 +1069,6 @@
     "name": "",
     "type": "address",
     "internalType": "address"
-   }
-  ],
-  "stateMutability": "view"
- },
- {
-  "type": "function",
-  "name": "uniswapV3SwapCallback",
-  "inputs": [
-   {
-    "name": "amount0Delta",
-    "type": "int256",
-    "internalType": "int256"
-   },
-   {
-    "name": "amount1Delta",
-    "type": "int256",
-    "internalType": "int256"
-   },
-   {
-    "name": "data",
-    "type": "bytes",
-    "internalType": "bytes"
-   }
-  ],
-  "outputs": [],
-  "stateMutability": "nonpayable"
- },
- {
-  "type": "function",
-  "name": "univ4Hook",
-  "inputs": [],
-  "outputs": [
-   {
-    "name": "",
-    "type": "address",
-    "internalType": "address"
-   }
-  ],
-  "stateMutability": "view"
- },
- {
-  "type": "function",
-  "name": "unlockCallback",
-  "inputs": [
-   {
-    "name": "data",
-    "type": "bytes",
-    "internalType": "bytes"
-   }
-  ],
-  "outputs": [
-   {
-    "name": "",
-    "type": "bytes",
-    "internalType": "bytes"
-   }
-  ],
-  "stateMutability": "nonpayable"
- },
- {
-  "type": "function",
-  "name": "wrappedNativeToken",
-  "inputs": [],
-  "outputs": [
-   {
-    "name": "",
-    "type": "address",
-    "internalType": "contract IWETH9"
    }
   ],
   "stateMutability": "view"
@@ -1162,6 +1233,268 @@
     "type": "uint256",
     "indexed": false,
     "internalType": "uint256"
+   },
+   {
+    "name": "caller",
+    "type": "address",
+    "indexed": false,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "JBRouterTerminalGateway_ProcessPendingCall",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "call",
+    "type": "tuple",
+    "indexed": false,
+    "internalType": "struct JBPendingRouterTerminalCall",
+    "components": [
+     {
+      "name": "amount",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "preferAddToBalance",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "shouldReturnHeldFees",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "beneficiary",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "projectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "refundTo",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "sourceProjectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "token",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
+   },
+   {
+    "name": "beneficiaryTokenCount",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   },
+   {
+    "name": "caller",
+    "type": "address",
+    "indexed": false,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "JBRouterTerminalGateway_QueuePendingCall",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "call",
+    "type": "tuple",
+    "indexed": false,
+    "internalType": "struct JBPendingRouterTerminalCall",
+    "components": [
+     {
+      "name": "amount",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "preferAddToBalance",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "shouldReturnHeldFees",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "beneficiary",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "projectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "refundTo",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "sourceProjectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "token",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
+   },
+   {
+    "name": "memo",
+    "type": "string",
+    "indexed": false,
+    "internalType": "string"
+   },
+   {
+    "name": "metadata",
+    "type": "bytes",
+    "indexed": false,
+    "internalType": "bytes"
+   },
+   {
+    "name": "errorHash",
+    "type": "bytes32",
+    "indexed": false,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "caller",
+    "type": "address",
+    "indexed": false,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "JBRouterTerminalGateway_RecordTerminalCallFailure",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "errorHash",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "count",
+    "type": "uint32",
+    "indexed": false,
+    "internalType": "uint32"
+   },
+   {
+    "name": "nextAttemptAt",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   },
+   {
+    "name": "caller",
+    "type": "address",
+    "indexed": false,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "JBRouterTerminalGateway_RefundPendingCall",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "bytes32",
+    "indexed": true,
+    "internalType": "bytes32"
+   },
+   {
+    "name": "call",
+    "type": "tuple",
+    "indexed": false,
+    "internalType": "struct JBPendingRouterTerminalCall",
+    "components": [
+     {
+      "name": "amount",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "preferAddToBalance",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "shouldReturnHeldFees",
+      "type": "bool",
+      "internalType": "bool"
+     },
+     {
+      "name": "beneficiary",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "projectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "refundTo",
+      "type": "address",
+      "internalType": "address"
+     },
+     {
+      "name": "sourceProjectId",
+      "type": "uint256",
+      "internalType": "uint256"
+     },
+     {
+      "name": "token",
+      "type": "address",
+      "internalType": "address"
+     }
+    ]
    },
    {
     "name": "caller",
@@ -1376,33 +1709,7 @@
  },
  {
   "type": "error",
-  "name": "FailedCall",
-  "inputs": []
- },
- {
-  "type": "error",
-  "name": "InsufficientBalance",
-  "inputs": [
-   {
-    "name": "balance",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "needed",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_AlreadyConfigured",
-  "inputs": []
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_AmountOverflow",
+  "name": "JBRouterTerminalGateway_AmountOverflow",
   "inputs": [
    {
     "name": "amount",
@@ -1413,42 +1720,15 @@
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_CallerNotPool",
+  "name": "JBRouterTerminalGateway_BlockGasLimitTooLow",
   "inputs": [
    {
-    "name": "caller",
-    "type": "address",
-    "internalType": "address"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_CallerNotPoolManager",
-  "inputs": [
-   {
-    "name": "caller",
-    "type": "address",
-    "internalType": "address"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_CashOutDidNotDeliver",
-  "inputs": [
-   {
-    "name": "sourceToken",
-    "type": "address",
-    "internalType": "address"
+    "name": "maximum",
+    "type": "uint256",
+    "internalType": "uint256"
    },
    {
-    "name": "tokenToReclaim",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "cashOutCount",
+    "name": "minimum",
     "type": "uint256",
     "internalType": "uint256"
    }
@@ -1456,82 +1736,39 @@
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_CashOutLoopLimit",
+  "name": "JBRouterTerminalGateway_CallDataMismatch",
   "inputs": [
    {
-    "name": "maxIterations",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_InsufficientTwapHistory",
-  "inputs": [
-   {
-    "name": "pool",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "twapWindow",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "minTwapWindow",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_ManipulationResistantQuoteRequired",
-  "inputs": [
-   {
-    "name": "poolId",
+    "name": "expectedCommitment",
     "type": "bytes32",
-    "internalType": "PoolId"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_NoCashOutPath",
-  "inputs": [
-   {
-    "name": "sourceProjectId",
-    "type": "uint256",
-    "internalType": "uint256"
+    "internalType": "bytes32"
    },
    {
-    "name": "destProjectId",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_NoLiquidity",
-  "inputs": [
-   {
-    "name": "pool",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "poolId",
+    "name": "actualCommitment",
     "type": "bytes32",
-    "internalType": "PoolId"
+    "internalType": "bytes32"
    }
   ]
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_NoMsgValueAllowed",
+  "name": "JBRouterTerminalGateway_InsufficientRetryGas",
+  "inputs": [
+   {
+    "name": "available",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "required",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBRouterTerminalGateway_NoMsgValueAllowed",
   "inputs": [
    {
     "name": "value",
@@ -1542,52 +1779,42 @@
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_NoObservationHistory",
+  "name": "JBRouterTerminalGateway_PendingCallNotFinalizable",
   "inputs": [
    {
-    "name": "pool",
-    "type": "address",
-    "internalType": "address"
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
+   },
+   {
+    "name": "failureCount",
+    "type": "uint32",
+    "internalType": "uint32"
    }
   ]
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_NoPoolFound",
+  "name": "JBRouterTerminalGateway_PendingCallNotFound",
   "inputs": [
    {
-    "name": "tokenIn",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "tokenOut",
-    "type": "address",
-    "internalType": "address"
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
    }
   ]
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_NonStandardTerminalToken",
+  "name": "JBRouterTerminalGateway_PendingCallNotReady",
   "inputs": [
    {
-    "name": "terminal",
-    "type": "address",
-    "internalType": "address"
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
    },
    {
-    "name": "token",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "expectedAmount",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "actualAmount",
+    "name": "nextAttemptAt",
     "type": "uint256",
     "internalType": "uint256"
    }
@@ -1595,7 +1822,18 @@
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_PermitAllowanceNotEnough",
+  "name": "JBRouterTerminalGateway_PendingCallRequiresFinalization",
+  "inputs": [
+   {
+    "name": "id",
+    "type": "bytes32",
+    "internalType": "bytes32"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBRouterTerminalGateway_PermitAllowanceNotEnough",
   "inputs": [
    {
     "name": "amount",
@@ -1611,15 +1849,10 @@
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_QuoteTokenMismatch",
+  "name": "JBRouterTerminalGateway_ReentrantTokenTransfer",
   "inputs": [
    {
-    "name": "quotedTokenOut",
-    "type": "address",
-    "internalType": "address"
-   },
-   {
-    "name": "expectedTokenOut",
+    "name": "token",
     "type": "address",
     "internalType": "address"
    }
@@ -1627,26 +1860,15 @@
  },
  {
   "type": "error",
-  "name": "JBRouterTerminal_SlippageExceeded",
+  "name": "JBRouterTerminalGateway_RefundFailed",
   "inputs": [
    {
-    "name": "amountOut",
-    "type": "uint256",
-    "internalType": "uint256"
+    "name": "originalTerminal",
+    "type": "address",
+    "internalType": "address"
    },
    {
-    "name": "minAmountOut",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBRouterTerminal_Unauthorized",
-  "inputs": [
-   {
-    "name": "caller",
+    "name": "primaryTerminal",
     "type": "address",
     "internalType": "address"
    }
@@ -1654,24 +1876,51 @@
  },
  {
   "type": "error",
-  "name": "PRBMath_MulDiv_Overflow",
+  "name": "JBRouterTerminalGateway_RetryGasLimitTooHigh",
   "inputs": [
    {
-    "name": "x",
+    "name": "gasLimit",
     "type": "uint256",
     "internalType": "uint256"
    },
    {
-    "name": "y",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "denominator",
+    "name": "maximum",
     "type": "uint256",
     "internalType": "uint256"
    }
   ]
+ },
+ {
+  "type": "error",
+  "name": "JBRouterTerminalGateway_RetryGasLimitTooLow",
+  "inputs": [
+   {
+    "name": "gasLimit",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "minimum",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBRouterTerminalGateway_RouteFailed",
+  "inputs": [
+   {
+    "name": "errorHash",
+    "type": "bytes32",
+    "internalType": "bytes32"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBRouterTerminalGateway_ZeroAddress",
+  "inputs": []
  },
  {
   "type": "error",
@@ -1683,10 +1932,5 @@
     "internalType": "address"
    }
   ]
- },
- {
-  "type": "error",
-  "name": "T",
-  "inputs": []
  }
 ]

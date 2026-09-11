@@ -13,13 +13,15 @@ metadata:
 
 # Juicebox V6 Implementation Deep Dive
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+
 Internal mechanics, edge cases, and exact encodings for integrators. Ground truth is the deployed `nana-*-v6` source. All contracts are Solidity 0.8.28.
 
 ## Deployment surface
 
 Deployed on 8 chains: Ethereum (1), Optimism (10), Base (8453), Arbitrum (42161), and their Sepolias (11155111, 11155420, 84532, 421614). Core contracts are deployed with CREATE2 and share **one address on every chain**. Addresses come from `shared/chain-config.json`; the chain-invariant ones:
 
-| Contract | Address (all chains) |
+| Contract | Address or per-chain source |
 |---|---|
 | JBController | `0x3fcec3572e84b624477bcff4e2cf1f7deab648f1` |
 | JBMultiTerminal | `0x130f5dd2bd8805443cf41755253d778a75a67f53` |
@@ -36,12 +38,13 @@ Deployed on 8 chains: Ethereum (1), Optimism (10), Base (8453), Arbitrum (42161)
 | JBERC20 (token implementation) | `0x6db9cf17222d8de2012fe13b9fa5bb7981fa0b17` |
 | ERC2771Forwarder | `0x3ba60b60933916a7c87d0860dcee62a0ce34e3e2` |
 | JBDeadline3Hours / 1Day / 3Days / 7Days | `0xd25264015483caa5c34643942d41f94bed5f1e92` / `0x3a15ac0bcf4f7dd48359a36b3e293254cf26d4ca` / `0xcda708c98fbdd15a7ff7f0c5c50f9371ca52c78f` / `0x540923f7b6166bf9713490719a2210aeebc9fca2` |
-| JBBuybackHook | `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` (not on OP Sepolia) |
+| JBBuybackHook | `chains[chainId].contracts.JBBuybackHook` (not on OP Sepolia) |
 | JBBuybackHookRegistry | `0x72f55a54cd53410a5ff175508a5a384227081788` |
 | JB721TiersHook (implementation) | `0xf4a5887170e4d7efb1c874ad88fc82ebf076b5ab` |
 | JB721TiersHookDeployer | `0xb7b8ec35e2dd84afff04ee769c6189e7a4d44a78` |
 | JB721TiersHookStore | `0x69913acf79dbba170d9efafe605ee62b42164f9c` |
-| JBRouterTerminal | `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7` (not on OP Sepolia) |
+| JBRouterTerminal | `chains[chainId].contracts.JBRouterTerminal` (not on OP Sepolia) |
+| JBRouterTerminalGateway | `chains[chainId].contracts.JBRouterTerminalGateway` when present |
 | JBRouterTerminalRegistry | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` |
 | JBProjectPayer (implementation) | `0x0de147532f522fe9f4559bd7f34774786424176e` |
 
@@ -518,14 +521,14 @@ Fees apply to fund egress: payouts to non-feeless recipients, payout split hooks
 
 ### Fee processing is fail-open
 
-`_processFee` wraps `executeProcessFee` in try/catch. On failure the fee is **forgiven**: credited back to the paying project's balance, `feeFreeSurplusOf` incremented, `FeeReverted` emitted. Fees route to project #1's primary terminal for the token via `pay(...)` (minting project-1 tokens to the fee beneficiary), or via `addToBalanceOf` when the beneficiary is `address(0)`.
+`_processFee` wraps `executeProcessFee` in try/catch. On failure the fee is **forgiven**: credited back to the paying project's balance, `feeFreeSurplusOf` incremented, `FeeReverted` emitted. Fees route to project #1's primary terminal for the token via `pay(...)` (minting project-1 tokens to the fee beneficiary), or via `addToBalanceOf` when the beneficiary is `address(0)`. On a gateway route, eligible downstream failures are caught and retained before core's catch boundary; the fee remains pending in gateway custody and `FeeReverted` is not emitted for that retained call.
 
 ### Held fees
 
 When ruleset metadata has `holdFees` (payouts and allowance only — never cash-outs):
 
 - The **gross basis amount** (not the fee) is pushed as `JBFee{uint224 amount, address beneficiary, uint48 unlockTimestamp}`; unlock = `block.timestamp + 2_419_200` (28 days).
-- `processHeldFeesOf(projectId, token, count)` — permissionless — processes unlocked fees in order, computing the fee as `amount / 40` at processing time; stops at the first still-locked entry; deletes entries before the external call (reentrancy-safe) and forgives (not retries) failures.
+- `processHeldFeesOf(projectId, token, count)` — permissionless — processes unlocked fees in order, computing the fee as `amount / 40` at processing time; stops at the first still-locked entry; deletes entries before the external call (reentrancy-safe) and forgives failures that bubble back to core. An eligible failure retained by the gateway instead becomes a separate pending call for retry/refund.
 - `addToBalanceOf(..., shouldReturnHeldFees: true)` refunds held fees against the deposited amount: an entry is fully released when the deposit covers its original **net** payout (`gross − gross/40`); a partial deposit shrinks the stored gross using the back-calculated fee (`mulDiv(x,40,39) − x`) so dust repayments can't short the fee project. Returned fees are added to the project's recorded balance.
 - Held-fee storage lives in the terminal but the mutation logic is `JBHeldFees`, an **external library reached via DELEGATECALL** (EIP-170 size management). `heldFeesOf(projectId, token, count)` views live entries.
 - Terminal migration does NOT move held fees; they remain processable on the old terminal (backed by the terminal's token balance).
@@ -624,12 +627,13 @@ The `bytes metadata` argument of `pay`/`cashOutTokensOf` is a multiplexed contai
 
 ## Buyback hook (`JBBuybackHook`, Uniswap V4)
 
-One canonical hook serves all projects. It is the project's ruleset `dataHook` with `useDataHookForPay` (and optionally `useDataHookForCashOut`); `JBBuybackHookRegistry` manages which hook a project uses (`SET_BUYBACK_HOOK` permission; choice can be permanently locked).
+A canonical hook serves new selections while retired hooks can still serve projects that previously selected them. Resolve `JBBuybackHookRegistry.hookOf(projectId)` rather than assuming the latest address applies to every project. It is the project's ruleset `dataHook` with `useDataHookForPay` (and optionally `useDataHookForCashOut`); `JBBuybackHookRegistry` manages which hook a project uses (`SET_BUYBACK_HOOK` permission; choice can be permanently locked).
 
 ### Configuration
 
 - `setPoolFor(projectId, poolKey, twapWindow, terminalToken)` / `setPoolFor(projectId, fee, tickSpacing, twapWindow, terminalToken)` / `initializePoolFor(projectId, fee, tickSpacing, twapWindow, terminalToken, sqrtPriceX96)` — all gated by `SET_BUYBACK_POOL`. Terminal token is normalized to `address(0)` for native. **Pool keys are immutable once set** (`JBBuybackHook_PoolAlreadySet`). `initializePoolFor` initializes the V4 pool and then verifies the on-chain `sqrtPriceX96` equals the caller's expectation — defense against front-run pool initialization at a poisoned price.
 - `setTwapWindowOf(projectId, terminalToken, newWindow)` — `SET_BUYBACK_TWAP`; window must be within `MIN_TWAP_WINDOW = 5 minutes` … `MAX_TWAP_WINDOW = 2 days`.
+- The 1.4.0 hook maps `MAX_TWAP_WINDOW` to 30 minutes during pool registration; an explicit `setTwapWindowOf` still honors 2 days. Read `twapWindowOf(projectId, token)` for actual configuration.
 - The V4 `poolManager` and oracle hook are set once per chain by the deployer (`setChainSpecificConstants`) to keep the CREATE2 address unified.
 
 ### Pay-side routing (`beforePayRecordedWith`)
@@ -640,8 +644,7 @@ Payer metadata entry, keyed by `getId("pay", buybackHookAddress)`:
 abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)
 ```
 
-Three words (96 bytes); `abi.decode` reverts on a 64-byte blob.
-
+- The 1.4.0 hook requires all three words; two-word payloads revert. `skipSplits = false` preserves reserved-token participation in swap output; `true` opts out of that split for bought tokens. Older deployed hooks tolerate the trailing word.
 - `amountToSwapWith == 0` → use the full payment. `amountToSwapWith > totalPaid` reverts.
 - `skipSplits = true` → swapped tokens are transferred to the beneficiary as-is (no burn-and-remint through the reserved split). The mint-vs-swap comparison and `minimumSwapAmountOut` are then measured against the beneficiary's share of a direct mint, not the full issuance.
 - `minimumSwapAmountOut != 0` → treated as an explicit user quote (hard settlement floor). `0` → the hook derives a minimum from the pool TWAP (sigmoid slippage tolerance: `minSlippage = max(poolFee + 1%, 2%)`, saturating toward `8_800/10_000` = 88% max as estimated price impact grows; cold-start spot fallback uses a 3% tolerance with bounded impact).
@@ -651,7 +654,8 @@ Three words (96 bytes); `abi.decode` reverts on a 64-byte blob.
 ### Pay-side execution (`afterPayRecordedWith`)
 
 - Swap runs via `poolManager.unlock` with a price limit derived from the issuance rate — the pool fills only while it beats minting; unconsumed input stays for minting. The whole swap is in try/catch: **swap failure falls back to minting** and never reverts the payment (unless an explicit user minimum then can't be met).
-- Project tokens received from the swap are **burned and re-minted through the controller** so the reserved percent applies to swapped tokens too, unless the payer set `skipSplits`.
+- When `skipSplits` is false, project tokens received from the swap are **burned and re-minted through the controller** so the reserved percent applies to swapped tokens too. With `skipSplits` true, bought tokens go directly to the payer's beneficiary.
+- In 1.4.0 an oracle-derived TWAP-floor miss unwinds the swap and falls back to minting. An explicit payer minimum remains a settlement guarantee and can still revert.
 - Leftover terminal tokens (partial fill) are returned to the project via `addToBalanceOf` and minted at the issuance rate; fee-on-transfer deltas are measured on both hops.
 - Same-terminal split pays that forward a net-of-fee amount scale the TWAP-derived floors proportionally; explicit user minima never scale.
 
@@ -743,7 +747,8 @@ Flow (`_processPayment` → `_mintAndUpdateCredits`):
 
 ## Other periphery
 
-- **JBRouterTerminal / JBRouterTerminalRegistry** (`nana-router-terminal-v6`): a universal forwarding terminal that accepts any token and converts it to whatever the destination project accepts (direct forward, Uniswap V3/V4 swap, or recursive JB cash-out routing), always picking the path yielding the most project tokens. The registry maps projects to their chosen router terminal with an owner-managed default; projects opt in via `SET_ROUTER_TERMINAL` and can permanently lock the choice. It implements `IJBPayerTracker` so refunds and credit cash-outs resolve to the original payer.
+- **JBRouterTerminalGateway** (`nana-router-terminal-v6`): the registry-selected forwarding terminal on upgraded chains, immutable-bound to `ROUTER()`. It takes custody before routing and retains eligible failed protocol calls for permissionless recovery; see the shared rollout reference for eligibility, commitments, retry delays, and source-project refunds.
+- **JBRouterTerminal / JBRouterTerminalRegistry** (`nana-router-terminal-v6`): a universal forwarding terminal that accepts any token and converts it to whatever the destination project accepts (direct forward, Uniswap V3/V4 swap, or recursive JB cash-out routing), always picking the path yielding the most project tokens. The registry maps projects to their chosen forwarding terminal (the gateway for new selections after rollout) with an owner-managed default; projects opt in via `SET_ROUTER_TERMINAL` and can permanently lock the choice. It implements `IJBPayerTracker` so refunds and credit cash-outs resolve to the original payer.
 - **JBProjectPayer** (`nana-project-payer-v6`): EIP-1167-cloned relay that auto-pays a configured project when it receives funds (`receive()`), with owner-set defaults (project ID, beneficiary, memo, metadata, pay-vs-addToBalance). Also an `IJBPayerTracker`. `JBProjects.creationFeeReceiver` can be one of these, which is why `originalPayer` tracking exists.
 
 ## Common mistakes
@@ -766,5 +771,5 @@ Flow (`_processPayment` → `_mintAndUpdateCredits`):
 16. **Stripping `noop: true` hook specifications when relaying buyback data-hook output** — the noop spec is the protocol's preview API for routing decisions and carries `amount: 0` by rule.
 17. **Setting `minReturnedTokens`/`minTokensReclaimed` to 0 in production** — pays/cash-outs then accept any execution (sandwichable when a buyback pool or data hook is involved).
 18. **Assuming a project's terminal balance is cash-out-able** — surplus excludes the remaining payout limit; and settlement is capped by the reclaim token's local surplus in that terminal even though pricing uses cross-terminal surplus.
-19. **Expecting a failed fee or failed split hook to revert the payout** — fee routing and split hooks are fail-open (try/catch): fees are forgiven back to the project (`FeeReverted`), failed split payouts return to the balance.
+19. **Expecting a failed fee or failed split hook to revert the payout** — fee routing and split hooks are fail-open (try/catch): synchronous fee-route reverts are forgiven back to the project (`FeeReverted`), failed split payouts return to the balance. Gateway-retained fees are a separate pending obligation and do not reach core's catch boundary.
 20. **Custom tokens with fewer/more than 18 decimals, or burn-with-approval semantics** — `setTokenFor` requires exactly 18 decimals and `JBTokens` calls `mint`/`burn` directly; approvals-based burns break cash outs.
