@@ -146,7 +146,7 @@ Default (project 0) feed registrations on every chain:
 
 Inverse directions (e.g. pricing in 61166 per unit of USD) derive automatically from these at read time.
 
-`JBPrices` resolves direct or inverse pairs, not arbitrary two-hop routes. On chains with a deployed and registered `JBRatioPriceFeed`, project-0 defaults also connect USDC to `NATIVE_TOKEN_CURRENCY` (61166) and ETH (1), using USDC/USD divided by ETH/USD. USDC payments to ETH-based projects and mixed ETH/USDC cash outs therefore have a conversion path. Mainnets remain on their recorded stack until execution and regeneration; probe `pricePerUnitOf` on each chain before enabling a pair. Projects can add project-specific feeds (`ADD_PRICE_FEED`, ID 20); revnets cannot.
+`JBPrices` resolves direct or inverse pairs, not arbitrary two-hop routes. On chains with a deployed and registered `JBRatioPriceFeed`, project-0 defaults also connect USDC to `NATIVE_TOKEN_CURRENCY` (61166) and ETH (1), using the ETH/USD numerator divided by the USDC/USD denominator: USDC per native token/ETH. The USDC currency is `pricingCurrency`; native (61166) and ETH (1) are the two `unitCurrency` registrations. USDC payments to ETH-based projects and mixed ETH/USDC cash outs therefore have a conversion path. Mainnets remain on their recorded stack until execution and regeneration; probe `pricePerUnitOf` on each chain before enabling a pair. Projects can add project-specific feeds (`ADD_PRICE_FEED`, ID 20); revnets cannot.
 
 ## Example: USD-based omnichain project accepting native ETH and USDC
 

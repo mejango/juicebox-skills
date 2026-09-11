@@ -63,7 +63,7 @@ Juicebox V6 has one core contract set: one `JBController`, one `JBMultiTerminal`
 | JBRouterTerminal | `chains[chainId].contracts.JBRouterTerminal` | Universal terminal: accepts any token and converts to the destination project's accepted token via direct forwarding, Uniswap V3/V4 swaps, or recursive cash-outs. Absent on OP Sepolia |
 | JBRouterTerminalGateway | `chains[chainId].contracts.JBRouterTerminalGateway` when present | Registry-selected custody wrapper bound to `ROUTER()`; failed eligible fee/protocol calls remain pending for retry or source-project refund |
 | JBRouterTerminalRegistry | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` | Per-project router-terminal selection with owner-managed default; choices lockable |
-| JBRatioPriceFeed | `chains[chainId].contracts.JBRatioPriceFeed` when present | Per-chain USDC/USD over ETH/USD feed for USDC–ETH/native default conversion; verify registration/liveness in `JBPrices` |
+| JBRatioPriceFeed | `chains[chainId].contracts.JBRatioPriceFeed` when present | Per-chain ETH/USD over USDC/USD feed, returning USDC per native token/ETH (`pricingCurrency = USDC`, `unitCurrency = native` or `ETH`); verify registration/liveness in `JBPrices` |
 | JBAddressRegistry | `0x581bfd1ead279e0a27b736e49494db3a7d85993c` | Records who deployed a contract (create or create2); used to verify hooks come from trusted deployers |
 | JBProjectHandles | `0x726f4a3dfd2fb8297f8ab98d215b42a92d8eefe8` | Bidirectionally-verified ENS handles for projects (ENS text record `juicebox` = `chainId:projectId`) |
 | JBProjectPayer | `0x0de147532f522fe9f4559bd7f34774786424176e` | Payment-relay implementation: forwards received ETH/ERC-20 to a project treasury; cloned per use |
