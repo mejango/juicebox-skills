@@ -12,7 +12,9 @@ metadata:
 
 # Juicebox V6 Contract Inventory
 
-Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`, one `JBRulesets`. Every project uses the same set — no per-project contract resolution beyond `JBDirectory` terminal lookups.
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
+Juicebox V6 has one core contract set: one `JBController`, one `JBMultiTerminal`, one `JBRulesets`. Router and buyback generations coexist; resolve each project through its registries, including already-selected retired generations.
 
 **Address rules:**
 - Core contracts are deployed via CREATE2 and share **one address on every chain**. Tables below marked "chain-same" list that single address once.
@@ -54,12 +56,14 @@ Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`
 | Permit2 | `0x000000000022d473030f116ddee9f6b43ac78ba3` | Canonical Uniswap Permit2; `JBMultiTerminal` pulls ERC-20 payments through it when `pay` metadata carries a Permit2 allowance |
 | JBOmnichainDeployer | `0xb853758a70a6b4216c09f1d071ea2344aba0a34f` | One-transaction deployer for omnichain projects (project + 721 hook + suckers); inserts itself as ruleset data hook to coordinate cross-chain supply/surplus |
 
-## Terminals, registries, periphery (chain-same)
+## Terminals, registries, periphery
 
 | Contract | Address | Role |
 |---|---|---|
-| JBRouterTerminal | `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7` | Universal terminal: accepts any token and converts to the destination project's accepted token via direct forwarding, Uniswap V3/V4 swaps, or recursive cash-outs. Absent on OP Sepolia |
+| JBRouterTerminal | `chains[chainId].contracts.JBRouterTerminal` | Universal terminal: accepts any token and converts to the destination project's accepted token via direct forwarding, Uniswap V3/V4 swaps, or recursive cash-outs. Absent on OP Sepolia |
+| JBRouterTerminalGateway | `chains[chainId].contracts.JBRouterTerminalGateway` when present | Registry-selected custody wrapper bound to `ROUTER()`; failed eligible fee/protocol calls remain pending for retry or source-project refund |
 | JBRouterTerminalRegistry | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` | Per-project router-terminal selection with owner-managed default; choices lockable |
+| JBRatioPriceFeed | `chains[chainId].contracts.JBRatioPriceFeed` when present | Per-chain ETH/USD over USDC/USD feed, returning USDC per native token/ETH (`pricingCurrency = USDC`, `unitCurrency = native` or `ETH`); verify registration/liveness in `JBPrices` |
 | JBAddressRegistry | `0x581bfd1ead279e0a27b736e49494db3a7d85993c` | Records who deployed a contract (create or create2); used to verify hooks come from trusted deployers |
 | JBProjectHandles | `0x726f4a3dfd2fb8297f8ab98d215b42a92d8eefe8` | Bidirectionally-verified ENS handles for projects (ENS text record `juicebox` = `chainId:projectId`) |
 | JBProjectPayer | `0x0de147532f522fe9f4559bd7f34774786424176e` | Payment-relay implementation: forwards received ETH/ERC-20 to a project treasury; cloned per use |
@@ -80,11 +84,11 @@ Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`
 | JB721CheckpointsDeployer | `0x76a97eeb5602a51ac2067d925269e0f9a0bd296b` | Deploys JB721Checkpoints clones |
 | Banny721TokenUriResolver | `0x70d28338226e61a442ef516c731d371d13c9c6df` | On-chain SVG composition for Banny NFTs: bodies, backgrounds, lockable outfits |
 
-### Buyback hook (chain-same)
+### Buyback hook generations
 
 | Contract | Address | Role |
 |---|---|---|
-| JBBuybackHook | `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` | Buys project tokens from a Uniswap V4 pool when cheaper than minting; sells on cash-out when the pool beats the bonding curve; TWAP-guarded. Absent on OP Sepolia |
+| JBBuybackHook | `chains[chainId].contracts.JBBuybackHook` | Buys project tokens from a Uniswap V4 pool when cheaper than minting; sells on cash-out when the pool beats the bonding curve; TWAP-guarded. Absent on OP Sepolia |
 | JBBuybackHookRegistry | `0x72f55a54cd53410a5ff175508a5a384227081788` | Maps projects to their buyback hook; terminal data hook that forwards pay/cash-out calls; default-hook cohorts by project creation time |
 
 ### Uniswap V4 (JBUniswapV4Hook is per-chain; rest chain-same)
@@ -199,7 +203,7 @@ Live clone instances for well-known projects. Each has one address across all ma
 
 ## Chain gaps
 
-- **Optimism Sepolia** lacks all Uniswap V4-dependent contracts: `JBUniswapV4Hook`, `JBUniswapV4LPSplitHook`, `JBUniswapV4LPSplitHookDeployer`, `JBP6FeeLPSplitHook`, `JBBuybackHook`, and also `JBRouterTerminal`. It still has `JBBuybackHookRegistry`, `JBRouterTerminalRegistry`, and `JBUniswapV4LPSplitHookMath`.
+- **Optimism Sepolia** lacks all Uniswap V4-dependent contracts: `JBUniswapV4Hook`, `JBUniswapV4LPSplitHook`, `JBUniswapV4LPSplitHookDeployer`, `JBP6FeeLPSplitHook`, `JBBuybackHook`, and also `JBRouterTerminal` and `JBRouterTerminalGateway`. Its registry default remains zero; the ratio feed is available. It still has `JBBuybackHookRegistry`, `JBRouterTerminalRegistry`, and `JBUniswapV4LPSplitHookMath`.
 - **JBERC20__ProjectART** exists only on Base and Base Sepolia.
 - Native suckers exist only on the chain pairs they bridge (see table above). CCIP suckers exist on each chain only for its actual peers.
 

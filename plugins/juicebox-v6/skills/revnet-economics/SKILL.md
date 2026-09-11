@@ -13,6 +13,8 @@ metadata:
 
 # Revnet Economics
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 ## Source papers
 
 All academic findings from CryptoEconLab (cryptoeconlab.com/paper/pub-0):
@@ -53,7 +55,7 @@ Revnet tokens trade within a bounded corridor: `P_floor ≤ P_AMM ≤ P_ceil`.
 
 - **Floor (`P_floor`)** — cash-out value per token. Enforced by arbitrage: AMM price below floor → buy on AMM, cash out at floor. Monotonically non-decreasing while no cash-outs occur.
 - **Ceiling (`P_ceil`)** — issuance price (`1 / weight` in base currency terms). Enforced by arbitrage: AMM price above ceiling → pay the revnet, sell tokens on AMM. Rises over time as issuance cuts (`issuanceCutPercent` every `issuanceCutFrequency` seconds) reduce the weight.
-- Every revnet auto-deploys a Uniswap V4 buyback pool at the issuance price (1% fee tier, 2-day TWAP window), and the buyback hook routes payments through the pool whenever it beats issuance, tightening the corridor in practice.
+- Every revnet auto-deploys a Uniswap V4 buyback pool at the issuance price (1% fee tier; the 1.4.0 hook remaps the deployer's maximum-window registration to 30 minutes, while older pools and explicit operator settings keep their stored windows), and the buyback hook routes payments through the pool whenever it beats issuance, tightening the corridor in practice.
 
 > "These arbitrage mechanisms establish a self-enforcing price corridor that persists regardless of market conditions." — Cryptoeconomics of Revnets
 

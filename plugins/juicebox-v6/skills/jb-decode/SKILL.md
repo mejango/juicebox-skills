@@ -12,6 +12,8 @@ metadata:
 
 # Juicebox Transaction Decoder
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 Decode and analyze Juicebox transaction calldata.
 
 ## Identify the Contract
@@ -26,7 +28,9 @@ Core contracts share the same address on every chain (CREATE2). Match the transa
 | `0x6017d1fba9dc279bfa0b03fd931c22e242ab3691` | JBProjects |
 | `0xf92ac1ab5a00033e35a3975739124f61928c36b0` | JBPermissions |
 | `0x1f80d8f057ee36b4c2656d107e4e4558b71ba7d9` | JBTokens |
-| `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` | JBBuybackHook |
+| `chains[chainId].contracts.JBBuybackHook` and its `_deprecated*` records | JBBuybackHook (decode with that generation's ABI) |
+| `chains[chainId].contracts.JBRouterTerminal` and its `_deprecated*` records | JBRouterTerminal |
+| `chains[chainId].contracts.JBRouterTerminalGateway` when present | JBRouterTerminalGateway (retained-call events and recovery) |
 | `0xb552eb94284f94b833837d4b2cbb237128415d4e` | REVDeployer |
 
 Verified ABIs for every core contract are in `shared/abis/*.json`.
@@ -217,7 +221,7 @@ bytes4 id = bytes4(bytes20(target) ^ bytes20(keccak256(bytes(purpose))));
 
 | Hook | purpose | target | Entry payload |
 |---|---|---|---|
-| JBBuybackHook (pay) | `"pay"` | buyback hook address | `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` (three words, `@bananapus/buyback-hook-v6` 1.4.0) — `minimumSwapAmountOut == 0` means "no explicit quote", hook falls back to its TWAP oracle; `skipSplits` is the payer's opt-out of split normalization. The hook at `0x77bee1ad…4948` was built before the third word existed and ignores it (static `abi.decode` tolerates trailing words), so always encode three words |
+| JBBuybackHook (pay) | `"pay"` | buyback hook address | `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` for the current hook; two-word historical payloads decode only against their retired generation — `minimumSwapAmountOut == 0` means "no explicit quote", hook falls back to its TWAP oracle |
 | JBBuybackHook (cash out) | `"cashOut"` | buyback hook address | `abi.encode(uint256 minimumSwapAmountOut, bool skip)` |
 | JB721TiersHook (pay) | `"pay"` | hook's `METADATA_ID_TARGET()` | `abi.encode(bool allowOverspending, uint16[] tierIdsToMint)` |
 | JB721TiersHook (cash out) | `"cashOut"` | hook's `METADATA_ID_TARGET()` | `abi.encode(uint256[] tokenIdsToBurn)` |
@@ -225,6 +229,8 @@ bytes4 id = bytes4(bytes20(target) ^ bytes20(keccak256(bytes(purpose))));
 `METADATA_ID_TARGET` is an immutable set to `address(this)` at implementation deployment — for cloned 721 hooks it is the shared implementation address, not the clone's address. Read `METADATA_ID_TARGET()` on the hook to get the right ID target.
 
 To build metadata off-chain, replicate `JBMetadataResolver.createMetadata(ids, datas)`: reserved word, then the id table, then each 32-byte-padded payload.
+
+For gateway recovery, decode `JBRouterTerminalGateway_QueuePendingCall` with `shared/abis/JBRouterTerminalGateway.json` and preserve the complete call tuple, memo, and metadata: only their hash commitment is stored. `pendingCallCount` is the cumulative number of issued IDs, not the outstanding-call count. Decode recovery events from the same gateway address; never label a queued call as settled or forgiven.
 
 ## Generation Guidelines
 

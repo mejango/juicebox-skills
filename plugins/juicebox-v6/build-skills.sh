@@ -51,6 +51,12 @@ for skill_dir in "$SKILLS_DIR"/*/; do
     cp "$SHARED_DIR"/abis/*.json "$skill_tmp/shared/abis/"
   fi
 
+  # Shared rollout references use the same path in the repository and packaged skill.
+  if grep -q "shared/references/" "$skill_tmp/SKILL.md" 2>/dev/null; then
+    mkdir -p "$skill_tmp/shared/references"
+    cp "$SHARED_DIR"/references/*.md "$skill_tmp/shared/references/"
+  fi
+
   # Bundle references if skill references them
   if grep -q "references/" "$skill_tmp/SKILL.md" 2>/dev/null; then
     mkdir -p "$skill_tmp/references"

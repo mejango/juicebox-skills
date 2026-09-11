@@ -4,7 +4,7 @@ description: |
   Dynamic terminal selection for Juicebox payments. Use when: (1) building payment UIs that support
   multiple tokens, (2) encountering a JBMultiTerminal_TokenNotAccepted revert, (3) paying a project
   with a token it doesn't list in its accounting contexts, (4) deciding between JBMultiTerminal,
-  JBRouterTerminalRegistry, and JBRouterTerminal for a payment, (5) wiring permit2 with the correct
+  JBRouterTerminalRegistry, JBRouterTerminalGateway, and JBRouterTerminal for a payment, (5) wiring permit2 with the correct
   spender for the terminal being called.
 metadata:
   version: "6.0.0"
@@ -12,18 +12,21 @@ metadata:
 
 # Dynamic Terminal Selection for Juicebox Payments
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 ## Problem
 
 `JBMultiTerminal` only accepts tokens the project registered an accounting context for. Paying it with any other token reverts with `JBMultiTerminal_TokenNotAccepted(address token)`. Payment UIs must resolve the correct terminal per `(projectId, token)` at runtime.
 
 ## Terminal roles
 
-| Contract | Address (same on all chains) | Role |
+| Contract | Address source | Role |
 |----------|------------------------------|------|
 | `JBDirectory` | `0x5aff29060e023e6fb87be5596652b33c65af535b` | Registry of each project's terminals; resolves `primaryTerminalOf` |
 | `JBMultiTerminal` | `0x130f5dd2bd8805443cf41755253d778a75a67f53` | Holds project balances; accepts only tokens with a registered accounting context |
 | `JBRouterTerminalRegistry` | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` | Forwarding terminal projects register in `JBDirectory`; forwards `pay`/`addToBalanceOf` to the project's resolved router terminal |
-| `JBRouterTerminal` | `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7` | Universal router: accepts any token and converts it (direct forward, Uniswap V3/V4 swap, recursive JB cash-outs, or combinations) into a token the destination project accepts. Not deployed on Optimism Sepolia — resolve the effective router via `registry.terminalOf(projectId)` |
+| `JBRouterTerminalGateway` | `chains[chainId].contracts.JBRouterTerminalGateway` when present | Registry-selectable custody wrapper; read `ROUTER()` for the quote consumer |
+| `JBRouterTerminal` | `chains[chainId].contracts.JBRouterTerminal` | Universal router: accepts any token and converts it (direct forward, Uniswap V3/V4 swap, recursive JB cash-outs, or combinations) into a token the destination project accepts. Not deployed on Optimism Sepolia — read `registry.terminalOf(projectId)`, then `gateway.ROUTER()` when the selected terminal is a gateway |
 
 The native token is the sentinel `0x000000000000000000000000000000000000EEEe` (`JBConstants.NATIVE_TOKEN`), never `address(0)`.
 
@@ -43,7 +46,7 @@ Acceptance semantics per terminal:
 
 ## Production route selection (juicebox.money `PayPanel`)
 
-1. `JBDirectory.terminalsOf(projectId)` — if neither the registry nor `JBRouterTerminal` is listed, only direct tokens are payable.
+1. `JBDirectory.terminalsOf(projectId)` — if no registry, recognized gateway, or router generation is listed, only direct tokens are payable.
 2. `JBMultiTerminal.accountingContextsOf(projectId)` — each context's token is a direct pay; `primaryTerminalOf(projectId, token)` gives the terminal to call.
 3. For candidate tokens not in step 2 (native, USDC), probe `registry.previewPayFor(projectId, token, 10 ** decimals, beneficiary, "0x")`; a revert or a returned `ruleset.id == 0` means the route is dead — hide the token. Cache per `(chainId, projectId, token)`.
 4. Pay the direct terminal for direct tokens; pay the registry for probed tokens, with permit2 spender/ID = registry.
@@ -53,45 +56,37 @@ Acceptance semantics per terminal:
 ```typescript
 import { type PublicClient, type Address, zeroAddress } from 'viem'
 
-const JB_DIRECTORY = '0x5aff29060e023e6fb87be5596652b33c65af535b'
-const JB_ROUTER_TERMINAL_REGISTRY = '0xe0427f250fdb0379c8e98e884ee4570521208cbc'
-const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe'
-
-const JB_DIRECTORY_ABI = [{
-  name: 'primaryTerminalOf',
-  type: 'function',
-  stateMutability: 'view',
-  inputs: [
-    { name: 'projectId', type: 'uint256' },
-    { name: 'token', type: 'address' },
-  ],
-  outputs: [{ name: '', type: 'address' }],
-}] as const
-
+// Load from shared/chain-config.json and shared/abis/ in the application.
+// chainContracts is the configuration for the connected chain.
 async function getPaymentTerminal(
   client: PublicClient,
   projectId: bigint,
-  paymentToken: Address
+  paymentToken: Address,
+  chainContracts: Record<string, Address>,
 ): Promise<{ address: Address; isRouter: boolean }> {
   const terminal = await client.readContract({
-    address: JB_DIRECTORY,
-    abi: JB_DIRECTORY_ABI,
+    address: chainContracts.JBDirectory,
+    abi: [{ type: 'function', name: 'primaryTerminalOf', stateMutability: 'view',
+      inputs: [{ name: 'projectId', type: 'uint256' }, { name: 'token', type: 'address' }],
+      outputs: [{ name: '', type: 'address' }] }],
     functionName: 'primaryTerminalOf',
     args: [projectId, paymentToken],
   })
-
-  // No registered terminal accepts this token → route through the registry,
-  // which converts the token into one the project accepts.
-  if (terminal === zeroAddress) {
-    return { address: JB_ROUTER_TERMINAL_REGISTRY, isRouter: true }
-  }
-
-  return {
-    address: terminal,
-    isRouter: terminal.toLowerCase() === JB_ROUTER_TERMINAL_REGISTRY.toLowerCase(),
-  }
+  if (terminal === zeroAddress) throw new Error('No registered terminal accepts this token')
+  const routingAddresses = Object.entries(chainContracts)
+    .filter(([name]) => name === 'JBRouterTerminalRegistry' ||
+      name === 'JBRouterTerminalGateway' || /^JBRouterTerminal(?:_deprecated\d*)?$/.test(name))
+    .map(([, address]) => address.toLowerCase())
+  return { address: terminal, isRouter: routingAddresses.includes(terminal.toLowerCase()) }
 }
 ```
+
+Use the returned terminal for approval/Permit2 and the transaction. For a registry route,
+read `terminalOf(projectId)`; if that address matches a deployed gateway record, read
+`ROUTER()` to get the router for quote IDs and pool views. Keep both the directly called
+terminal and downstream router in the route result. A zero registry resolution means no
+route; never substitute the latest router artifact. For custom forwarding terminals,
+inspect the forwarding chain and simulate before treating it as a known route.
 
 All terminals share the same `pay` signature (`IJBTerminal`):
 
@@ -113,14 +108,14 @@ function pay(
 
 `JBRouterTerminal` prices swaps from manipulation-resistant sources (V3 TWAP, canonical-hook V4 oracle) with a dynamic slippage model. Front-ends should still supply an explicit quote via a `pay` metadata entry (see `jb-permit2-metadata` for the encoding format):
 
-- Entry ID: `bytes4(bytes20(routerTerminal) ^ bytes20(keccak256("pay")))` = `0xa27bedbd` for `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7`.
+- Entry ID: `bytes4(bytes20(routerTerminal) ^ bytes20(keccak256("pay")))`. Resolve the project's selected terminal and unwrap its gateway before computing this ID; the gateway address is not the router quote consumer.
 - Payload: `abi.encode(address quotedTokenOut, uint256 quotedMinAmountOut)`. A zero `quotedMinAmountOut` is treated as "not provided" and falls back to automatic quoting.
 
-If the destination project runs `JBBuybackHook`, its own `pay` entry (`0xda79b72d`) is a separate 3-word payload: `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — `skipSplits = true` opts the swapped tokens out of the reserved split (see `jb-permit2-metadata`).
+If the destination project runs `JBBuybackHook`, its own `pay` entry (`getId("pay", resolvedBuybackHook)`) is a separate 3-word payload: `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — `skipSplits = true` opts the swapped tokens out of the reserved split (see `jb-permit2-metadata`).
 
 `addToBalanceOf` through the router has no `minReturnedTokens` backstop, so a swap leg with no manipulation-resistant TWAP **requires** a `pay` quote — otherwise it reverts with `JBRouterTerminal_ManipulationResistantQuoteRequired`.
 
-Router cash-out legs call the downstream `cashOutTokensOf` with `minTokensReclaimed: 0` and enforce the caller's floor (the `cashOut` metadata entry `0x890df4c9`, payload `(uint256 minTokensReclaimed)`) against the measured balance delta, reverting `JBRouterTerminal_SlippageExceeded` — always supply that entry; the downstream terminal's own min check is not your guard.
+Router cash-out legs call the downstream `cashOutTokensOf` with `minTokensReclaimed: 0` and enforce the caller's floor (the `cashOut` metadata entry `getId("cashOut", resolvedRouter)`, payload `(uint256 minTokensReclaimed)`) against the measured balance delta, reverting `JBRouterTerminal_SlippageExceeded` — always supply that entry; the downstream terminal's own min check is not your guard.
 
 ## Permit2 integration
 
@@ -134,7 +129,7 @@ metadataId = bytes4(bytes20(calledTerminal) ^ bytes20(keccak256("permit2")))
 |-----------------|---------------------|
 | `JBMultiTerminal` | `0xd260d5c9` |
 | `JBRouterTerminalRegistry` | `0x212df73e` |
-| `JBRouterTerminal` | `0xced33326` |
+| Direct router or gateway | `computeMetadataId("permit2", calledTerminal)` |
 
 See `jb-permit2-metadata` for the full encoding.
 

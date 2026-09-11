@@ -38,7 +38,7 @@ Both fee recipients are revnets: **NANA is project 1** (`JBConstants.FEE_BENEFIC
 - **Applies to**: payouts to wallets/split hooks, cross-terminal project payouts, surplus allowance usage, cash outs with non-zero tax rate, terminal migration to non-feeless terminals.
 - **Exempt**: same-terminal project-to-project payouts, feeless addresses (`JBFeelessAddresses`, per-project with a project-0 wildcard), and project 1 on `migrateBalanceOf` only (its payouts, allowance usage, and cash outs take the normal fee path).
 - **Mechanism**: the terminal pays the fee into project 1's primary terminal for the token via `pay`. **NANA tokens are minted per NANA's ruleset to a beneficiary that depends on the operation**: project owner for payouts and migration, the explicit `feeBeneficiary` argument for `useAllowanceOf` (REVLoans passes the borrower's beneficiary), the cash-out beneficiary for cash outs. Fees route through NANA's issuance machinery — value capture is via NANA token distribution (reserved splits, cash-out backing), not a separate treasury.
-- **Fail-open**: a broken fee route forgives the fee back to the paying project (`FeeReverted`) rather than blocking the operation.
+- **Fee-route failures**: core forgives a synchronous fee-route revert back to the paying project (`FeeReverted`). When the selected route includes `JBRouterTerminalGateway`, an eligible failed fee is instead retained in gateway custody for retry/refund, so core sees a successful call and does not forgive it. Track pending custody separately from paid fees; see `shared/references/router-gateway-rollout.md` and `shared/abis/JBRouterTerminalGateway.json`.
 
 ## Layer 2: revnet fees → REV
 
