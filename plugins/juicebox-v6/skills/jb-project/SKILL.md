@@ -580,7 +580,7 @@ DIRECTORY.setTerminalsOf(projectId, terminals);             // SET_TERMINALS + r
 - "Create a project that mints 1000 tokens per ETH with 10% reserved" → `weight: 1000e18`, `reservedPercent: 1000`
 - "Set up a project with weekly payout cycles to 3 addresses" → `duration: 604800`, payout split group + fund access limits
 - "Deploy a project with a 3-day approval delay for ruleset changes" → `approvalHook: JBDeadline3Days`
-- "Create a project that accepts both ETH and USDC" → two `JBAccountingContext` entries; probe `JBPrices.pricePerUnitOf` for both payments and cross-context surplus/cash-out conversions on each chain. A deployed, registered `JBRatioPriceFeed` enables USDC↔ETH/native, including ETH-based mixed treasuries; mainnet proposals do not provide a live feed. See `shared/references/router-gateway-rollout.md`
+- "Create a project that accepts both ETH and USDC" → two `JBAccountingContext` entries; probe `JBPrices.pricePerUnitOf` for both payments and cross-context surplus/cash-out conversions on each chain. A deployed, registered `JBRatioPriceFeed` enables USDC↔ETH/native, including ETH-based mixed treasuries; the feed is deployed on all eight supported chains, and current registration/liveness still needs verification. See `shared/references/router-gateway-rollout.md`
 
 ## Common mistakes
 

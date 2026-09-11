@@ -33,9 +33,10 @@
         "JBArbitrumSuckerDeployer": "0xa12ebfca3d4e0810e4ed174e4c08277c26917acb",
         "JBBaseSucker": "0x2fc1f6e8010e7a6198da9465931cce8d0c52e788",
         "JBBaseSuckerDeployer": "0x54140331902de5c3445eb0c26e15099a5a9d59e6",
-        "JBBuybackHook": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
+        "JBBuybackHook": "0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91",
         "JBBuybackHookRegistry": "0x72f55a54cd53410a5ff175508a5a384227081788",
         "JBBuybackHook_deprecated": "0xc7c8334b09e43a38c20b43cf0f824e074280b566",
+        "JBBuybackHook_deprecated1": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
         "JBCCIPLib": "0xd331f229eeeeb32e54b85fe4a0997627913fb9a5",
         "JBCCIPSuckerDeployer__ARB": "0x36a2e30029d87c46f77f71b7b6b97fec8a760660",
         "JBCCIPSuckerDeployer__BASE": "0x3955fec11fe15f0be4dfa2b0153feef55d55e1ee",
@@ -77,9 +78,12 @@
         "JBProjectPayerDeployer": "0x7321740fd0dcf73dd3e2aa8fc060454abfce9517",
         "JBProjectPayer__ProjectCreationFeeReceiver": "0xe6d6819374c43085caa26cec5cbd19aff5d5f19f",
         "JBProjects": "0x6017d1fba9dc279bfa0b03fd931c22e242ab3691",
-        "JBRouterTerminal": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
+        "JBRatioPriceFeed": "0x3fa39399bbc752418ee7e16addeb0b95d6386943",
+        "JBRouterTerminal": "0x62e2fe718ca3008a6a322deec9903286463f1add",
+        "JBRouterTerminalGateway": "0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901",
         "JBRouterTerminalRegistry": "0xe0427f250fdb0379c8e98e884ee4570521208cbc",
         "JBRouterTerminal_deprecated": "0x90689f415c80d2bc0f690a08e9e2b8c9dbfbdf61",
+        "JBRouterTerminal_deprecated1": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
         "JBRulesets": "0x26f2228a4e8b0079ed1c2a3d22f12ff7f83cdfba",
         "JBSplits": "0x28b3d11fcb8d2ad0a143c5b193cd9f2e4d43f4c3",
         "JBSuckerLib": "0x0b2b545a4e2fd65d29f2417f1b26698d71769a8f",
@@ -105,10 +109,10 @@
       "deploymentInfo": {
         "JBBuybackHook": {
           "generation": "current",
-          "package": "@bananapus/buyback-hook-v6@1.1.1",
-          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
-          "blockNumber": 25453848,
-          "transactionHash": "0x4ea9274b43a08369fad0ad658b7dc28a6c582a0a2d512e277e262181b2119352"
+          "package": "@bananapus/buyback-hook-v6@1.4.0",
+          "abi": "shared/abis/JBBuybackHook__1_4_0.json",
+          "blockNumber": 25956574,
+          "transactionHash": "0x81258278844a00b063ebb69297bcddcee6de1d2155904686c4731af28ea11125"
         },
         "JBBuybackHook_deprecated": {
           "generation": "v1",
@@ -117,12 +121,33 @@
           "blockNumber": 25329918,
           "transactionHash": "0xf07fc468ef5b756d7c897a5aca61d8c9140cbac1365d2588fc2be010c49fed98"
         },
+        "JBBuybackHook_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/buyback-hook-v6@1.1.1",
+          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
+          "blockNumber": 25453848,
+          "transactionHash": "0x4ea9274b43a08369fad0ad658b7dc28a6c582a0a2d512e277e262181b2119352"
+        },
+        "JBRatioPriceFeed": {
+          "generation": "current",
+          "package": "@bananapus/core-v6@1.2.0",
+          "abi": "shared/abis/JBRatioPriceFeed__1_2_0.json",
+          "blockNumber": 25956567,
+          "transactionHash": "0x4c0b10dd5e0dd875a207133cf0abd7cd6d15a0f9351aee0624799975084959ce"
+        },
         "JBRouterTerminal": {
           "generation": "current",
-          "package": "@bananapus/router-terminal-v6@1.1.1",
-          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
-          "blockNumber": 25453852,
-          "transactionHash": "0xcb8c6b0c9658f39ebb9d2e9cf0dc8385001d0bbda1c564ec7a46bd4539b2558d"
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminal__1_3_0.json",
+          "blockNumber": 25956586,
+          "transactionHash": "0xfccb59419c076acf025d3e3c096d659297461a784ce1e7d542c5820cff5573b1"
+        },
+        "JBRouterTerminalGateway": {
+          "generation": "current",
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminalGateway__1_3_0.json",
+          "blockNumber": 25956590,
+          "transactionHash": "0x302ba30b83eb2512488f94b75ffe7044694188d136b15bec65652a16a7717a55"
         },
         "JBRouterTerminal_deprecated": {
           "generation": "v1",
@@ -130,6 +155,13 @@
           "abi": "shared/abis/JBRouterTerminal__1_0_1.json",
           "blockNumber": 25329924,
           "transactionHash": "0x42c4dfe68bfeb6c51888ec96b3863c61fc5c24ffaae55f239b6fef484214d472"
+        },
+        "JBRouterTerminal_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/router-terminal-v6@1.1.1",
+          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
+          "blockNumber": 25453852,
+          "transactionHash": "0xcb8c6b0c9658f39ebb9d2e9cf0dc8385001d0bbda1c564ec7a46bd4539b2558d"
         }
       }
     },
@@ -160,9 +192,10 @@
         "JB721TiersHook__ProjectBAN": "0x37e35937ecf949d7a44a9fe878107de264618b8f",
         "JB721TiersHook__ProjectCPN": "0x779957e5376571adaf544e63ffc8404e98f30d30",
         "JBAddressRegistry": "0x581bfd1ead279e0a27b736e49494db3a7d85993c",
-        "JBBuybackHook": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
+        "JBBuybackHook": "0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91",
         "JBBuybackHookRegistry": "0x72f55a54cd53410a5ff175508a5a384227081788",
         "JBBuybackHook_deprecated": "0xc7c8334b09e43a38c20b43cf0f824e074280b566",
+        "JBBuybackHook_deprecated1": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
         "JBCCIPLib": "0xd331f229eeeeb32e54b85fe4a0997627913fb9a5",
         "JBCCIPSuckerDeployer__ARB": "0x1d58d56fbdb753de44737be926c33b79cf009afa",
         "JBCCIPSuckerDeployer__BASE": "0x8f6f0a70939997310309d7ab66b1b199faafe7f0",
@@ -204,9 +237,12 @@
         "JBProjectPayerDeployer": "0x7321740fd0dcf73dd3e2aa8fc060454abfce9517",
         "JBProjectPayer__ProjectCreationFeeReceiver": "0xe6d6819374c43085caa26cec5cbd19aff5d5f19f",
         "JBProjects": "0x6017d1fba9dc279bfa0b03fd931c22e242ab3691",
-        "JBRouterTerminal": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
+        "JBRatioPriceFeed": "0xedb20e9963b22bcd3b0652b246aac2c222510d36",
+        "JBRouterTerminal": "0x62e2fe718ca3008a6a322deec9903286463f1add",
+        "JBRouterTerminalGateway": "0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901",
         "JBRouterTerminalRegistry": "0xe0427f250fdb0379c8e98e884ee4570521208cbc",
         "JBRouterTerminal_deprecated": "0x90689f415c80d2bc0f690a08e9e2b8c9dbfbdf61",
+        "JBRouterTerminal_deprecated1": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
         "JBRulesets": "0x26f2228a4e8b0079ed1c2a3d22f12ff7f83cdfba",
         "JBSplits": "0x28b3d11fcb8d2ad0a143c5b193cd9f2e4d43f4c3",
         "JBSuckerLib": "0x0b2b545a4e2fd65d29f2417f1b26698d71769a8f",
@@ -232,10 +268,10 @@
       "deploymentInfo": {
         "JBBuybackHook": {
           "generation": "current",
-          "package": "@bananapus/buyback-hook-v6@1.1.1",
-          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
-          "blockNumber": 153752660,
-          "transactionHash": "0x11fec56b621dcc414a95a54f14e119a7e0aece1d91daf57e077fd92db1ae0943"
+          "package": "@bananapus/buyback-hook-v6@1.4.0",
+          "abi": "shared/abis/JBBuybackHook__1_4_0.json",
+          "blockNumber": 156779965,
+          "transactionHash": "0xc425b49efe764ebbcc56e36598a904e5fa604628bd8d8d3f24b69dbd71f9b949"
         },
         "JBBuybackHook_deprecated": {
           "generation": "v1",
@@ -244,12 +280,33 @@
           "blockNumber": 152994172,
           "transactionHash": "0x9a5fbe27d1b5eaac1e8382f50b806821f1fa6a2323a065d1d1c36d63035f0be4"
         },
+        "JBBuybackHook_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/buyback-hook-v6@1.1.1",
+          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
+          "blockNumber": 153752660,
+          "transactionHash": "0x11fec56b621dcc414a95a54f14e119a7e0aece1d91daf57e077fd92db1ae0943"
+        },
+        "JBRatioPriceFeed": {
+          "generation": "current",
+          "package": "@bananapus/core-v6@1.2.0",
+          "abi": "shared/abis/JBRatioPriceFeed__1_2_0.json",
+          "blockNumber": 156779948,
+          "transactionHash": "0x33b5d11b4a91bd2d88d3db7782e22d5c6703b3c0924e9b70b51eeee22e99d8ca"
+        },
         "JBRouterTerminal": {
           "generation": "current",
-          "package": "@bananapus/router-terminal-v6@1.1.1",
-          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
-          "blockNumber": 153752671,
-          "transactionHash": "0xcf18227bc018bf89351dd35cc1b24ea5c2b4fd9e9c2dde613cd9e39ee73cf7ed"
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminal__1_3_0.json",
+          "blockNumber": 156779998,
+          "transactionHash": "0x8b302adc7ddab16f2a2905b55f069e7e9f6561973e283f9070c3e936039afcae"
+        },
+        "JBRouterTerminalGateway": {
+          "generation": "current",
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminalGateway__1_3_0.json",
+          "blockNumber": 156780009,
+          "transactionHash": "0x202d3ba6f31976126c8a438e38d56fcc1569da04acfbeffede5139a8ac7d4167"
         },
         "JBRouterTerminal_deprecated": {
           "generation": "v1",
@@ -257,6 +314,13 @@
           "abi": "shared/abis/JBRouterTerminal__1_0_1.json",
           "blockNumber": 152994187,
           "transactionHash": "0xc227e54b980f11848a11d5604aa21089a66da95cb1d83357d7c7720455c5134b"
+        },
+        "JBRouterTerminal_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/router-terminal-v6@1.1.1",
+          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
+          "blockNumber": 153752671,
+          "transactionHash": "0xcf18227bc018bf89351dd35cc1b24ea5c2b4fd9e9c2dde613cd9e39ee73cf7ed"
         }
       }
     },
@@ -289,9 +353,10 @@
         "JBAddressRegistry": "0x581bfd1ead279e0a27b736e49494db3a7d85993c",
         "JBBaseSucker": "0x2fc1f6e8010e7a6198da9465931cce8d0c52e788",
         "JBBaseSuckerDeployer": "0x54140331902de5c3445eb0c26e15099a5a9d59e6",
-        "JBBuybackHook": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
+        "JBBuybackHook": "0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91",
         "JBBuybackHookRegistry": "0x72f55a54cd53410a5ff175508a5a384227081788",
         "JBBuybackHook_deprecated": "0xc7c8334b09e43a38c20b43cf0f824e074280b566",
+        "JBBuybackHook_deprecated1": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
         "JBCCIPLib": "0xd331f229eeeeb32e54b85fe4a0997627913fb9a5",
         "JBCCIPSuckerDeployer__ARB": "0x2845f919af9ed7d8dab188d42114bd590340a242",
         "JBCCIPSuckerDeployer__ETH": "0x3955fec11fe15f0be4dfa2b0153feef55d55e1ee",
@@ -332,9 +397,12 @@
         "JBProjectPayerDeployer": "0x7321740fd0dcf73dd3e2aa8fc060454abfce9517",
         "JBProjectPayer__ProjectCreationFeeReceiver": "0xe6d6819374c43085caa26cec5cbd19aff5d5f19f",
         "JBProjects": "0x6017d1fba9dc279bfa0b03fd931c22e242ab3691",
-        "JBRouterTerminal": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
+        "JBRatioPriceFeed": "0x3c2f3742785b0dec9bbb401de6615b70f740e4ca",
+        "JBRouterTerminal": "0x62e2fe718ca3008a6a322deec9903286463f1add",
+        "JBRouterTerminalGateway": "0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901",
         "JBRouterTerminalRegistry": "0xe0427f250fdb0379c8e98e884ee4570521208cbc",
         "JBRouterTerminal_deprecated": "0x90689f415c80d2bc0f690a08e9e2b8c9dbfbdf61",
+        "JBRouterTerminal_deprecated1": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
         "JBRulesets": "0x26f2228a4e8b0079ed1c2a3d22f12ff7f83cdfba",
         "JBSplits": "0x28b3d11fcb8d2ad0a143c5b193cd9f2e4d43f4c3",
         "JBSuckerLib": "0x0b2b545a4e2fd65d29f2417f1b26698d71769a8f",
@@ -360,10 +428,10 @@
       "deploymentInfo": {
         "JBBuybackHook": {
           "generation": "current",
-          "package": "@bananapus/buyback-hook-v6@1.1.1",
-          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
-          "blockNumber": 48157376,
-          "transactionHash": "0x320cd597204f82eba143756f27322bb58c62bfe205304ba6d7c6b5e6d334a17e"
+          "package": "@bananapus/buyback-hook-v6@1.4.0",
+          "abi": "shared/abis/JBBuybackHook__1_4_0.json",
+          "blockNumber": 51184680,
+          "transactionHash": "0xaa3f11dbd9a2665579c94f2fc8c804ae52439934c554e08a7cf28bb0ef303bb4"
         },
         "JBBuybackHook_deprecated": {
           "generation": "v1",
@@ -372,12 +440,33 @@
           "blockNumber": 47398898,
           "transactionHash": "0x16717e6b5f3ea59d31f1f62846f4021d67913f892c716bb54c0e50be8b7af5e5"
         },
+        "JBBuybackHook_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/buyback-hook-v6@1.1.1",
+          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
+          "blockNumber": 48157376,
+          "transactionHash": "0x320cd597204f82eba143756f27322bb58c62bfe205304ba6d7c6b5e6d334a17e"
+        },
+        "JBRatioPriceFeed": {
+          "generation": "current",
+          "package": "@bananapus/core-v6@1.2.0",
+          "abi": "shared/abis/JBRatioPriceFeed__1_2_0.json",
+          "blockNumber": 51184664,
+          "transactionHash": "0xa8fc2eaecb3e5e3d7992e13dc1ff2ec3988f6e3fb16951a8dc98f564e92f4646"
+        },
         "JBRouterTerminal": {
           "generation": "current",
-          "package": "@bananapus/router-terminal-v6@1.1.1",
-          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
-          "blockNumber": 48157387,
-          "transactionHash": "0x543b8945e4b3c25934063ea8a1b75cecafc5142af1e28135cfa311b1e770673e"
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminal__1_3_0.json",
+          "blockNumber": 51184713,
+          "transactionHash": "0x539add1b72f016cafd038331ba6c620f3155c7958ba43ba73d59999bcab520fd"
+        },
+        "JBRouterTerminalGateway": {
+          "generation": "current",
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminalGateway__1_3_0.json",
+          "blockNumber": 51184725,
+          "transactionHash": "0xacbf13382ff7ff72132178618f840a7d340e6dbf27e6020c5ce602280985ef93"
         },
         "JBRouterTerminal_deprecated": {
           "generation": "v1",
@@ -385,6 +474,13 @@
           "abi": "shared/abis/JBRouterTerminal__1_0_1.json",
           "blockNumber": 47398915,
           "transactionHash": "0x26f4ffdba154611e6e7599048fe871ed6e36ba47132c74711dc12de05afbbde1"
+        },
+        "JBRouterTerminal_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/router-terminal-v6@1.1.1",
+          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
+          "blockNumber": 48157387,
+          "transactionHash": "0x543b8945e4b3c25934063ea8a1b75cecafc5142af1e28135cfa311b1e770673e"
         }
       }
     },
@@ -417,9 +513,10 @@
         "JBAddressRegistry": "0x581bfd1ead279e0a27b736e49494db3a7d85993c",
         "JBArbitrumSucker": "0xf044d9f16c4bce21bd75227561bb3d1838ce8651",
         "JBArbitrumSuckerDeployer": "0xa12ebfca3d4e0810e4ed174e4c08277c26917acb",
-        "JBBuybackHook": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
+        "JBBuybackHook": "0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91",
         "JBBuybackHookRegistry": "0x72f55a54cd53410a5ff175508a5a384227081788",
         "JBBuybackHook_deprecated": "0xc7c8334b09e43a38c20b43cf0f824e074280b566",
+        "JBBuybackHook_deprecated1": "0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948",
         "JBCCIPLib": "0xd331f229eeeeb32e54b85fe4a0997627913fb9a5",
         "JBCCIPSuckerDeployer__BASE": "0x2845f919af9ed7d8dab188d42114bd590340a242",
         "JBCCIPSuckerDeployer__ETH": "0x36a2e30029d87c46f77f71b7b6b97fec8a760660",
@@ -459,9 +556,12 @@
         "JBProjectPayerDeployer": "0x7321740fd0dcf73dd3e2aa8fc060454abfce9517",
         "JBProjectPayer__ProjectCreationFeeReceiver": "0xe6d6819374c43085caa26cec5cbd19aff5d5f19f",
         "JBProjects": "0x6017d1fba9dc279bfa0b03fd931c22e242ab3691",
-        "JBRouterTerminal": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
+        "JBRatioPriceFeed": "0xa588449291852a49962276d75a25d51d8e285469",
+        "JBRouterTerminal": "0x62e2fe718ca3008a6a322deec9903286463f1add",
+        "JBRouterTerminalGateway": "0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901",
         "JBRouterTerminalRegistry": "0xe0427f250fdb0379c8e98e884ee4570521208cbc",
         "JBRouterTerminal_deprecated": "0x90689f415c80d2bc0f690a08e9e2b8c9dbfbdf61",
+        "JBRouterTerminal_deprecated1": "0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7",
         "JBRulesets": "0x26f2228a4e8b0079ed1c2a3d22f12ff7f83cdfba",
         "JBSplits": "0x28b3d11fcb8d2ad0a143c5b193cd9f2e4d43f4c3",
         "JBSuckerLib": "0x0b2b545a4e2fd65d29f2417f1b26698d71769a8f",
@@ -487,10 +587,10 @@
       "deploymentInfo": {
         "JBBuybackHook": {
           "generation": "current",
-          "package": "@bananapus/buyback-hook-v6@1.1.1",
-          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
-          "blockNumber": 480050991,
-          "transactionHash": "0x82d3b436a075e48e90af6123a4e8de91208e89839c8d1540e0bbfa811fdb66b8"
+          "package": "@bananapus/buyback-hook-v6@1.4.0",
+          "abi": "shared/abis/JBBuybackHook__1_4_0.json",
+          "blockNumber": 504165584,
+          "transactionHash": "0xaa9df1bda9d705f49e6edf87e0b56170832bd477bd680a830c4b559d384dc1aa"
         },
         "JBBuybackHook_deprecated": {
           "generation": "v1",
@@ -499,12 +599,33 @@
           "blockNumber": 473989048,
           "transactionHash": "0x20ad2ffe653043291a4999635b13a40f91d36e4dd83cf0dcccb669b45f8060a2"
         },
+        "JBBuybackHook_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/buyback-hook-v6@1.1.1",
+          "abi": "shared/abis/JBBuybackHook__1_1_1.json",
+          "blockNumber": 480050991,
+          "transactionHash": "0x82d3b436a075e48e90af6123a4e8de91208e89839c8d1540e0bbfa811fdb66b8"
+        },
+        "JBRatioPriceFeed": {
+          "generation": "current",
+          "package": "@bananapus/core-v6@1.2.0",
+          "abi": "shared/abis/JBRatioPriceFeed__1_2_0.json",
+          "blockNumber": 504165455,
+          "transactionHash": "0x95fd90af013c60e5fcd4c32ed0a1a1fe34761c753254fc634bd450dc14fbb324"
+        },
         "JBRouterTerminal": {
           "generation": "current",
-          "package": "@bananapus/router-terminal-v6@1.1.1",
-          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
-          "blockNumber": 480051078,
-          "transactionHash": "0x8fb18d2e3834b52e1f9dfa047be98dd0752f004b0b7b95f78c99c95a677ea55f"
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminal__1_3_0.json",
+          "blockNumber": 504165843,
+          "transactionHash": "0x0f9cb6a10def22f96a7db19c4ea57da2c6605e360dd124108ed546a586977636"
+        },
+        "JBRouterTerminalGateway": {
+          "generation": "current",
+          "package": "@bananapus/router-terminal-v6@1.3.0",
+          "abi": "shared/abis/JBRouterTerminalGateway__1_3_0.json",
+          "blockNumber": 504165929,
+          "transactionHash": "0x55ba94dc0ea4d9a16261fd2dc0e2301ca3c5f265a1e065651298ef1ae50a2592"
         },
         "JBRouterTerminal_deprecated": {
           "generation": "v1",
@@ -512,6 +633,13 @@
           "abi": "shared/abis/JBRouterTerminal__1_0_1.json",
           "blockNumber": 474081996,
           "transactionHash": "0x0b20007caf77137027e15a8c2e6442b4a1c7676cb4c4b9ba904647af163c5ea5"
+        },
+        "JBRouterTerminal_deprecated1": {
+          "generation": "previous",
+          "package": "@bananapus/router-terminal-v6@1.1.1",
+          "abi": "shared/abis/JBRouterTerminal__1_1_1.json",
+          "blockNumber": 480051078,
+          "transactionHash": "0x8fb18d2e3834b52e1f9dfa047be98dd0752f004b0b7b95f78c99c95a677ea55f"
         }
       }
     },

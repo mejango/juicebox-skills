@@ -13,7 +13,7 @@ metadata:
 
 # Data hook resolution
 
-Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
 
 `JBRulesetMetadata.dataHook` is rarely the hook that does the work. Revnets and omnichain 721
 projects set a singleton wrapper as the data hook and store the real hooks in the wrapper's own

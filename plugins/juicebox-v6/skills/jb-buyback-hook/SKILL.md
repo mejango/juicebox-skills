@@ -15,7 +15,7 @@ metadata:
 
 # JBBuybackHook and JBBuybackHookRegistry
 
-Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
 
 Source: `nana-buyback-hook-v6/src` (package `@bananapus/buyback-hook-v6` 1.4.0). Line references below are to that source.
 

@@ -14,7 +14,7 @@ metadata:
 
 # Revnet deployment and operation
 
-Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
 
 A revnet is a Juicebox V6 project whose `JBProjects` NFT is held by `REVOwner` forever. `REVDeployer.deployFor` creates the project, queues every stage as a ruleset in one `launchRulesetsFor`, deploys the ERC-20, seeds Uniswap V4 buyback pools, deploys suckers, deploys a tiered-721 hook, then hands the NFT to `REVOwner`. No one holds an owner key afterwards; the only human role is the **operator**, a `JBPermissions` grant scoped to `(REVOwner, revnetId)`.
 
@@ -104,7 +104,7 @@ Deploying onto a chain after stage 0 has already started (`startsAtOrAfter < blo
 
 ## Feed reachability
 
-`JBTerminalStore` converts every accepting context's `currency` into `baseCurrency` at pay time, and converts between contexts during cash-outs and surplus reads, via `JBPrices.pricePerUnitOf`. Revnets can never register project-level feeds, so a combination with no protocol default feed is bricked at runtime, not at deploy. Before launch, probe `JBPrices.pricePerUnitOf(projectId = 0, pricingCurrency, unitCurrency, decimals)` for each pair `(context.currency, baseCurrency)` and each pair of contexts; a revert means the feed is missing — do not launch. On chains where the project-0 `JBRatioPriceFeed` rollout is executed, USDC/native and USDC/ETH conversions also support ETH-based mixed treasuries. Mainnet proposals do not supply a live feed: check the per-chain deployment record and probe every needed pair rather than assuming availability. `deployFor` itself does not exercise the feed except to seed buyback pools, and it swallows that failure, so a passing deploy simulation proves nothing about pricing.
+`JBTerminalStore` converts every accepting context's `currency` into `baseCurrency` at pay time, and converts between contexts during cash-outs and surplus reads, via `JBPrices.pricePerUnitOf`. Revnets can never register project-level feeds, so a combination with no protocol default feed is bricked at runtime, not at deploy. Before launch, probe `JBPrices.pricePerUnitOf(projectId = 0, pricingCurrency, unitCurrency, decimals)` for each pair `(context.currency, baseCurrency)` and each pair of contexts; a revert means the feed is missing — do not launch. On chains where the project-0 `JBRatioPriceFeed` rollout is executed, USDC/native and USDC/ETH conversions also support ETH-based mixed treasuries. The ratio feed is deployed on all eight supported chains; check the per-chain deployment record and probe every needed pair for current registration and liveness. `deployFor` itself does not exercise the feed except to seed buyback pools, and it swallows that failure, so a passing deploy simulation proves nothing about pricing.
 
 Store decimals follow the **pricing currency**, not the treasury token: base `1` → `18`; base `2` → `6`; a custom ERC-20 base → that token's decimals.
 

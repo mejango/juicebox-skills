@@ -13,7 +13,7 @@ metadata:
 
 # Juicebox V6 API Reference
 
-Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
 
 Function signatures, parameters, return values, structs, permission gating, and constants for the Juicebox V6 protocol: core contracts plus the ecosystem (suckers, buyback hook, 721 hook, router terminal, ownable, omnichain deployer, revnets, croptop).
 

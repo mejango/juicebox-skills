@@ -12,7 +12,7 @@ metadata:
 
 # Juicebox V6 Contract Inventory
 
-Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
 
 Juicebox V6 has one core contract set: one `JBController`, one `JBMultiTerminal`, one `JBRulesets`. Router and buyback generations coexist; resolve each project through its registries, including already-selected retired generations.
 

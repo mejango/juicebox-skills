@@ -17,7 +17,7 @@ metadata:
 
 # Juicebox V6 Multi-Currency Accounting
 
-Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; mainnet proposals do not activate a deployment.
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
 
 A project can hold tokens in one denomination (native ETH, USDC) while denominating its
 issuance weight and fund access limits in another (USD, ETH). `JBPrices` resolves every
@@ -134,7 +134,7 @@ When a feed reverts (stale price, sequencer down), `JBPrices` skips it and tries
 if none exist, `pricePerUnitOf` reverts — which propagates into any pay, payout, surplus,
 or cash-out path that needed that conversion.
 
-The rollout registers a project-0 `JBRatioPriceFeed` with the chain's token-derived USDC currency as `pricingCurrency`, and `NATIVE_TOKEN_CURRENCY` or `ETH` as `unitCurrency`. This directly quotes USDC per native token/ETH at the USDC payer's six decimals; registering the reciprocal would lose precision when `JBPrices` inverts its rounded value. This supplies the missing conversion for USDC payments to ETH-based projects and mixed-balance cash outs: `JBPrices` does not chain arbitrary feeds. Resolve addresses from `chains[chainId].contracts.JBRatioPriceFeed`; absent mainnet artifacts mean the feed is still proposed. OP Sepolia has the feed even though router/gateway/buyback are absent.
+The rollout registers a project-0 `JBRatioPriceFeed` with the chain's token-derived USDC currency as `pricingCurrency`, and `NATIVE_TOKEN_CURRENCY` or `ETH` as `unitCurrency`. This directly quotes USDC per native token/ETH at the USDC payer's six decimals; registering the reciprocal would lose precision when `JBPrices` inverts its rounded value. This supplies the missing conversion for USDC payments to ETH-based projects and mixed-balance cash outs: `JBPrices` does not chain arbitrary feeds. Resolve the deployed feed on each of the eight supported chains from `chains[chainId].contracts.JBRatioPriceFeed`. OP Sepolia has the feed even though router/gateway/buyback are absent.
 
 ## Adding a project-specific price feed
 
