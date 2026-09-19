@@ -172,7 +172,7 @@ await send(prepared.transaction)
 
 ## Launch, rulesets, splits
 
-Obtain a real metadata JSON URI with `jb-project-metadata` before finalizing launch calldata. The hosted MCP at `https://juicebox.center/mcp` provides `jb_prepare_project_metadata` followed by authorized `jb_pin_project_metadata`; use the returned `metadataUri`. The SDK Center client also exposes `pinJson`, `pinImage`, and `pinMedia` for actually approved integrations, but public RPC access does not grant upload access and JSON pinning does not upload a referenced logo.
+Obtain a real metadata JSON URI with `jb-project-metadata` before finalizing launch calldata. The hosted MCP at `https://juicebox.center/mcp` provides `jb_prepare_project_metadata` followed by authorized `jb_pin_project_metadata`; use the returned `metadataUri`. A local logo is pinned first with `jb_pin_project_logo` and referenced as `ipfs://<cid>`; the webclients do not render HTTPS logos. The SDK Center client also exposes `pinJson`, `pinImage`, and `pinMedia` for actually approved browser origins, but public RPC access does not grant upload access and JSON pinning does not upload a referenced logo.
 
 | Export | Signature |
 |--------|-----------|

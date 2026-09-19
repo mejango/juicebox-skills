@@ -120,7 +120,7 @@ Points to a JSON file (typically IPFS):
 }
 ```
 
-Use `jb-project-metadata` to obtain the actual URI: connect to `https://juicebox.center/mcp`, prepare the complete document with `jb_prepare_project_metadata`, then publish the reviewed JSON with `jb_pin_project_metadata` after authorization for that public upload. Use its returned `metadataUri` as `projectUri`. The example URIs above are notation only; replace them with real existing content or omit optional fields. A local logo needs a separate authorized image upload first.
+Use `jb-project-metadata` to obtain the actual URI: connect to `https://juicebox.center/mcp`, prepare the complete document with `jb_prepare_project_metadata`, then publish the reviewed JSON with `jb_pin_project_metadata` after authorization for that public upload. Use its returned `metadataUri` as `projectUri`. The example URIs above are notation only; replace them with real existing content or omit optional fields. A local logo is pinned first with `jb_pin_project_logo`; `logoUri` must be `ipfs://`, since the webclients do not render HTTPS logos.
 
 The URI is stored in `JBController.uriOf[projectId]` and updated via `JBController.setUriOf(projectId, uri)` (owner or `SET_PROJECT_URI` operator). The ERC-721 `tokenURI` is separate — it is rendered by a protocol-owned `tokenUriResolver` on `JBProjects`, which individual project owners do not control.
 
