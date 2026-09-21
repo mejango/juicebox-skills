@@ -86,13 +86,52 @@ would introduce a second sender.
 | Mainnet | `8453` (Base), `10` (Optimism), `42161` (Arbitrum) |
 | Testnet | `11155111` (Sepolia), `84532` (Base Sepolia), `11155420` (Optimism Sepolia), `421614` (Arbitrum Sepolia) |
 
-One family per intent — `isSponsorable(chainIds)` requires every chain in the
-intent to fall in the mainnet family or every chain to fall in the testnet
-family, never a mix of the two. Ethereum mainnet (`1`) is never sponsored — an
-intent that includes it is self-paid only. Sponsored deploys run through
-Relayr with Center's sponsor key as the sender on every chain (see
-`jb-relayr` for bundle/polling mechanics); Center itself queues and tracks
-the per-chain sends.
+One family per intent — `isSponsorable(chainIds)` (backed by the
+`JBCENTER_SPONSORED_CHAIN_IDS` constant) requires every chain in the intent to
+fall in the mainnet family or every chain to fall in the testnet family, never
+a mix of the two. Ethereum mainnet (`1`) is never sponsored — an intent that
+includes it is self-paid only. Sponsored deploys run through Relayr with
+Center's sponsor key as the sender on every chain (see `jb-relayr` for
+bundle/polling mechanics) — Center's sponsor key signs the ERC-2771 forward
+requests, so it plays the role `jb-relayr` calls "the user"; Center itself
+queues and tracks the per-chain sends.
+
+## Publishing an intent end to end
+
+```js
+import { createJBCenterClient, prepareIntent, publishIntent, createJBCenterDeploymentCall } from '@bananapus/nana-sdk-core/jbcenter'
+
+// 1. Build the per-chain launch request the client already uses to deploy
+//    (e.g. the same launchProjectFor/launchRulesetsFor request builder),
+//    with stage 1's mustStartAtOrAfter set to an absolute time — never 0.
+const request = buildLaunchRequest({ ...formValues, mustStartAtOrAfter })
+
+// 2. Freeze it into a deployment call per target chain.
+const deploymentCalls = chainIds.map((chainId) =>
+  createJBCenterDeploymentCall({ chainId, request }),
+)
+
+// 3. Prepare the envelope and get the exact message to sign.
+const client = createJBCenterClient()
+const { message, ...input } = await prepareIntent(client, {
+  format: 'jbm/1',
+  deploymentVersion: '6',
+  chainIds,
+  deploymentCalls,
+  jb: formValues,
+})
+
+// 4. Sign with the connected wallet (personal_sign) — never hand-build `message`.
+const signature = await wallet.signMessage({ message })
+
+// 5. Publish, then route straight to the intent's page.
+const intent = await publishIntent(client, { ...input, publisher, signature })
+router.push(intentPath(intent.id))
+```
+
+`getIntent` re-fetches this same intent by id (used to render `/intent/<id>`
+and to poll `deploys[]`); `searchIntents` returns the undeployed rows that
+`mergeSearch` merges into project lists.
 
 ## Center routes (`/v1`, origin-gated)
 
@@ -133,14 +172,16 @@ const decoded = decodeDeploymentCall(call) // one { chainId, to, data } entry
 ## Lists and search: `mergeSearch`
 
 ```js
+const centerIntentItems = await searchIntents(client, { query })
 const rows = mergeSearch(bendystrawRows, centerIntentItems)
 ```
 
-`mergeSearch(rows, items)` merges deployed projects (Bendystraw) with
-undeployed intents (Center search), newest first; intent rows carry
-`undeployed: true`. Use it wherever a client renders project lists or search
-results. Trending and Top stay volume-based and are computed from Bendystraw
-alone — an intent has no volume, so it does not belong in either.
+`searchIntents` hits `GET /v1/search` for the undeployed rows; `mergeSearch(rows, items)`
+merges them with deployed projects (Bendystraw), newest first, building each
+intent row with `intentRow(intent)` and flagging it `undeployed: true`. Use it
+wherever a client renders project lists or search results. Trending and Top
+stay volume-based and are computed from Bendystraw alone — an intent has no
+volume, so it does not belong in either.
 
 ## `ensureDeployed` at the write chokepoint
 
@@ -155,14 +196,15 @@ review/simulate/send pipeline — there is no `projectId` to write against
 until it resolves. After it resolves, re-resolve project ids from the result
 and continue the write normally.
 
-Behavior: sponsors when the intent is sponsorable and nothing is deployed yet,
-polling `GET /v1/intents/:id` until every chain is `confirmed`; falls back to
-the caller's `selfPaid(calls)` on a `400`/`429`/`503` from the deploy request
-and records each resulting deployment; never mixes senders across a fallback
-(a fallback restarts the whole intent as self-paid, it does not patch in the
-self-paid wallet for the chains sponsorship failed on). Throws
-`EnsureDeployedError` (carrying `chainId` for the row that failed) on
-irrecoverable failure.
+Behavior: sponsors by calling `requestDeploy` (`POST /v1/intents/:id/deploy`)
+when the intent is sponsorable and nothing is deployed yet, polling `GET
+/v1/intents/:id` until every chain is `confirmed`; falls back to the caller's
+`selfPaid(calls)` on a `400`/`429`/`503` from that request, then calls
+`recordDeployment` (`POST /v1/intents/:id/deployments`) for each resulting
+deployment; never mixes senders across a fallback (a fallback restarts the
+whole intent as self-paid, it does not patch in the self-paid wallet for the
+chains sponsorship failed on). Throws `EnsureDeployedError` (carrying
+`chainId` for the row that failed) on irrecoverable failure.
 
 Client norm: the create flow's primary action is **Publish** — there is no
 separate save step and no later edit action to build UI for.
