@@ -61,7 +61,7 @@ Every transaction UI follows CONVENTIONS rule 5: simulate first, nonzero floors,
 
 | Domain | Skills |
 |--------|--------|
-| Core API / reference | jb-project-identity, jb-project-metadata, jb-sdk, jb-v6-api, jb-v6-impl, jb-contracts, jb-currency-types, jb-project, jb-ruleset, jb-multi-currency, jb-query, jb-decode, jb-patterns, jb-simplify, jb-docs |
+| Core API / reference | jb-project-identity, jb-project-metadata, jb-project-intents, jb-sdk, jb-v6-api, jb-v6-impl, jb-contracts, jb-currency-types, jb-project, jb-ruleset, jb-multi-currency, jb-query, jb-decode, jb-patterns, jb-simplify, jb-docs |
 | Terminals / fees | jb-tx-safety, jb-terminal-selection, jb-data-hook-resolution, jb-terminal-wrapper, jb-protocol-fees, jb-fee-flows, jb-fund-access-limits, jb-cash-out-curve, jb-permit2-metadata |
 | Hooks / 721 | jb-pay-hook, jb-cash-out-hook, jb-split-hook, jb-buyback-hook, jb-lp-split-hook, jb-721-per-chain-config, jb-721-tier-content |
 | Omnichain / suckers | jb-suckers, jb-relayr, jb-safe-and-relayr-execution, jb-omnichain-erc20-config, jb-omnichain-payout-limits, jb-omnichain-per-chain-projectids, jb-omnichain-tier-quantity-per-chain |
