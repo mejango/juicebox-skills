@@ -16,14 +16,15 @@ A project intent is a signed, frozen launch: per-chain launch calldata plus the
 client's own form data, stored on juicebox.center. Publishing needs one signature
 and no transaction. The intent appears in lists and search as an undeployed
 project and is deployed on first use — sponsored by Center on a fixed set of
-chains, or self-paid by the triggering wallet on every chain. Source: the
-`juicebox.center` `/v1` API and `@bananapus/nana-sdk-core/jbcenter` (2.7.0).
+chains, or self-paid by the triggering wallet on every chain. Canonical reference:
+<https://juicebox.center/api/docs/project-intents>. Source: the `juicebox.center`
+`/v1` API and `@bananapus/nana-sdk-core/jbcenter` (2.7.0).
 
 ## Envelope and signing message
 
 | Field | Type | Notes |
 |---|---|---|
-| `format` | string | `<app>/<version>`, e.g. `jbm/1` — identifies the publishing client |
+| `format` | string | `<host>/<label>` with exactly one slash, e.g. `jbm/1` or `beep.biz/terminal.v1` — identifies the publishing client |
 | `deploymentVersion` | string | `"6"` |
 | `chainIds` | `number[]` | sorted, unique |
 | `deploymentCalls` | array | `{ chainId, to, data }`, exactly one entry per `chainIds` member |
@@ -39,8 +40,9 @@ Version: 1
 Content hash: <hash>
 ```
 
-Center verifies the signature with ERC-1271/6492 support, so a passkey smart
-account that isn't deployed yet can still publish. The creation fee is **not**
+Center verifies the signature as an EOA `personal_sign` only; contract-wallet
+signatures (ERC-1271, ERC-6492) are refused with a 400, so a Safe or a passkey
+smart account cannot publish as itself today. The creation fee is **not**
 part of the signed envelope — the deployer reads `JBProjects.creationFee()`
 live (0.0001 ETH today; see `jb-project` for the address) and must send that
 exact value at deploy time, whatever it is then.
