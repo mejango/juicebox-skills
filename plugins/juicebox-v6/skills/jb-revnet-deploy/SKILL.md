@@ -48,14 +48,14 @@ function deployFor(uint256 revnetId, REVConfig configuration, JBAccountingContex
 | `tiered721HookConfiguration` | Always deployed; ownership is transferred to `REVOwner`. `issueTokensForSplits` is forced `false`. |
 | `allowedPosts` | Non-empty grants `CTPublisher` `ADJUST_721_TIERS` on the revnet and configures Croptop posting criteria. |
 
-Why the 4-arg overload is a footgun: it builds the store as `tiersConfig.currency = baseCurrency, tiersConfig.decimals = 18` and grants the operator all four 721 permissions unconditionally. A USD-based revnet (`baseCurrency = 2`) then prices every store tier with 18 decimals when USD amounts in Juicebox carry 6, so a `$10` tier encodes as `1e19` and is mispriced by twelve orders of magnitude. The empty-store 6-arg call is the same thing with the decimals set right: pass `tiersConfig: {tiers: [], currency: baseCurrency, decimals: <decimals of the pricing currency>}` and the `preventOperator*` flags you mean. Viem cannot disambiguate the two overloads when arrays are empty; filter the ABI to the 6-input `deployFor` before `encodeFunctionData`/`simulateContract`.
+The 4-arg overload creates an empty store with `currency = baseCurrency`, `decimals = 18`, and all four operator permissions. These defaults must be intentional. Use the 6-arg call to make pricing precision and permission choices explicit, including `tiers: []`. USD commonly uses 6 decimals in the apps, but an 18-decimal USD shop is valid when its prices use that precision: `$10` is `10 * 10 ** decimals`. The hook converts incoming payments into those units. Read an existing hook’s `pricingContext()` before encoding item prices. When encoding directly, filter the ABI to the selected `deployFor` overload; the new SDK deployment builder owns this selection.
 
 ## Structs (ABI order)
 
 | `REVConfig` | Type | Notes |
 |---|---|---|
 | `description` | `REVDescription` | `{string name; string ticker; string uri; bytes32 salt}` — `uri` is the project metadata URI |
-| `baseCurrency` | `uint32` | `JBCurrencyIds`: ETH `1`, USD `2`. Never the token-keyed context currency. Issuance is priced in this |
+| `baseCurrency` | `uint32` | `JBCurrencyIds`: ETH `1`, USD `2`, or a token-keyed currency. Issuance is priced in this; accepted reserve currencies need supported conversion paths |
 | `operator` | `address` | initial operator; `address(0)` launches with no operator, permanently |
 | `scopeCashOutsToLocalBalances` | `bool` | `false` = cash-outs price against cross-chain surplus + supply |
 | `stageConfigurations` | `REVStageConfig[]` | ≥ 1 (`REVDeployer_StagesRequired`) |
