@@ -19,7 +19,7 @@ Source: `https://github.com/Bananapus/juice-sdk-v4` (`packages/core`). ESM + CJS
 npm i @bananapus/nana-sdk-core@2.18.0 viem@2.55.19
 ```
 
-Use the consuming app’s lockfile when matching its SDK. The deployment-diagnostics changes are distributed in pinned app snapshots pending an SDK major release; new helpers may be absent from the registry version above. Check installed exports before using them. juicescan does not depend on the package; it references it in generated build prompts only.
+Use the consuming app’s lockfile when matching its SDK. The deployment-diagnostics changes are distributed in pinned app snapshots pending an SDK release; new helpers may be absent from the registry version above. Check installed exports before using them. juicescan does not depend on the package; it references it in generated build prompts only.
 
 ## Develop with the hosted MCP
 
@@ -227,7 +227,7 @@ const request = buildLaunchProjectTx({
 | `buildRepayLoanTx` | `({ chainId, loanId, maxRepayBorrowAmount, collateralCountToReturn, beneficiary, allowance?, value? })` |
 | `loanOpeningAmounts` | `/v6/loan-math` — gross → `{ protocolFee, revFee, sourceFee, netBorrowAmount }` |
 
-Every canonical V6 revnet gets a 721 hook, including an empty shop. Pass an explicit `tiered721Config` with the intended pricing units and all four operator-permission choices; see [the deployment configuration](../jb-revnet-deploy/SKILL.md). This works with the registry SDK and the stricter app snapshot. Where available, `resolve721PricingContext` and `buildRevnet721Config` own the shared construction rules; the new builder also selects the exact ABI overload. Older versions require filtering it before encoding empty tuple arrays.
+Every canonical V6 revnet gets a 721 hook, including an empty shop. Prefer an explicit `tiered721Config` with the intended pricing units and all four operator-permission choices; see [the deployment configuration](../jb-revnet-deploy/SKILL.md). Omitting this configuration preserves the deployer defaults: an empty shop with 18 pricing decimals and all four operator permissions. Where available, `resolve721PricingContext` and `buildRevnet721Config` own the shared construction rules; the new builder also selects the exact ABI overload. Older versions require filtering it before encoding empty tuple arrays.
 
 `RULESET_WEIGHT_INHERIT = 1n` as `initialIssuance` inherits the previous stage's cut-adjusted rate. `parseSuckerDeployerConfig(chainId, chainIds, assets, { version: 6, bridge })` from the root entry produces `suckerConfig.deployerConfigurations` (`MappableAsset.NATIVE | USDC`; `bridge: "ccip" | "native" | "both"`). revnet.money `parseDeployData.ts`:
 

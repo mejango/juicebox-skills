@@ -48,7 +48,7 @@ function deployFor(uint256 revnetId, REVConfig configuration, JBAccountingContex
 | `tiered721HookConfiguration` | Always deployed; ownership is transferred to `REVOwner`. `issueTokensForSplits` is forced `false`. |
 | `allowedPosts` | Non-empty grants `CTPublisher` `ADJUST_721_TIERS` on the revnet and configures Croptop posting criteria. |
 
-The 4-arg overload creates an empty store with `currency = baseCurrency`, `decimals = 18`, and all four operator permissions. These defaults must be intentional. Use the 6-arg call to make pricing precision and permission choices explicit, including `tiers: []`. USD commonly uses 6 decimals in the apps, but an 18-decimal USD shop is valid when its prices use that precision: `$10` is `10 * 10 ** decimals`. The hook converts incoming payments into those units. Read an existing hook’s `pricingContext()` before encoding item prices. When encoding directly, filter the ABI to the selected `deployFor` overload; the new SDK deployment builder owns this selection.
+The 4-arg overload creates an empty store with `currency = baseCurrency`, `decimals = 18`, and all four operator permissions. Use these defaults when they match your intended configuration, or the 6-arg call to choose pricing precision and permissions explicitly, including `tiers: []`. USD commonly uses 6 decimals in the apps, but an 18-decimal USD shop is valid when its prices use that precision: `$10` is `10 * 10 ** decimals`. The hook converts incoming payments into those units. Read an existing hook’s `pricingContext()` before encoding item prices. When encoding directly, filter the ABI to the selected `deployFor` overload; the new SDK deployment builder owns this selection.
 
 ## Structs (ABI order)
 
