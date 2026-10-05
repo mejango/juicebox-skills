@@ -20,7 +20,7 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 
 ## Regenerating
 
-- Addresses changed? Run `python3 scripts/gen-chain-config.py <path/to/deploy-all-v6/deployments>`, then re-check skills that inline core addresses (`jb-decode`, `jb-contracts`, `shared/wallet-utils.js`).
+- Addresses changed? Run `python3 scripts/gen-chain-config.py <deploy-all-v6/deployments>` to regenerate `shared/chain-config.json` and the versioned router, gateway, buyback, and ratio-feed ABIs; `--check` verifies parity. The generator reads flat executed deployment records and retains `_deprecated*` generations. It never reads proposals. Resolve project registry selections at runtime; see `shared/references/router-gateway-rollout.md`.
 - Run `node scripts/test-project-identity.mjs` after changing identity guidance or the NFT/omnichain examples. It executes the examples with mocked contract/indexer responses, including wrong-deployment, wrong-chain, and missing-project cases.
 - Then run `./build-skills.sh`.
 

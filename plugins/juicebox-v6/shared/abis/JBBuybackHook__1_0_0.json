@@ -1308,22 +1308,6 @@
  },
  {
   "type": "error",
-  "name": "JBBuybackHook_DerivedFloorNotMet",
-  "inputs": [
-   {
-    "name": "amount",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "minimum",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
   "name": "JBBuybackHook_InsufficientPayAmount",
   "inputs": [
    {
@@ -1385,11 +1369,6 @@
     "internalType": "uint160"
    }
   ]
- },
- {
-  "type": "error",
-  "name": "JBBuybackHook_PoolKeyCurrenciesMismatch",
-  "inputs": []
  },
  {
   "type": "error",

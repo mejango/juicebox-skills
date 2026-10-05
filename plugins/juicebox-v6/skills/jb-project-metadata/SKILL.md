@@ -4,22 +4,46 @@ description: |
   Prepare and publish standard Juicebox V6 project metadata JSON to IPFS and obtain
   the real project URI. Use when: (1) a project or revnet launch needs name,
   description, logoUri, or infoUri, (2) an agent needs an actionable IPFS pinning
-  path, (3) building a metadata upload flow. Covers JSON publishing and the
-  separate image upload prerequisite; wallet signing remains external.
+  path, (3) a launch needs a logo pinned from a local image file, (4) building a
+  metadata upload flow. Covers logo pinning, JSON publishing, and why a logo must
+  be an ipfs:// URI; wallet signing remains external.
 metadata:
-  version: 6.0.0
+  version: 6.1.0
 ---
 
 # Juicebox V6 Project Metadata
 
-Use the hosted MCP at `https://juicebox.center/mcp` to prepare and pin a standard
-metadata document. Pinning JSON is a separate operation from uploading an image
-or launching/updating a project. No wallet is needed to pin metadata.
+Use the hosted MCP at `https://juicebox.center/mcp` to pin a logo, then prepare
+and pin the standard metadata document. Three separate operations: pin the image,
+pin the JSON, launch or update the project. No wallet is needed to pin either.
+
+## Pin the logo first
+
+The logo must be `ipfs://<cid>`. Juicebox Money and Revnet Money resolve only
+content-addressed logos through the Center gateway; an HTTPS logo is never
+rendered, so the metadata tool rejects it. Get the CID one of these ways:
+
+- **Local file → `jb_pin_project_logo`.** Read the file, base64 it, and call the
+  tool with `contentType` (`image/png`, `image/jpeg`, `image/gif`, `image/webp`
+  or inert `image/svg+xml`), `imageBase64`, and `confirmPublicUpload: true` after
+  the user authorizes a public, potentially permanent upload. At most 1 MiB
+  decoded; bytes must match the declared type; SVG with scripts, external
+  references or styles is rejected. The response's `logoUri` goes straight into
+  `metadata.logoUri`, and `sha256` is the published bytes.
+- **Already on IPFS.** Use the existing `ipfs://<cid>` exactly. Any pinner the
+  user controls works (Pinata, Filebase, a local kubo `ipfs add`); the CID is the
+  same everywhere.
+- **No image yet.** Launch without `logoUri`; the owner can add one later from
+  the project's edit-metadata dialog in either webclient.
+
+`jb_pin_project_logo` shares the MCP's anonymous pin budget with JSON pinning: 10
+pins per 10 minutes across all MCP callers. Do not retry a failed pin in a loop;
+`LOGO_PUBLICATION_UNVERIFIED` means the image may already be public.
 
 ## Prepare the complete document
 
-Call `jb_prepare_project_metadata` with this shape. This example intentionally
-omits an image until the user has a real image URI:
+Call `jb_prepare_project_metadata` with this shape. Add `logoUri` once a real
+`ipfs://` CID exists:
 
 ```json
 {
@@ -36,8 +60,8 @@ omits an image until the user has a real image URI:
 | `version` | Required literal `6` at the tool-input level; not written into the JSON document |
 | `metadata.name` | Required nonblank string, at most 256 characters |
 | `metadata.description` | Required string; may be empty if that is the intended document |
-| `metadata.logoUri` | Optional existing `ipfs://` URI with a real canonical CID and safe path, or absolute HTTPS URL without credentials |
-| `metadata.infoUri` | Optional URI with the same supported forms; normally the project's HTTPS website |
+| `metadata.logoUri` | Optional `ipfs://` URI with a real canonical CID and safe path; HTTPS is rejected because the webclients do not render it |
+| `metadata.infoUri` | Optional absolute HTTPS URL without credentials, or an `ipfs://` URI; normally the project's website |
 
 The complete canonical JSON must fit 64 KiB in UTF-8. These four metadata fields
 are the entire supported document; other fields are rejected. Do not silently
@@ -87,19 +111,13 @@ Inspect provider/service status before a deliberate retry; do not loop and spend
 the provider quota repeatedly. An unavailable backend or spent quota is a real
 failure: return the reviewed JSON and exact missing prerequisite, not a fake CID.
 
-## Obtain the logo URI separately
+## Logos in webclients and scripts
 
-The MCP metadata tools accept references to already hosted images; they do not
-accept local image paths, binary/base64 payloads, or upload an image when given a
-URL. `ipfs://<IMAGE_CID>`, `ipfs://...`, and made-up CIDs are not usable metadata.
-
-If the user supplies an existing image URI, retain it exactly. If they supply a
-local image, use an available, authorized image upload integration first, then
-insert its returned URI into the metadata and prepare the complete JSON. If no
-such integration is available, leave publication pending when the logo is
-required; continue drafting the document and other launch configuration. Do not
-silently omit the requested logo. A user who wants to launch without one can omit
-`logoUri` altogether.
+`jb_prepare_project_metadata` takes a reference, never bytes: `ipfs://<IMAGE_CID>`,
+`ipfs://...`, local paths and made-up CIDs are not usable metadata. If the user
+supplies an existing `ipfs://` URI, retain it exactly; if they supply a file, pin
+it with `jb_pin_project_logo` and use the returned URI. Do not silently omit a
+requested logo. A user who wants to launch without one can omit `logoUri`.
 
 For webclient development, the real SDK methods are:
 
@@ -118,8 +136,9 @@ const logoUri = imagePin.uri
 uses `POST /v1/pins/json`. The browser pin routes require an actually approved
 origin. Do not spoof a first-party `Origin` from a script, assume the public RPC
 gateway grants upload access, expose provider credentials, or claim these SDK
-methods make arbitrary CLI uploads authorized. Hosted MCP JSON publication uses
-Center's integrated backend and its quota checks.
+methods make arbitrary CLI uploads authorized. Scripts and agents pin through the
+hosted MCP instead; both routes use Center's integrated backend and its quota
+checks.
 
 Verified first-party image workflows: Juicebox Money
 `src/components/create/CreateForm.tsx` → `src/lib/jbcenter-ipfs.ts`; Revnet Money
@@ -154,4 +173,6 @@ Source: MCP `src/services/metadata.ts` and `src/mcp/metadata-tools.ts`; SDK
 - Pinning the JSON and claiming the referenced image was uploaded too.
 - Treating queued replication as completed, permanent storage.
 - Passing `logoUri` as the project's metadata URI instead of the JSON URI.
+- Putting an HTTPS image URL in `logoUri`; it pins but never renders. Pin the image and use `ipfs://`.
+- Pasting the image as a `data:` URL or a local path; the tool takes base64 bytes, the metadata takes a CID.
 - Replacing existing metadata while silently dropping unsupported fields.

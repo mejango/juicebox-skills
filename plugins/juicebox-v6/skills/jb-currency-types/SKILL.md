@@ -13,6 +13,8 @@ metadata:
 
 # Juicebox V6 Currency Types
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 ## Two currency-ID namespaces
 
 Every currency in Juicebox is a `uint32` ID. Two namespaces share that space:
@@ -107,7 +109,7 @@ uint256 weightRatio = amount.currency == ruleset.baseCurrency()
 tokenCount = mulDiv(amount.value, weight, weightRatio); // weight is 18-decimal fixed point
 ```
 
-Payout limits and surplus allowances (`JBTerminalStore.recordPayoutFor` / `recordUsedAllowanceOf`): a limit denominated in `currency` converts to the terminal token via `pricePerUnitOf(projectId, currency, accountingContext.currency, 18)` at 18-decimal fidelity. If the limit currency equals the accounting-context currency exactly, no feed is consulted. A conversion that rounds to zero returns zero paid out without consuming the limit. Conversion only succeeds when a project-level or project-0 feed exists for the pair; there is no default ETH/native <-> USDC feed (see below).
+Payout limits and surplus allowances (`JBTerminalStore.recordPayoutFor` / `recordUsedAllowanceOf`): a limit denominated in `currency` converts to the terminal token via `pricePerUnitOf(projectId, currency, accountingContext.currency, 18)` at 18-decimal fidelity. If the limit currency equals the accounting-context currency exactly, no feed is consulted. A conversion that rounds to zero returns zero paid out without consuming the limit. Conversion only succeeds when a project-level or project-0 feed exists for the pair; ETH/native ↔ USDC defaults depend on the per-chain ratio-feed rollout (see below).
 
 Decimals rules:
 
@@ -144,7 +146,7 @@ Default (project 0) feed registrations on every chain:
 
 Inverse directions (e.g. pricing in 61166 per unit of USD) derive automatically from these at read time.
 
-There is no default feed between `NATIVE_TOKEN_CURRENCY` (61166) / ETH (1) and USDC. Every registered pair has USD on one side, and `JBPrices` resolves only direct or inverse pairs (no two-hop routing). Consequences for a project that accepts both native ETH and USDC: `baseCurrency = 2` (USD) is the only base currency for which both payments resolve; with `baseCurrency = 1` or `61166` a USDC payment reverts `JBPrices_PriceFeedNotFound`, and an ETH-denominated payout limit on a USDC terminal reverts the same way. A project may add its own feed under its `projectId` (`ADD_PRICE_FEED`, ID 20), but revnets cannot.
+`JBPrices` resolves direct or inverse pairs, not arbitrary two-hop routes. On chains with a deployed and registered `JBRatioPriceFeed`, project-0 defaults also connect USDC to `NATIVE_TOKEN_CURRENCY` (61166) and ETH (1), using the ETH/USD numerator divided by the USDC/USD denominator: USDC per native token/ETH. The USDC currency is `pricingCurrency`; native (61166) and ETH (1) are the two `unitCurrency` registrations. USDC payments to ETH-based projects and mixed ETH/USDC cash outs therefore have a conversion path. The ratio feed is deployed on all eight supported chains; probe `pricePerUnitOf` on each chain to verify the needed registration and current feed liveness. Projects can add project-specific feeds (`ADD_PRICE_FEED`, ID 20); revnets cannot.
 
 ## Example: USD-based omnichain project accepting native ETH and USDC
 

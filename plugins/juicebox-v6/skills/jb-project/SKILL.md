@@ -120,7 +120,7 @@ Points to a JSON file (typically IPFS):
 }
 ```
 
-Use `jb-project-metadata` to obtain the actual URI: connect to `https://juicebox.center/mcp`, prepare the complete document with `jb_prepare_project_metadata`, then publish the reviewed JSON with `jb_pin_project_metadata` after authorization for that public upload. Use its returned `metadataUri` as `projectUri`. The example URIs above are notation only; replace them with real existing content or omit optional fields. A local logo needs a separate authorized image upload first.
+Use `jb-project-metadata` to obtain the actual URI: connect to `https://juicebox.center/mcp`, prepare the complete document with `jb_prepare_project_metadata`, then publish the reviewed JSON with `jb_pin_project_metadata` after authorization for that public upload. Use its returned `metadataUri` as `projectUri`. The example URIs above are notation only; replace them with real existing content or omit optional fields. A local logo is pinned first with `jb_pin_project_logo`; `logoUri` must be `ipfs://`, since the webclients do not render HTTPS logos.
 
 The URI is stored in `JBController.uriOf[projectId]` and updated via `JBController.setUriOf(projectId, uri)` (owner or `SET_PROJECT_URI` operator). The ERC-721 `tokenURI` is separate — it is rendered by a protocol-owned `tokenUriResolver` on `JBProjects`, which individual project owners do not control.
 
@@ -580,7 +580,7 @@ DIRECTORY.setTerminalsOf(projectId, terminals);             // SET_TERMINALS + r
 - "Create a project that mints 1000 tokens per ETH with 10% reserved" → `weight: 1000e18`, `reservedPercent: 1000`
 - "Set up a project with weekly payout cycles to 3 addresses" → `duration: 604800`, payout split group + fund access limits
 - "Deploy a project with a 3-day approval delay for ruleset changes" → `approvalHook: JBDeadline3Days`
-- "Create a project that accepts both ETH and USDC" → two `JBAccountingContext` entries with `baseCurrency: 2` (USD); no default ETH<->USDC feed exists, so any other base currency makes one of the two payments revert `JBPrices_PriceFeedNotFound`
+- "Create a project that accepts both ETH and USDC" → two `JBAccountingContext` entries; probe `JBPrices.pricePerUnitOf` for both payments and cross-context surplus/cash-out conversions on each chain. A deployed, registered `JBRatioPriceFeed` enables USDC↔ETH/native, including ETH-based mixed treasuries; the feed is deployed on all eight supported chains, and current registration/liveness still needs verification. See `shared/references/router-gateway-rollout.md`
 
 ## Common mistakes
 

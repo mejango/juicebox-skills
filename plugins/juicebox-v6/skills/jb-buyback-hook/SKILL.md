@@ -15,12 +15,14 @@ metadata:
 
 # JBBuybackHook and JBBuybackHookRegistry
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 Source: `nana-buyback-hook-v6/src` (package `@bananapus/buyback-hook-v6` 1.4.0). Line references below are to that source.
 
-| Contract | Address (all chains) | Role |
+| Contract | Address source | Role |
 |---|---|---|
 | `JBBuybackHookRegistry` | `0x72f55a54cd53410a5ff175508a5a384227081788` | Ruleset `dataHook`. Resolves the project's hook, rekeys the payer's `pay`/`cashOut` metadata, forwards `beforePayRecordedWith` / `beforeCashOutRecordedWith` |
-| `JBBuybackHook` | `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` | Data hook + pay hook + cash-out hook. Swaps against a Uniswap V4 pool when it beats issuance / bonding-curve reclaim |
+| `JBBuybackHook` | `chains[chainId].contracts.JBBuybackHook` (resolve `registry.hookOf(projectId)`) | Data hook + pay hook + cash-out hook. Swaps against a Uniswap V4 pool when it beats issuance / bonding-curve reclaim |
 
 Never resolve a project's hook from the static address. Read `JBDirectory.controllerOf(pid)` → `currentRulesetOf(pid).metadata.dataHook`; if it is the registry (or `REVOwner`, which forwards to it) call `registry.hookOf(pid)`. `hookOf` returns a default for projects that never route through the registry, so it is only meaningful once the ruleset's data hook is known to be the registry. Addresses live in `shared/chain-config.json`.
 
@@ -91,7 +93,7 @@ Cold start (`twapLiquidity == 0`): the pay side (`allowColdStartSpotFallback = t
 
 ### Metadata entry
 
-Key: `JBMetadataResolver.getId("pay", hook)` = `0xda79b72d` for `0x77bee1ad…4948` (or `0xdf320cd4` keyed to the registry). Payload (:1157):
+Key: `JBMetadataResolver.getId("pay", resolvedHook)`; compute from the effective hook rather than a generation-bound ID (or use the registry-keyed ID when the registry translates it). Payload (:1157):
 
 ```solidity
 abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits) // 96 bytes
@@ -106,14 +108,18 @@ abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSpli
 Always encode all three words. The 1.4.0 source decodes three; a hook built from the earlier two-word source decodes `(uint256, uint256)` and `abi.decode` ignores trailing bytes, so a 96-byte payload works on both. A 64-byte payload reverts on 1.4.0.
 
 ```typescript
-import { encodeAbiParameters } from 'viem'
+import { encodeAbiParameters, keccak256, toBytes, type Hex } from 'viem'
 import createMetadata from 'juicebox-metadata-helper'
 
 const payload = encodeAbiParameters(
   [{ type: 'uint256' }, { type: 'uint256' }, { type: 'bool' }],
   [0n /* full amount */, minimumSwapAmountOut, true /* skipSplits */]
 )
-const metadata = createMetadata(['0xda79b72d'], [payload])
+// resolvedHook comes from the project's effective data-hook path.
+const purposePrefix = BigInt(keccak256(toBytes('pay')).slice(0, 10))
+const addressPrefix = BigInt(resolvedHook.slice(0, 10))
+const payId = `0x${(purposePrefix ^ addressPrefix).toString(16).padStart(8, '0')}` as Hex
+const metadata = createMetadata([payId], [payload])
 ```
 
 ### Route selection (`beforePayRecordedWith`, :1141-1301)
@@ -167,7 +173,7 @@ Without `skipSplits`, paying through the hook costs the payer the reserved cut o
 
 ### Metadata entry
 
-Key: `getId("cashOut", hook)` = `0xf10fae59` for `0x77bee1ad…4948` (`0xf44415a0` keyed to the registry). Payload (:972):
+Key: `getId("cashOut", resolvedHook)`; compute from the effective hook (or use the registry-keyed ID when the registry translates it). Payload (:972):
 
 ```solidity
 abi.encode(uint256 minimumSwapAmountOut, bool skip) // 64 bytes

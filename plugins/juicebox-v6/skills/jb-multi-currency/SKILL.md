@@ -17,6 +17,8 @@ metadata:
 
 # Juicebox V6 Multi-Currency Accounting
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 A project can hold tokens in one denomination (native ETH, USDC) while denominating its
 issuance weight and fund access limits in another (USD, ETH). `JBPrices` resolves every
 cross-currency conversion at read time. This skill covers the price-feed registry, the
@@ -87,7 +89,7 @@ Views (from `shared/abis/JBPrices.json`):
 
 ## Deployed protocol-default feeds (project 0)
 
-Four pairs are registered on project 0 on every chain:
+The baseline project-0 registrations shared by every chain are:
 
 | pricingCurrency | unitCurrency | Feed | Meaning |
 |-----------------|--------------|------|---------|
@@ -96,8 +98,8 @@ Four pairs are registered on project 0 on every chain:
 | `ETH` (1) | `NATIVE_TOKEN_CURRENCY` (61166) | `JBMatchingPriceFeed` | 1:1 — the native token *is* ETH |
 | `USD` (2) | `uint32(uint160(USDC))` | Chainlink USDC/USD adapter | USD price of 1 USDC |
 
-Only the USD→X directions (plus ETH→native) are registered; the opposite directions
-(e.g. native priced in USDC) resolve through the inverse-derivation step at read time.
+The ratio-feed rollout additionally registers USDC against native and ETH, as described below.
+Opposite directions derive by inversion at read time; unrelated pairs are not chained automatically.
 
 Feed adapter addresses per chain (`shared/chain-config.json`):
 
@@ -122,8 +124,8 @@ All feeds implement one function: `currentUnitPrice(uint256 decimals) → uint25
 |----------|----------|
 | `JBChainlinkV3PriceFeed` | Reads `FEED.latestRoundData()`. Reverts if the round is incomplete (`updatedAt == 0` or `answeredInRound < roundId`), the update is older than `THRESHOLD` seconds, or the price is `<= 0`. Rescales from the Chainlink feed's decimals to the requested `decimals` via `JBFixedPointNumber.adjustDecimals` |
 | `JBChainlinkV3SequencerPriceFeed` | Extends the above for L2s: first reads `SEQUENCER_FEED.latestRoundData()` and reverts if the round is uninitialized (`startedAt == 0`), the sequencer is down (`answer != 0`), or it came back up `GRACE_PERIOD_TIME` seconds ago or less (`block.timestamp <= startedAt + GRACE_PERIOD_TIME`). Deployed on OP/Base/Arb mainnets; the testnets use the plain feed |
+| `JBRatioPriceFeed` | Composes two feeds with the same intermediate currency: the deployed ETH/USD numerator divided by the USDC/USD denominator yields USDC per native token/ETH. Calls `NUMERATOR.currentUnitPrice(decimals + 18) / DENOMINATOR.currentUnitPrice(18)`; leg staleness and sequencer checks propagate, and a zero denominator reverts |
 | `JBMatchingPriceFeed` | Always returns `10 ** decimals` (1:1). Registered for pairs where no conversion is needed, e.g. `(ETH, NATIVE_TOKEN_CURRENCY)` |
-| `JBRatioPriceFeed` | Composes two feeds: `NUMERATOR.currentUnitPrice / DENOMINATOR.currentUnitPrice`. Prices a pair neither leg covers directly, e.g. USDC/ETH from USD/USDC and USD/ETH (`src/periphery/JBRatioPriceFeed.sol`) |
 
 Deployed staleness thresholds (from `nana-core-v6/script/DeployPeriphery.s.sol`): ETH/USD
 adapters use `THRESHOLD = 3600` seconds; USDC/USD adapters use `THRESHOLD = 86400` seconds.
@@ -131,6 +133,8 @@ adapters use `THRESHOLD = 3600` seconds; USDC/USD adapters use `THRESHOLD = 8640
 When a feed reverts (stale price, sequencer down), `JBPrices` skips it and tries backups;
 if none exist, `pricePerUnitOf` reverts — which propagates into any pay, payout, surplus,
 or cash-out path that needed that conversion.
+
+The rollout registers a project-0 `JBRatioPriceFeed` with the chain's token-derived USDC currency as `pricingCurrency`, and `NATIVE_TOKEN_CURRENCY` or `ETH` as `unitCurrency`. This directly quotes USDC per native token/ETH at the USDC payer's six decimals; registering the reciprocal would lose precision when `JBPrices` inverts its rounded value. This supplies the missing conversion for USDC payments to ETH-based projects and mixed-balance cash outs: `JBPrices` does not chain arbitrary feeds. Resolve the deployed feed on each of the eight supported chains from `chains[chainId].contracts.JBRatioPriceFeed`. OP Sepolia has the feed even though router/gateway/buyback are absent.
 
 ## Adding a project-specific price feed
 

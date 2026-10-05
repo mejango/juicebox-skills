@@ -13,6 +13,8 @@ metadata:
 
 # Data hook resolution
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 `JBRulesetMetadata.dataHook` is rarely the hook that does the work. Revnets and omnichain 721
 projects set a singleton wrapper as the data hook and store the real hooks in the wrapper's own
 storage. A webclient must unwrap before it can quote weights, route swaps, or find a shop.
@@ -46,7 +48,7 @@ All addresses are identical on every chain; read them from `shared/chain-config.
 | `REVOwner` `0x2ba4705ad0332cdfb299b452068438bcba3faaf3` | address match (also ERC-165 `IJBRulesetDataHook` + `IJBCashOutHook`) | `tiered721HookOf(revnetId) → IJB721TiersHook` (zero if none); `BUYBACK_HOOK()` = `JBBuybackHookRegistry` | 721 hook first (its split amount), then `registry.hookOf(id)` with the remainder; specs merged `[721, buyback]` | Buyback hook only (via registry) plus REVOwner's own fee spec; loans/suckers/cash-out delay applied first. 721 hook never prices cash-outs on a revnet |
 | `JBOmnichainDeployer` `0xb853758a70a6b4216c09f1d071ea2344aba0a34f` | address match (ERC-165 `IJBOmnichainDeployer`, `IJBRulesetDataHook`) | `tiered721HookOf(projectId, rulesetId) → (hook, useDataHookForCashOut)`; `extraDataHookOf(projectId, rulesetId) → (dataHook, useDataHookForPay, useDataHookForCashOut)` | 721 hook always (when set), then extra hook if its stored `useDataHookForPay`; weight from the extra hook | 721 hook if its stored `useDataHookForCashOut`; otherwise extra hook if its stored `useDataHookForCashOut`. Never both |
 | `JBBuybackHookRegistry` `0x72f55a54cd53410a5ff175508a5a384227081788` | address match (ERC-165 `IJBBuybackHookRegistry`) | `hookOf(projectId)`: per-project `setHookFor` pin → `defaultHook` if `projectId > defaultHookProjectIdThreshold` → historical default segment → `address(0)` | resolved buyback hook | resolved buyback hook (registry forwards both) |
-| a `JBBuybackHook` (default `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948`; any allowed hook) | ERC-165 `IJBBuybackHook` `0x16f0f2dd`, or `registry.isHookAllowed(addr)` | nothing | itself — swaps when the pool beats issuance | itself — routes cash-outs through the pool unless the `cashOut` metadata entry sets `skip`, no pool, or no project token |
+| a `JBBuybackHook` (resolve the project's hook, including retired choices) | ERC-165 `IJBBuybackHook` `0x16f0f2dd`, or a matching deployed generation from `shared/chain-config.json`; `isHookAllowed` describes new selections, not existing retired choices | nothing | itself — swaps when the pool beats issuance | itself — routes cash-outs through the pool unless the `cashOut` metadata entry sets `skip`, no pool, or no project token |
 | a `JB721TiersHook` clone | ERC-165 `IJB721TiersHook` `0xc74ac2fc`; `JBAddressRegistry.deployerOf(addr) == JB721TiersHookDeployer` | nothing | itself — mints tiers, weight from `pricingContext` | itself, only if the ruleset bit `useDataHookForCashOut` is set |
 | `CTDeployer`, `DefifaHook`, unknown | fallthrough | project-specific | treat as opaque custom hook: no buyback pool, no shop unless the address itself answers `STORE()` | same |
 | `address(0)` or both flags false | — | — | none | none |

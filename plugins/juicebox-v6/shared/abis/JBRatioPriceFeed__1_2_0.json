@@ -1,0 +1,78 @@
+[
+ {
+  "type": "constructor",
+  "inputs": [
+   {
+    "name": "numerator",
+    "type": "address",
+    "internalType": "contract IJBPriceFeed"
+   },
+   {
+    "name": "denominator",
+    "type": "address",
+    "internalType": "contract IJBPriceFeed"
+   }
+  ],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "DENOMINATOR",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "contract IJBPriceFeed"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "NUMERATOR",
+  "inputs": [],
+  "outputs": [
+   {
+    "name": "",
+    "type": "address",
+    "internalType": "contract IJBPriceFeed"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "currentUnitPrice",
+  "inputs": [
+   {
+    "name": "decimals",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "error",
+  "name": "JBRatioPriceFeed_ZeroDenominator",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "JBRatioPriceFeed_ZeroDenominatorPrice",
+  "inputs": []
+ },
+ {
+  "type": "error",
+  "name": "JBRatioPriceFeed_ZeroNumerator",
+  "inputs": []
+ }
+]

@@ -16,10 +16,10 @@ metadata:
 Source: `https://github.com/Bananapus/juice-sdk-v4` (`packages/core`). ESM + CJS, `sideEffects: false`. Peer: `viem ^2.12.0`. Every builder returns a plain `{ chainId, address, abi, functionName, args[, value] }` object that feeds `publicClient.simulateContract` and `walletClient.writeContract` unchanged.
 
 ```bash
-npm i @bananapus/nana-sdk-core@2.3.2 viem@2.55.19
+npm i @bananapus/nana-sdk-core@2.18.0 viem@2.55.19
 ```
 
-juicebox.money and revnet.money declare `"^2.3.2"` and lock `2.3.2`; juicebox.money pins `viem` `2.55.19`, revnet.money `2.55.8`. juicescan does not depend on the package; it references it in generated build prompts only.
+Use the consuming app’s lockfile when matching its SDK. The deployment-diagnostics changes are distributed in pinned app snapshots pending an SDK major release; new helpers may be absent from the registry version above. Check installed exports before using them. juicescan does not depend on the package; it references it in generated build prompts only.
 
 ## Develop with the hosted MCP
 
@@ -78,9 +78,19 @@ const controller = jbContractAddress['6'][JBCoreContracts.JBController][chainId]
 const splits = v6Address('JBSplits', chainId)                                      // same table, string key
 ```
 
-`jbContractAddress['6']` holds 33 contracts: the 15 `JBCoreContracts` + `ERC2771Forwarder`, `JB721TiersHook{,Deployer,ProjectDeployer,Store}`, `JBAddressRegistry`, `JBSuckerRegistry`, `JBBuybackHook{,Registry}`, `JBRouterTerminal{,Registry}`, `JBUniswapV4LPSplitHook{,Deployer}`, `JBP6FeeLPSplitHook`, `JBOmnichainDeployer`, `REVDeployer`, `REVLoans`, `REVOwner`. Every one matches `shared/chain-config.json` byte-for-byte on all 8 chains. `shared/chain-config.json` additionally carries what the SDK table omits: native sucker deployers, per-chain CCIP suckers/deployers, price feeds, `JBUniswapV4Hook`, `JBProjectPayerDeployer` (SDK exposes it as `JB_PROJECT_PAYER_DEPLOYER`), Permit2, USDC, Defifa/Croptop/Banny, and project-instance contracts. For those, read `shared/chain-config.json`; the SDK exposes sucker deployers separately via `NATIVE_SUCKER_DEPLOYER_ADDRESSES` and `CCIP_SUCKER_DEPLOYER_ADDRESSES` (used by `parseSuckerDeployerConfig`).
+The SDK's `jbContractAddress['6']` is generated deployment data. Compare the installed package's chain entries with `shared/chain-config.json` before using a rollout feature; an older lockfile may still contain the previous router/hook. The rollout generator includes `JBRouterTerminalGateway` and `JBRatioPriceFeed` only on chains with executed artifacts. It preserves retired hook/router addresses in `jbContractAddressHistory['6'][contract].{previous,v1}[chainId]`, while `jbContractAbiGeneration['6'][contract][chainId]` selects `current`, `previous`, or `v1` for the canonical deployed address. The shared config additionally covers contracts omitted from the SDK's main table; the SDK exposes native/CCIP sucker deployers separately through `NATIVE_SUCKER_DEPLOYER_ADDRESSES` and `CCIP_SUCKER_DEPLOYER_ADDRESSES`.
 
 V6 ABIs are the unsuffixed exports: `jbControllerAbi`, `jbDirectoryAbi`, `jbMultiTerminalAbi`, `jbRulesetsAbi`, `jbSplitsAbi`, `jbTokensAbi`, `jbProjectsAbi`, `jbPermissionsAbi`, `jbPricesAbi`, `jbTerminalStoreAbi`, `jbFundAccessLimitsAbi`, `jb721TiersHookAbi`, `jb721TiersHookStoreAbi`, `jbBuybackHookAbi`, `jbBuybackHookRegistryAbi`, `jbRouterTerminalAbi`, `jbRouterTerminalRegistryAbi`, `jbSuckerRegistryAbi`, `jbOmnichainDeployerAbi`, `revDeployerAbi`, `revLoansAbi`, `revOwnerAbi`, `erc2771ForwarderAbi`. `jbSuckerV6Abi` lives in `/v6`. Ignore any `*V4Abi` / `*V5Abi` / `4_1` / `1_1` export.
+
+## Router gateway rollout APIs
+
+The rollout adds these APIs; verify that the installed SDK version exports them before use (the rollout changeset requires a package release). Until that version is installed, use `shared/abis/` and the resolution described in `shared/references/router-gateway-rollout.md`.
+
+- Top-level ABIs: `jbRouterTerminalGatewayAbi`, `jbRatioPriceFeedAbi`, `jbBuybackHookPreviousAbi`, `jbBuybackHookV1Abi`, `jbRouterTerminalPreviousAbi`, and `jbRouterTerminalV1Abi`.
+- `/v6` `resolveRouterPath(client, { chainId, projectId })` returns a discriminated `ResolvedRouterPath`. All results include `registry`. `status: "gateway"` has the selected `terminal`/`gateway` and immutable `router`; `"direct"` has the same terminal/router and a null gateway; `"unresolved"` has null terminal/gateway/router; `"unknown"` preserves the unrecognized selected terminal and null gateway/router. Only a recognized deployed gateway is unwrapped via `ROUTER()`. Resolve the project selection, including retired overrides; never choose the newest artifact as a fallback.
+- `/v6` `buildBuybackPayMetadata({ hook, amountToSwapWith, minimumSwapAmountOut, skipSplits? })` produces framed metadata for the effective hook's `pay` ID and always encodes all three words. `skipSplits` defaults to false. Two words revert on buyback 1.4.0; an oracle-derived floor miss falls back to minting while explicit payer minimums stay binding.
+
+Keep the directly called terminal for Permit2 and transaction submission; use the resolved router for router quote IDs. A gateway queue event represents retained custody, not destination settlement; expose its commitment and retry/refund events separately from paid fees.
 
 ## viem wiring
 
@@ -162,7 +172,7 @@ await send(prepared.transaction)
 
 ## Launch, rulesets, splits
 
-Obtain a real metadata JSON URI with `jb-project-metadata` before finalizing launch calldata. The hosted MCP at `https://juicebox.center/mcp` provides `jb_prepare_project_metadata` followed by authorized `jb_pin_project_metadata`; use the returned `metadataUri`. The SDK Center client also exposes `pinJson`, `pinImage`, and `pinMedia` for actually approved integrations, but public RPC access does not grant upload access and JSON pinning does not upload a referenced logo.
+Obtain a real metadata JSON URI with `jb-project-metadata` before finalizing launch calldata. The hosted MCP at `https://juicebox.center/mcp` provides `jb_prepare_project_metadata` followed by authorized `jb_pin_project_metadata`; use the returned `metadataUri`. A local logo is pinned first with `jb_pin_project_logo` and referenced as `ipfs://<cid>`; the webclients do not render HTTPS logos. The SDK Center client also exposes `pinJson`, `pinImage`, and `pinMedia` for actually approved browser origins, but public RPC access does not grant upload access and JSON pinning does not upload a referenced logo.
 
 | Export | Signature |
 |--------|-----------|
@@ -217,6 +227,8 @@ const request = buildLaunchProjectTx({
 | `buildRepayLoanTx` | `({ chainId, loanId, maxRepayBorrowAmount, collateralCountToReturn, beneficiary, allowance?, value? })` |
 | `loanOpeningAmounts` | `/v6/loan-math` — gross → `{ protocolFee, revFee, sourceFee, netBorrowAmount }` |
 
+Every canonical V6 revnet gets a 721 hook, including an empty shop. Pass an explicit `tiered721Config` with the intended pricing units and all four operator-permission choices; see [the deployment configuration](../jb-revnet-deploy/SKILL.md). This works with the registry SDK and the stricter app snapshot. Where available, `resolve721PricingContext` and `buildRevnet721Config` own the shared construction rules; the new builder also selects the exact ABI overload. Older versions require filtering it before encoding empty tuple arrays.
+
 `RULESET_WEIGHT_INHERIT = 1n` as `initialIssuance` inherits the previous stage's cut-adjusted rate. `parseSuckerDeployerConfig(chainId, chainIds, assets, { version: 6, bridge })` from the root entry produces `suckerConfig.deployerConfigurations` (`MappableAsset.NATIVE | USDC`; `bridge: "ccip" | "native" | "both"`). revnet.money `parseDeployData.ts`:
 
 ```typescript
@@ -228,6 +240,8 @@ const request = buildDeployRevnetTx({
   chainId,
   config: { description: { name, ticker, uri: `ipfs://${cid}`, salt }, baseCurrency: BASE_CURRENCY_USD, operator, scopeCashOutsToLocalBalances: false, stageConfigurations: [stage] },
   accountingContexts: [buildAccountingContext(NATIVE_TOKEN, 18)],
+  creationFee: await getProjectCreationFee(publicClient, chainId),
+  tiered721Config, // Explicit pricing and permission choices, including when tiers is empty.
   suckerConfig: { deployerConfigurations: parseSuckerDeployerConfig(chainId, chainIds, [MappableAsset.NATIVE], { version: 6 }).deployerConfigurations, salt },
 })
 ```

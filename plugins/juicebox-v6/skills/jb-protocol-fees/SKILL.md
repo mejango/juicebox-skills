@@ -69,7 +69,7 @@ The fee is paid into project #1's primary terminal for the token via `pay`; **NA
 | `migrateBalanceOf` | project owner |
 | Held fee processed later | the beneficiary recorded at hold time (`JBFee.beneficiary`) |
 
-Fee processing is fail-open: if the fee route reverts, the fee is forgiven, credited back to the paying project's balance, tracked in `feeFreeSurplusOf`, and surfaced via a `FeeReverted` event. Payouts never get stuck on a broken fee route.
+Core fee processing catches synchronous route reverts: the fee is forgiven, credited back to the paying project's balance, tracked in `feeFreeSurplusOf`, and surfaced via `FeeReverted`. On upgraded routes, `JBRouterTerminalGateway` catches eligible downstream failures first and retains the original fee input as a pending call. Core sees success; the fee remains in custody for permissionless retry or source-project refund instead of being forgiven. Query gateway commitments and events to distinguish queued, settled, and refunded fees; see `shared/references/router-gateway-rollout.md` and `shared/abis/JBRouterTerminalGateway.json`.
 
 ## Held fees
 

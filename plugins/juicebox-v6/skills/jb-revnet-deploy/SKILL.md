@@ -14,6 +14,8 @@ metadata:
 
 # Revnet deployment and operation
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 A revnet is a Juicebox V6 project whose `JBProjects` NFT is held by `REVOwner` forever. `REVDeployer.deployFor` creates the project, queues every stage as a ruleset in one `launchRulesetsFor`, deploys the ERC-20, seeds Uniswap V4 buyback pools, deploys suckers, deploys a tiered-721 hook, then hands the NFT to `REVOwner`. No one holds an owner key afterwards; the only human role is the **operator**, a `JBPermissions` grant scoped to `(REVOwner, revnetId)`.
 
 | Contract | Address (all 8 chains) | Role |
@@ -46,14 +48,14 @@ function deployFor(uint256 revnetId, REVConfig configuration, JBAccountingContex
 | `tiered721HookConfiguration` | Always deployed; ownership is transferred to `REVOwner`. `issueTokensForSplits` is forced `false`. |
 | `allowedPosts` | Non-empty grants `CTPublisher` `ADJUST_721_TIERS` on the revnet and configures Croptop posting criteria. |
 
-Why the 4-arg overload is a footgun: it builds the store as `tiersConfig.currency = baseCurrency, tiersConfig.decimals = 18` and grants the operator all four 721 permissions unconditionally. A USD-based revnet (`baseCurrency = 2`) then prices every store tier with 18 decimals when USD amounts in Juicebox carry 6, so a `$10` tier encodes as `1e19` and is mispriced by twelve orders of magnitude. The empty-store 6-arg call is the same thing with the decimals set right: pass `tiersConfig: {tiers: [], currency: baseCurrency, decimals: <decimals of the pricing currency>}` and the `preventOperator*` flags you mean. Viem cannot disambiguate the two overloads when arrays are empty; filter the ABI to the 6-input `deployFor` before `encodeFunctionData`/`simulateContract`.
+The 4-arg overload creates an empty store with `currency = baseCurrency`, `decimals = 18`, and all four operator permissions. These defaults must be intentional. Use the 6-arg call to make pricing precision and permission choices explicit, including `tiers: []`. USD commonly uses 6 decimals in the apps, but an 18-decimal USD shop is valid when its prices use that precision: `$10` is `10 * 10 ** decimals`. The hook converts incoming payments into those units. Read an existing hook’s `pricingContext()` before encoding item prices. When encoding directly, filter the ABI to the selected `deployFor` overload; the new SDK deployment builder owns this selection.
 
 ## Structs (ABI order)
 
 | `REVConfig` | Type | Notes |
 |---|---|---|
 | `description` | `REVDescription` | `{string name; string ticker; string uri; bytes32 salt}` — `uri` is the project metadata URI |
-| `baseCurrency` | `uint32` | `JBCurrencyIds`: ETH `1`, USD `2`. Never the token-keyed context currency. Issuance is priced in this |
+| `baseCurrency` | `uint32` | `JBCurrencyIds`: ETH `1`, USD `2`, or a token-keyed currency. Issuance is priced in this; accepted reserve currencies need supported conversion paths |
 | `operator` | `address` | initial operator; `address(0)` launches with no operator, permanently |
 | `scopeCashOutsToLocalBalances` | `bool` | `false` = cash-outs price against cross-chain surplus + supply |
 | `stageConfigurations` | `REVStageConfig[]` | ≥ 1 (`REVDeployer_StagesRequired`) |
@@ -102,7 +104,7 @@ Deploying onto a chain after stage 0 has already started (`startsAtOrAfter < blo
 
 ## Feed reachability
 
-`JBTerminalStore` converts every accepting context's `currency` into `baseCurrency` at pay time, and converts between contexts during cash-outs and surplus reads, via `JBPrices.pricePerUnitOf`. Revnets can never register project-level feeds, so a combination with no protocol default feed is bricked at runtime, not at deploy. Before launch, probe `JBPrices.pricePerUnitOf(projectId = 0, pricingCurrency, unitCurrency, decimals)` for each pair `(context.currency, baseCurrency)` and each pair of contexts; a revert means the feed is missing — do not launch. Supported today: ETH-only with base `1`; ETH-only, USDC-only, or ETH+USDC with base `2`. `baseCurrency = 2` is the only base that works for a mixed ETH+USDC treasury. `deployFor` itself does not exercise the feed except to seed buyback pools, and it swallows that failure, so a passing deploy simulation proves nothing about pricing.
+`JBTerminalStore` converts every accepting context's `currency` into `baseCurrency` at pay time, and converts between contexts during cash-outs and surplus reads, via `JBPrices.pricePerUnitOf`. Revnets can never register project-level feeds, so a combination with no protocol default feed is bricked at runtime, not at deploy. Before launch, probe `JBPrices.pricePerUnitOf(projectId = 0, pricingCurrency, unitCurrency, decimals)` for each pair `(context.currency, baseCurrency)` and each pair of contexts; a revert means the feed is missing — do not launch. On chains where the project-0 `JBRatioPriceFeed` rollout is executed, USDC/native and USDC/ETH conversions also support ETH-based mixed treasuries. The ratio feed is deployed on all eight supported chains; check the per-chain deployment record and probe every needed pair for current registration and liveness. `deployFor` itself does not exercise the feed except to seed buyback pools, and it swallows that failure, so a passing deploy simulation proves nothing about pricing.
 
 Store decimals follow the **pricing currency**, not the treasury token: base `1` → `18`; base `2` → `6`; a custom ERC-20 base → that token's decimals.
 
@@ -229,7 +231,7 @@ No new stage can ever be queued: `QUEUE_RULESETS` is not in the operator set, `R
 - Different senders per chain (EOA on one, Safe on another): every salt folds `msg.sender`.
 - `splitPercent > 0` with empty `splits` reverts; splits summing below `1_000_000_000` leave residue on `REVOwner` that anyone can burn with `burnHeldTokensOf`.
 - Setting `operator = address(0)` or calling `setOperatorOf(id, address(0))`: there is no recovery path; splits, buyback, sucker expansion, and the store are frozen.
-- ETH+USDC treasury with `baseCurrency = 1`: no USDC→ETH default feed; USDC pays and mixed cash-outs revert on-chain. Use base `2`, and probe `JBPrices` with project id `0` before launch.
+- Assuming an ETH+USDC treasury works from a proposal or deployment simulation: USDC→ETH/native requires the chain's executed ratio-feed registration. Probe `JBPrices` with project id `0` for every pair before launch.
 - Treating a passing deploy simulation as proof the feed exists: pool seeding failures are swallowed; pricing runs at pay time.
 - Expecting cash-outs on a late-added chain immediately: `cashOutDelayOf` gates them for 7 days; bridge tokens in via suckers first.
 - Sending `msg.value` with a non-zero `revnetId`: `REVDeployer_ProjectCreationFeeNotNeeded`.

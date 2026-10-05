@@ -13,6 +13,8 @@ metadata:
 
 # Juicebox V6 API Reference
 
+Read `shared/references/router-gateway-rollout.md` for deployment generations, per-chain rollout status, project migration, retained-call recovery, and ratio-feed availability. Addresses and ABIs come from `shared/chain-config.json` and `shared/abis/`; resolve the selected project generation at runtime.
+
 Function signatures, parameters, return values, structs, permission gating, and constants for the Juicebox V6 protocol: core contracts plus the ecosystem (suckers, buyback hook, 721 hook, router terminal, ownable, omnichain deployer, revnets, croptop).
 
 Addresses come from `shared/chain-config.json` (8 chains: Ethereum, Optimism, Base, Arbitrum + their Sepolia testnets). **Core contracts share one address on every chain (CREATE2)** — the tables below list each address once.
@@ -1026,7 +1028,7 @@ function launchProjectFor(
 
 ## Router Terminal (nana-router-terminal-v6): Pay With Any Token
 
-`JBRouterTerminalRegistry` (`0xe0427f250fdb0379c8e98e884ee4570521208cbc`, chain-invariant) is itself an `IJBTerminal` a project adds to its terminal list. It forwards `pay`/`addToBalanceOf` to the project's effective router terminal (`JBRouterTerminal`, chain-specific), which swaps the paid token through discovered Uniswap V3 or V4 pools (`PoolInfo.isV4`) and forwards proceeds to the project's primary terminal.
+`JBRouterTerminalRegistry` (`0xe0427f250fdb0379c8e98e884ee4570521208cbc`, chain-invariant) is itself an `IJBTerminal` a project adds to its terminal list. It forwards `pay`/`addToBalanceOf` to `terminalOf(projectId)`. On upgraded chains the selected default is `JBRouterTerminalGateway`; read its immutable `ROUTER()` to find `JBRouterTerminal`, which converts via direct forwarding, Uniswap V3/V4 swaps, or recursive cash outs. Existing project overrides may still resolve to a retired router.
 
 ```solidity
 // JBRouterTerminalRegistry — per-project routing. Gated: SET_ROUTER_TERMINAL.
@@ -1035,7 +1037,7 @@ function lockTerminalFor(uint256 projectId, IJBTerminal expectedTerminal) extern
 
 // Owner-of-registry only: allowTerminal, disallowTerminal, setDefaultTerminal.
 
-// Views: defaultTerminal(), defaultTerminalFor(projectId), hasLockedTerminal(projectId),
+// Views: terminalOf(projectId), defaultTerminal(), defaultTerminalFor(projectId), hasLockedTerminal(projectId),
 // isTerminalAllowed(terminal), defaultTerminalProjectIdThreshold().
 
 // JBRouterTerminal — pool discovery views:
