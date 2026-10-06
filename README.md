@@ -9,6 +9,27 @@ on every supported chain (Ethereum, Optimism, Base, Arbitrum + Sepolia testnets)
 
 ## Quick Start
 
+### Start from the product
+
+Connecting a business, Shopify store or game community to a revnet? Start with
+[`revnet-commerce`](plugins/juicebox-v6/skills/revnet-commerce/SKILL.md). It maps
+player allocations, settled revenue, operating cash and holder rewards to existing
+mechanisms, and identifies what still needs an external integration. Read that
+recipe before choosing deployment parameters or loading the whole library.
+
+Give your agent the product brief, intended networks and this instruction:
+
+> Use revnet-commerce to map the requirements to V6 mechanisms. Separate confirmed
+> facts, assumptions and missing decisions. Evaluate operator token splits and
+> shared revenue backing as an alignment/funding model; compare a configurable
+> Juicebox project if separate treasury payouts are required. Discover only the tools and
+> references required next; identify external integrations and what evidence would
+> prove the result. Start with the architecture and open questions.
+
+For an existing project or a specific operation, go directly to its workflow below.
+Skills explain the protocol; connect MCP separately for callable tools and live
+observations. Newer skills may not yet be in the MCP's versioned reference bundle.
+
 ### Use the skills in your agent
 
 Each skill is a directory with a `SKILL.md` entry point using the open
@@ -112,6 +133,7 @@ another protocol version. An unconfigured network remains unavailable.
 
 | I want to... | Use this skill |
 |--------------|----------------|
+| Connect commerce or game allocations to a revnet | [`revnet-commerce`](plugins/juicebox-v6/skills/revnet-commerce/SKILL.md) |
 | Find the correct V6 project from a name, URL, or ID | `jb-project-identity` |
 | Prepare and pin project metadata JSON to IPFS | `jb-project-metadata` |
 | Create a new project | `jb-project` |
@@ -186,10 +208,11 @@ another protocol version. An unconfigured network remains unavailable.
 
 | Skill | Identifier | Description |
 |-------|---------|-------------|
+| Revnet Commerce | `revnet-commerce` | Business revenue, player allocations, operating cash and integration boundaries |
 | Revnet Economics | `revnet-economics` | Economic thresholds and stage design |
 | Revnet Modeler | `revnet-modeler` | Simulation and parameter planning |
 | Revnet Omnichain Default | `revnet-omnichain-default` | Deploying revnets across chains |
-| Reserved Rate Off-Chain Revenue | `jb-reserved-rate-offchain-revenue` | Splitting off-chain revenue on-chain |
+| Revenue and Token Reserves | `jb-reserved-rate-offchain-revenue` | Independent cash contribution and token issuance policies |
 | REVLoans | `jb-revloans` | Loan borrow/repay/reallocate mechanics |
 | Loan Queries | `jb-loan-queries` | Query REVLoans data via Bendystraw |
 | Croptop | `jb-croptop` | Permissioned posting and minting |

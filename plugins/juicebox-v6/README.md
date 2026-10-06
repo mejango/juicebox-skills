@@ -11,7 +11,7 @@ carried over from earlier protocol versions. Authoring rules: [`CONVENTIONS.md`]
 
 ## Layout
 
-- `skills/<name>/SKILL.md` — one skill per directory (55 skills)
+- `skills/<name>/SKILL.md` — one skill per directory
 - `shared/chain-config.json` — canonical per-chain V6 addresses, generated from `deploy-all-v6/deployments`
 - `shared/abis/*.json` — verified ABIs from deployment artifacts
 - `shared/wallet-utils.js`, `shared/styles.css` — helpers bundled into UI skills
@@ -42,9 +42,15 @@ references to addresses, ABIs, and other bundled resources.
 
 ## Start here
 
-For existing projects, start with `jb-project-identity`: every selection is `{ version: 6, chainId, projectId }`, never a bare ID or the first name match. For launch metadata, `jb-project-metadata` describes the reviewed IPFS publishing workflow at `https://juicebox.center/mcp`. Read `jb-contracts` (addresses, which contract does what) and `jb-v6-api` (signatures, structs, permission IDs) as needed. Then pick a lane:
+For a business or game community, start with
+[`revnet-commerce`](skills/revnet-commerce/SKILL.md) to map revenue, allocations,
+operating cash and rewards before configuring a launch. The
+[repository quickstart](../../README.md#start-from-the-product) is the shared
+starting prompt; client setup is needed only when connecting tools.
 
-| Building | Read, in order |
+For existing projects, start with `jb-project-identity`: every selection is `{ version: 6, chainId, projectId }`, never a bare ID or the first name match. For launch metadata, `jb-project-metadata` describes the reviewed IPFS publishing workflow at `https://juicebox.center/mcp`. Read `jb-contracts` (addresses, which contract does what) and `jb-v6-api` (signatures, structs, permission IDs) as needed. Select references for the next decision; a table row is not a requirement to load every listed skill.
+
+| Building | Relevant references |
 |----------|----------------|
 | A pay / cash-out / mint button for an existing project | jb-sdk → jb-tx-safety → jb-terminal-selection → jb-data-hook-resolution → jb-protocol-fees → jb-cash-out-curve → jb-permit2-metadata → jb-interact-ui. Revnets: add revnet-economics. 721: add jb-721-tier-content. |
 | A webclient that reads project state | jb-query → jb-bendystraw → jb-omnichain-per-chain-projectids → jb-explorer-ui / jb-event-explorer-ui / jb-ruleset-timeline-ui |
@@ -55,7 +61,12 @@ For existing projects, start with `jb-project-identity`: every selection is `{ v
 
 Every transaction UI follows CONVENTIONS rule 5: simulate first, nonzero floors, `receipt.status` checked.
 
-**Not deployed** (source exists, no addresses; do not target): `JBDistributor*`, `JBSwapSplitHook`, `JBRouterTerminalGateway`, `JBPayRouteResolver`, `JBRatioPriceFeed`, everything under `extensions/`.
+**Deployment support:** use the per-chain executed records in
+[`shared/chain-config.json`](shared/chain-config.json), the owning package's
+deployment artifacts and current project/registry reads. Extension support needs
+its own deployment evidence. A missing entry means support is unverified through
+that catalog, not that source is callable or that no deployment exists anywhere.
+Do not use a prose list as current deployment or runtime-availability proof.
 
 ## Skill index
 
@@ -65,6 +76,6 @@ Every transaction UI follows CONVENTIONS rule 5: simulate first, nonzero floors,
 | Terminals / fees | jb-tx-safety, jb-terminal-selection, jb-data-hook-resolution, jb-terminal-wrapper, jb-protocol-fees, jb-fee-flows, jb-fund-access-limits, jb-cash-out-curve, jb-permit2-metadata |
 | Hooks / 721 | jb-pay-hook, jb-cash-out-hook, jb-split-hook, jb-buyback-hook, jb-lp-split-hook, jb-721-per-chain-config, jb-721-tier-content |
 | Omnichain / suckers | jb-suckers, jb-relayr, jb-safe-and-relayr-execution, jb-omnichain-erc20-config, jb-omnichain-payout-limits, jb-omnichain-per-chain-projectids, jb-omnichain-tier-quantity-per-chain |
-| Revnets / loans / croptop | jb-revnet-deploy, revnet-economics, revnet-modeler, revnet-omnichain-default, jb-reserved-rate-offchain-revenue, jb-revloans, jb-loan-queries, jb-croptop |
+| Revnets / loans / croptop | revnet-commerce, jb-revnet-deploy, revnet-economics, revnet-modeler, revnet-omnichain-default, jb-reserved-rate-offchain-revenue, jb-revloans, jb-loan-queries, jb-croptop |
 | Data | jb-bendystraw |
 | UI generators | jb-deploy-ui, jb-explorer-ui, jb-event-explorer-ui, jb-ruleset-timeline-ui, jb-interact-ui, jb-hook-deploy-ui, jb-nft-gallery-ui, jb-omnichain-ui |
