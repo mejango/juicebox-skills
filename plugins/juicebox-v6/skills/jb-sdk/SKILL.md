@@ -87,7 +87,7 @@ V6 ABIs are the unsuffixed exports: `jbControllerAbi`, `jbDirectoryAbi`, `jbMult
 ```typescript
 import { createPublicClient, createWalletClient, custom, http } from 'viem'
 import { base } from '@bananapus/nana-sdk-core/chains'
-import { buildPayTx, previewPay, resolvePaymentTerminal, getAccountingContexts } from '@bananapus/nana-sdk-core/v6'
+import { buildPayTx, prepareUserPay, PAY_QUOTE_FAILED_MESSAGE, resolvePaymentTerminal, getAccountingContexts } from '@bananapus/nana-sdk-core/v6'
 
 const chainId = 8453 as const
 const publicClient = createPublicClient({ chain: base, transport: http(rpcUrl) })
@@ -109,7 +109,9 @@ async function send(request: { address: `0x${string}`; abi: any; functionName: s
 | `getAccountingContexts` | `(client, { chainId, projectId }) => Promise<readonly JBAccountingContext[]>` — `{ token, decimals, currency }` from `JBMultiTerminal` |
 | `resolvePaymentTerminal` | `(client, { chainId, projectId, token }) => Promise<{ address, isRouter }>` — `primaryTerminalOf`, else the registry with `isRouter: true` |
 | `previewPay` | `(client, { chainId, terminal, projectId, token, amount, beneficiary, metadata? }) => Promise<{ beneficiaryTokenCount, reservedTokenCount }>` |
-| `buildPayTx` | `({ chainId, terminal, projectId, token, amount, beneficiary, minReturnedTokens?, memo?, metadata? }) => V6PayTxRequest` — `value = amount` when `token === NATIVE_TOKEN` |
+| `prepareUserPay` | `(client, { chainId, terminal, projectId, token, amount, beneficiary, tiers?, slippageBps?, skipSplits? }) => Promise<{ metadata, preview, minReturnedTokens, quoteFailed? }>` — a person's payment: the buyback pool quote (fee and impact included) floored by `slippageBps` (default 1%) as the hook's explicit minimum, or the router's conversion quote |
+| `buildPayTx` | `({ chainId, terminal, projectId, token, amount, beneficiary, minReturnedTokens?, memo?, metadata? }) => V6PayTxRequest` — `value = amount` when `token === NATIVE_TOKEN`; defaults to a zero minimum and empty metadata, so pass `prepareUserPay`'s |
+| `decodePayFailure` / `payRetrySlippageBps` | `(error) => PayFailure \| null` / `(failure, currentBps) => bigint \| null` — why a pay reverted, and a larger `slippageBps` to prepare again with |
 | `build721PayMetadata` | `({ metadataIdTarget, tierIdsToMint, allowOverspending? }) => Hex` |
 | `chooseBestPayRoute` | `({ pay, paySettlement, directSwapQuote?, slippageBps? }) => BestPayRoute` |
 | `buildPermit2ApproveTx` | `({ chainId, token, amount?, expiration }) => Permit2ApproveTxRequest` |
@@ -120,16 +122,16 @@ juicebox.money `PayPanel` and revnet.money `V6PayCard`:
 ```typescript
 const contexts = await getAccountingContexts(publicClient, { chainId, projectId })
 const terminal = await resolvePaymentTerminal(publicClient, { chainId, projectId, token: NATIVE_TOKEN })
-const metadata = shop && tierIds.length > 0
-  ? build721PayMetadata({ metadataIdTarget: shop.metadataIdTarget, tierIdsToMint: tierIds })
+const tiers = shop && tierIds.length > 0
+  ? { metadataIdTarget: shop.metadataIdTarget, tierIdsToMint: tierIds }
   : undefined
-const preview = await previewPay(publicClient, { chainId, terminal: terminal.address, projectId, token: NATIVE_TOKEN, amount, beneficiary, metadata })
-const request = buildPayTx({
-  chainId, terminal: terminal.address, projectId, token: NATIVE_TOKEN, amount, beneficiary,
-  minReturnedTokens: preview.beneficiaryTokenCount * 99n / 100n,   // nonzero floor from the preview
-  metadata,
-})
+const pay = { chainId, terminal: terminal.address, projectId, token: NATIVE_TOKEN, amount, beneficiary }
+const prepared = await prepareUserPay(publicClient, { ...pay, tiers })
+if (prepared.quoteFailed) warn(PAY_QUOTE_FAILED_MESSAGE)   // offer to quote again
+const request = buildPayTx({ ...pay, minReturnedTokens: prepared.minReturnedTokens, metadata: prepared.metadata })
 ```
+
+Send `prepareUserPay`'s `minReturnedTokens` and `metadata` together. Without its quote, buyback hook 1.4 routes by its TWAP floor, which reaches zero on large buys against a thin pool (the payment mints even when the pool pays more), and the router uses its sigmoid slippage floor; both leave room to sandwich. A hand-rolled `preview × 99 / 100` or `slippageFloor(preview)` has the same gap: the preview with empty metadata is the mint path. `quoteFailed: true` means the pool price could not be read after one retry, so the minimum is only the mint rate. If the payment reverts, `decodePayFailure(error)` says why; to let the payer accept less, prepare again with `slippageBps: payRetrySlippageBps(failure, slippageBps)`, since lowering `minReturnedTokens` alone leaves the hook's minimum in the metadata. `quoteFailed` and `PAY_QUOTE_FAILED_MESSAGE` ship in nana-sdk-core 3.5; `prepareUserPay` exists in 3.4.1.
 
 `isRouter: true` means the registry is where the payment goes, not that the token is payable — a cold-start project reverts `JBRouterTerminalRegistry_TerminalNotSet`. Both clients probe `jbRouterTerminalRegistryAbi.previewPayFor` and treat a revert or `ruleset.id == 0` as a dead route (see `jb-terminal-selection`).
 

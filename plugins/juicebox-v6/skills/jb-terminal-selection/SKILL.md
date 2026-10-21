@@ -111,7 +111,7 @@ function pay(
 
 ## Router quote metadata
 
-`JBRouterTerminal` prices swaps from manipulation-resistant sources (V3 TWAP, canonical-hook V4 oracle) with a dynamic slippage model. Front-ends should still supply an explicit quote via a `pay` metadata entry (see `jb-permit2-metadata` for the encoding format):
+`JBRouterTerminal` prices swaps from manipulation-resistant sources (V3 TWAP, canonical-hook V4 oracle) with a dynamic slippage model. Front-ends should still supply an explicit quote via a `pay` metadata entry (see `jb-permit2-metadata` for the encoding format). For a person's payment, `prepareUserPay` (`@bananapus/nana-sdk-core/v6`) quotes the conversion and the destination's buyback pool and returns the `metadata` and `minReturnedTokens` to send:
 
 - Entry ID: `bytes4(bytes20(routerTerminal) ^ bytes20(keccak256("pay")))` = `0xa27bedbd` for `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7`.
 - Payload: `abi.encode(address quotedTokenOut, uint256 quotedMinAmountOut)`. A zero `quotedMinAmountOut` is treated as "not provided" and falls back to automatic quoting.
@@ -150,4 +150,4 @@ See `jb-permit2-metadata` for the full encoding.
 2. **Using `address(0)` for ETH.** The native token is `0x…EEEe`.
 3. **Signing permit2 with the router as spender while calling the registry.** The registry pulls the funds; it must be the spender and the metadata-ID target.
 4. **Assuming the registry reverts for unknown tokens.** It forwards to a router terminal that accepts any token; conversion happens inside the route. The failure mode is a missing pool / failed quote, not `TokenNotAccepted`.
-5. **Skipping `minReturnedTokens` on routed payments.** For router paths this is the user's only end-to-end slippage guard on `pay`.
+5. **Skipping `minReturnedTokens` on routed payments.** For router paths this is the user's only end-to-end slippage guard on `pay`; without a quote the router falls back to its sigmoid slippage floor. Send `prepareUserPay`'s minimum and metadata.

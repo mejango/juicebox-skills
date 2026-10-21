@@ -28,6 +28,7 @@ prevent using the V6 template below.
 
 - Single HTML file, no build step; viem from ESM CDN
 - Shared CSS from `shared/styles.css`, helpers from `shared/wallet-utils.js`
+- A person's pay sends `prepareUserPay`'s `minReturnedTokens` and `metadata` (`@bananapus/nana-sdk-core/v6` from esm.sh, exact version), never a zero or simulation-derived minimum
 - Addresses from `shared/chain-config.json` via `getContractAddress(chainId, name)` — core contracts share one address on all 8 chains
 - ABIs: hand-write only the minimal fragments shown here (verified below), or load full ABIs from `shared/abis/*.json` via `loadABI(name)`
 
@@ -131,11 +132,11 @@ Permissions (checked via `JBPermissions`): `cashOutTokensOf` requires the caller
   <script type="module">
     import { createPublicClient, createWalletClient, http, custom, formatEther, formatUnits, parseEther } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, getContractAddress, resolveTerminal, truncateAddress, getTxUrl, waitForSuccess } from '/shared/wallet-utils.js';
+    import { prepareUserPay } from 'https://esm.sh/@bananapus/nana-sdk-core@3.4.1/v6';
 
     // Configuration
     const PROJECT_ID = 1n;
     const CHAIN_ID = 1;
-    const SLIPPAGE_BPS = 500n; // 5% floor below the simulated result
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
 
     const TERMINAL_ABI = [
@@ -262,17 +263,15 @@ Permissions (checked via `JBPermissions`): `cashOutTokensOf` requires the caller
       showTxPending('Please confirm in wallet...');
 
       try {
-        // Simulate first: a failing simulation aborts before the wallet prompt, and the simulated
-        // token count sets a nonzero floor so a sandwiched buyback/data-hook path reverts instead of executing.
-        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: address };
-        const { result: expectedTokens } = await publicClient.simulateContract({
-          ...call, args: [PROJECT_ID, NATIVE_TOKEN, value, address, 0n, memo, '0x']
+        // The minimum and metadata come from the buyback pool's quote (1% slippage), so a
+        // sandwiched swap reverts instead of executing. Simulate before the wallet prompt.
+        const { minReturnedTokens, metadata } = await prepareUserPay(publicClient, {
+          chainId: CHAIN_ID, terminal, projectId: PROJECT_ID, token: NATIVE_TOKEN, amount: value, beneficiary: address
         });
-        const minReturnedTokens = expectedTokens * (10_000n - SLIPPAGE_BPS) / 10_000n;
-
-        const hash = await walletClient.writeContract({
-          ...call, args: [PROJECT_ID, NATIVE_TOKEN, value, address, minReturnedTokens, memo, '0x']
-        });
+        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: address,
+          args: [PROJECT_ID, NATIVE_TOKEN, value, address, minReturnedTokens, memo, metadata] };
+        await publicClient.simulateContract(call);
+        const hash = await walletClient.writeContract(call);
 
         showTxSent(hash);
         await waitForSuccess(publicClient, hash);
@@ -514,8 +513,9 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
 
 ```html
 <script type="module">
-  import { createPublicClient, createWalletClient, http, custom, parseEther, encodeAbiParameters, keccak256 } from 'https://esm.sh/viem@2.55.19';
+  import { createPublicClient, createWalletClient, http, custom, parseEther } from 'https://esm.sh/viem@2.55.19';
   import { CHAIN_CONFIGS, resolveTerminal } from '/shared/wallet-utils.js';
+  import { prepareUserPay } from 'https://esm.sh/@bananapus/nana-sdk-core@3.4.1/v6';
 
   const PROJECT_ID = 1n;
   const CHAIN_ID = 1;
@@ -539,45 +539,26 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
     }
   ];
 
-  // 4-byte id: bytes4(bytes20(idTarget) ^ bytes20(keccak256("pay")))
-  function tier721MetadataId(idTarget) {
-    const k = keccak256('0x706179'); // keccak256(utf8 "pay")
-    const a = idTarget.slice(2, 10).toLowerCase(), b = k.slice(2, 10);
-    let out = '';
-    for (let i = 0; i < 8; i += 2) {
-      out += (parseInt(a.substr(i, 2), 16) ^ parseInt(b.substr(i, 2), 16)).toString(16).padStart(2, '0');
-    }
-    return out;
-  }
-
-  // JBMetadataResolver envelope: [reserved word][lookup: id(4B)+offset(0x02)+pad][data]
-  function buildTierMintMetadata(idTarget, tierIds) {
-    const id = tier721MetadataId(idTarget);
-    const data = encodeAbiParameters([{ type: 'bool' }, { type: 'uint16[]' }], [true, tierIds]);
-    return '0x' + '00'.repeat(32) + id + '02' + '00'.repeat(27) + data.slice(2);
-  }
-
   async function mint(tierIds, totalPriceWei, walletClient, publicClient, address) {
     // Key the metadata to METADATA_ID_TARGET (the implementation), NOT the clone address.
     const idTarget = await publicClient.readContract({
       address: HOOK_ADDRESS, abi: HOOK_ABI, functionName: 'METADATA_ID_TARGET'
     });
-    const metadata = buildTierMintMetadata(idTarget, tierIds);
     // Throws if the project accepts no ETH terminal. totalPriceWei must already be converted from
     // hook.pricingContext() currency via JBPrices when it is not native (see /jb-nft-gallery-ui).
     const { terminal } = await resolveTerminal(publicClient, PROJECT_ID, NATIVE_TOKEN);
 
-    // Simulate first: surfaces a wrong envelope / sold-out tier / bad price before the wallet prompt,
-    // and the simulated token count becomes the floor for the real call.
-    const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value: totalPriceWei, account: address };
-    const { result: expectedTokens } = await publicClient.simulateContract({
-      ...call, args: [PROJECT_ID, NATIVE_TOKEN, totalPriceWei, address, 0n, '', metadata]
+    // The SDK builds the envelope (tiers plus the buyback pool's quote) and the minimum.
+    const { minReturnedTokens, metadata } = await prepareUserPay(publicClient, {
+      chainId: CHAIN_ID, terminal, projectId: PROJECT_ID, token: NATIVE_TOKEN, amount: totalPriceWei, beneficiary: address,
+      tiers: { metadataIdTarget: idTarget, tierIdsToMint: tierIds.map(BigInt) }
     });
-    const minReturnedTokens = expectedTokens * 95n / 100n;
 
-    const hash = await walletClient.writeContract({
-      ...call, args: [PROJECT_ID, NATIVE_TOKEN, totalPriceWei, address, minReturnedTokens, '', metadata]
-    });
+    // Simulate first: surfaces a sold-out tier or bad price before the wallet prompt.
+    const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value: totalPriceWei, account: address,
+      args: [PROJECT_ID, NATIVE_TOKEN, totalPriceWei, address, minReturnedTokens, '', metadata] };
+    await publicClient.simulateContract(call);
+    const hash = await walletClient.writeContract(call);
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     if (receipt.status !== 'success') throw new Error(`Mint reverted: ${hash}`);
     return hash;
