@@ -154,7 +154,7 @@ Take the payment's minimum and hook metadata from `prepareUserPay` (nana-sdk-cor
 
 ```typescript
 import { createHookMetadata, hookMetadataId } from '@bananapus/nana-sdk-core'
-import { prepareUserPay } from '@bananapus/nana-sdk-core/v6'
+import { PAY_QUOTE_FAILED_MESSAGE, prepareUserPay } from '@bananapus/nana-sdk-core/v6'
 
 // Split JBMetadataResolver bytes into entries: reserved word, (bytes4 id, uint8 word offset) table, payloads.
 function metadataEntries(metadata: Hex): { ids: Hex[]; datas: Hex[] } {
@@ -171,6 +171,8 @@ function metadataEntries(metadata: Hex): { ids: Hex[]; datas: Hex[] } {
 const prepared = await prepareUserPay(publicClient, {
   chainId, terminal: terminalAddress, projectId, token: tokenAddress, amount, beneficiary,
 })
+// The minimum fell back to the mint rate: say so in your confirm step (payerAccepts), and let the payer quote again or accept it.
+if (prepared.quoteFailed && !(await payerAccepts(PAY_QUOTE_FAILED_MESSAGE))) return
 const allowanceData = encodeJBSingleAllowance(sigDeadline, amount, expiration, Number(currentNonce), signature)
 const { ids, datas } = metadataEntries(prepared.metadata)
 const metadata = createHookMetadata(

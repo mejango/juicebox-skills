@@ -77,7 +77,7 @@ A `min*` argument is an input to the simulation, so the simulation cannot produc
 
 | Operation | Floor argument | Source | Floor |
 |---|---|---|---|
-| `pay` (a person's) | `minReturnedTokens` + `metadata` | `prepareUserPay` quotes the buyback pool (fee and impact included) or the router's conversion | `prepared.minReturnedTokens` with `prepared.metadata`, which carries the hook's explicit minimum; never `preview × 99 / 100`, since the empty-metadata preview is the mint path and the hook then routes by its TWAP floor |
+| `pay` (a person's) | `minReturnedTokens` + `metadata` | `prepareUserPay` quotes the buyback pool (fee and impact included) or the router's conversion | `prepared.minReturnedTokens` with `prepared.metadata`, which carries the hook's explicit minimum; never `preview × 99 / 100`, since empty metadata leaves routing to the hook's TWAP floor and the preview's swap estimate leaves out pool fees and price impact |
 | `pay` (swap route) | `minReturnedTokens` | swap quote `minimumTokenCount` | quote's own protected minimum |
 | `cashOutTokensOf` (treasury) | `minTokensReclaimed` | `previewCashOutFrom` → `reclaimAmount` net of REV/buyback hooks; then `net = reclaimAmount − cashOutProtocolFee` | `slippageFloor(net, bps)` = `net × (10000 − bps) / 10000`, min `1n`; default 100 bps |
 | `cashOutTokensOf` (buyback pool) | `minTokensReclaimed = 0`; floor lives in hook metadata `minimumSwapAmountOut` | `resolveCashOutRoute` | `slippageFloor(quote)` inside metadata |
