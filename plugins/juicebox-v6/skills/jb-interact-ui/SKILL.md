@@ -132,7 +132,7 @@ Permissions (checked via `JBPermissions`): `cashOutTokensOf` requires the caller
   <script type="module">
     import { createPublicClient, createWalletClient, http, custom, formatEther, formatUnits, parseEther } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, getContractAddress, resolveTerminal, truncateAddress, getTxUrl, waitForSuccess } from '/shared/wallet-utils.js';
-    import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.0/v6';
+    import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.1/v6';
 
     // Configuration
     const PROJECT_ID = 1n;
@@ -516,7 +516,7 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
 <script type="module">
   import { createPublicClient, createWalletClient, http, custom, parseEther } from 'https://esm.sh/viem@2.55.19';
   import { CHAIN_CONFIGS, resolveTerminal } from '/shared/wallet-utils.js';
-  import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.0/v6';
+  import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.1/v6';
 
   const PROJECT_ID = 1n;
   const CHAIN_ID = 1;

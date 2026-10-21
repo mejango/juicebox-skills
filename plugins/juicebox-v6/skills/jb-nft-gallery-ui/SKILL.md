@@ -138,7 +138,7 @@ Verified against `nana-721-hook-v6`.
   <script type="module">
     import { createPublicClient, http, formatUnits, isAddress, createWalletClient, custom, parseAbiItem } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, DEPLOY_BLOCKS, getContractAddress, loadABI, loadChainConfig, resolveTerminal, truncateAddress, waitForSuccess } from '/shared/wallet-utils.js';
-    import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.0/v6';
+    import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.1/v6';
 
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
     const NATIVE_TOKEN_CURRENCY = 61166n; // uint32(uint160(NATIVE_TOKEN))
