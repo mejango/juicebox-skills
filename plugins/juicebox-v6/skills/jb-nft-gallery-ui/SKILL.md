@@ -138,7 +138,7 @@ Verified against `nana-721-hook-v6`.
   <script type="module">
     import { createPublicClient, http, formatUnits, isAddress, createWalletClient, custom, parseAbiItem } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, DEPLOY_BLOCKS, getContractAddress, loadABI, loadChainConfig, resolveTerminal, truncateAddress, waitForSuccess } from '/shared/wallet-utils.js';
-    import { prepareUserPay } from 'https://esm.sh/@bananapus/nana-sdk-core@3.4.1/v6';
+    import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.0/v6';
 
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
     const NATIVE_TOKEN_CURRENCY = 61166n; // uint32(uint160(NATIVE_TOKEN))
@@ -501,10 +501,11 @@ Verified against `nana-721-hook-v6`.
 
         // tiers.allowOverspending defaults to true; set it to !flags.preventOverspending (JB721TiersHookStore.flagsOf)
         // when the store disallows overspending, or rounding dust reverts the mint.
-        const { minReturnedTokens, metadata } = await prepareUserPay(publicClient, {
+        const { minReturnedTokens, metadata, quoteFailed } = await prepareUserPay(publicClient, {
           chainId, terminal, projectId, token: NATIVE_TOKEN, amount: value, beneficiary: connectedAddress,
           tiers: { metadataIdTarget, tierIdsToMint: [BigInt(tierId)] }
         });
+        if (quoteFailed && !confirm(PAY_QUOTE_FAILED_MESSAGE + ' Pay anyway? Cancel to quote again.')) return;
         // Simulate first: a sold-out tier or wrong price aborts before the wallet prompt.
         const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: connectedAddress,
           args: [projectId, NATIVE_TOKEN, value, connectedAddress, minReturnedTokens, '', metadata] };

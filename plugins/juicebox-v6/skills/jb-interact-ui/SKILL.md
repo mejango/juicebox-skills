@@ -132,7 +132,7 @@ Permissions (checked via `JBPermissions`): `cashOutTokensOf` requires the caller
   <script type="module">
     import { createPublicClient, createWalletClient, http, custom, formatEther, formatUnits, parseEther } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, getContractAddress, resolveTerminal, truncateAddress, getTxUrl, waitForSuccess } from '/shared/wallet-utils.js';
-    import { prepareUserPay } from 'https://esm.sh/@bananapus/nana-sdk-core@3.4.1/v6';
+    import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.0/v6';
 
     // Configuration
     const PROJECT_ID = 1n;
@@ -265,9 +265,10 @@ Permissions (checked via `JBPermissions`): `cashOutTokensOf` requires the caller
       try {
         // The minimum and metadata come from the buyback pool's quote (1% slippage), so a
         // sandwiched swap reverts instead of executing. Simulate before the wallet prompt.
-        const { minReturnedTokens, metadata } = await prepareUserPay(publicClient, {
+        const { minReturnedTokens, metadata, quoteFailed } = await prepareUserPay(publicClient, {
           chainId: CHAIN_ID, terminal, projectId: PROJECT_ID, token: NATIVE_TOKEN, amount: value, beneficiary: address
         });
+        if (quoteFailed && !confirm(PAY_QUOTE_FAILED_MESSAGE + ' Pay anyway? Cancel to quote again.')) { showTxError(new Error(PAY_QUOTE_FAILED_MESSAGE)); return; }
         const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: address,
           args: [PROJECT_ID, NATIVE_TOKEN, value, address, minReturnedTokens, memo, metadata] };
         await publicClient.simulateContract(call);
@@ -515,7 +516,7 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
 <script type="module">
   import { createPublicClient, createWalletClient, http, custom, parseEther } from 'https://esm.sh/viem@2.55.19';
   import { CHAIN_CONFIGS, resolveTerminal } from '/shared/wallet-utils.js';
-  import { prepareUserPay } from 'https://esm.sh/@bananapus/nana-sdk-core@3.4.1/v6';
+  import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.0/v6';
 
   const PROJECT_ID = 1n;
   const CHAIN_ID = 1;
@@ -549,10 +550,11 @@ envelope    = [32B reserved zeros][4B id][1B offset = 0x02][27B zero pad][abi.en
     const { terminal } = await resolveTerminal(publicClient, PROJECT_ID, NATIVE_TOKEN);
 
     // The SDK builds the envelope (tiers plus the buyback pool's quote) and the minimum.
-    const { minReturnedTokens, metadata } = await prepareUserPay(publicClient, {
+    const { minReturnedTokens, metadata, quoteFailed } = await prepareUserPay(publicClient, {
       chainId: CHAIN_ID, terminal, projectId: PROJECT_ID, token: NATIVE_TOKEN, amount: totalPriceWei, beneficiary: address,
       tiers: { metadataIdTarget: idTarget, tierIdsToMint: tierIds.map(BigInt) }
     });
+    if (quoteFailed && !confirm(PAY_QUOTE_FAILED_MESSAGE + ' Pay anyway? Cancel to quote again.')) throw new Error(PAY_QUOTE_FAILED_MESSAGE);
 
     // Simulate first: surfaces a sold-out tier or bad price before the wallet prompt.
     const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value: totalPriceWei, account: address,
