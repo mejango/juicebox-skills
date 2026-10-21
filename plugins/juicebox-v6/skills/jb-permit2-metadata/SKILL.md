@@ -150,23 +150,37 @@ One-time prerequisite: the user must have approved the token to the Permit2 cont
 
 ### 3. Build and send
 
-```typescript
-import createMetadata from 'juicebox-metadata-helper'
+Take the payment's minimum and hook metadata from `prepareUserPay` (nana-sdk-core 3.5.2), then add the permit entry. A bare `0n` minimum with Permit2-only metadata leaves a buyback swap to the hook's TWAP floor, which can reach zero. No SDK export appends an entry to packed metadata, so split the prepared entries and repack them with `createHookMetadata`:
 
-function padTo32(data: Hex): Hex {
-  const len = (data.length - 2) / 2
-  return ('0x' + data.slice(2).padEnd(Math.ceil(len / 32) * 32 * 2, '0')) as Hex
+```typescript
+import { createHookMetadata, hookMetadataId } from '@bananapus/nana-sdk-core'
+import { prepareUserPay } from '@bananapus/nana-sdk-core/v6'
+
+// Split JBMetadataResolver bytes into entries: reserved word, (bytes4 id, uint8 word offset) table, payloads.
+function metadataEntries(metadata: Hex): { ids: Hex[]; datas: Hex[] } {
+  const body = metadata.slice(2)
+  const ids: Hex[] = [], offsets: number[] = []
+  for (let p = 64; /^[0-9a-f]{8}$/i.test(body.slice(p, p + 8)) && !/^0{8}$/.test(body.slice(p, p + 8)); p += 10) {
+    ids.push(`0x${body.slice(p, p + 8)}`)
+    offsets.push(parseInt(body.slice(p + 8, p + 10), 16))
+  }
+  const datas = offsets.map((o, i) => `0x${body.slice(o * 64, (offsets[i + 1] ?? body.length / 64) * 64)}` as Hex)
+  return { ids, datas }
 }
 
+const prepared = await prepareUserPay(publicClient, {
+  chainId, terminal: terminalAddress, projectId, token: tokenAddress, amount, beneficiary,
+})
 const allowanceData = encodeJBSingleAllowance(sigDeadline, amount, expiration, Number(currentNonce), signature)
-const metadata = createMetadata(
-  [computeMetadataId('permit2', terminalAddress)],
-  [padTo32(allowanceData)]
-) as Hex
+const { ids, datas } = metadataEntries(prepared.metadata)
+const metadata = createHookMetadata(
+  [...ids, hookMetadataId(terminalAddress, 'permit2')],
+  [...datas, allowanceData],
+)
 
 await walletClient.writeContract({
   address: terminalAddress, abi: terminalAbi, functionName: 'pay',
-  args: [projectId, tokenAddress, amount, beneficiary, 0n, memo, metadata],
+  args: [projectId, tokenAddress, amount, beneficiary, prepared.minReturnedTokens, memo, metadata],
 })
 ```
 
@@ -175,6 +189,13 @@ await walletClient.writeContract({
 The ID target is the shared `JB721TiersHook` **implementation** address (`0xf4a5887170e4d7efb1c874ad88fc82ebf076b5ab`) — every cloned hook reads its `METADATA_ID_TARGET` immutable from the implementation, so one ID works for all 721 projects:
 
 ```typescript
+import createMetadata from 'juicebox-metadata-helper'
+
+function padTo32(data: Hex): Hex {
+  const len = (data.length - 2) / 2
+  return ('0x' + data.slice(2).padEnd(Math.ceil(len / 32) * 32 * 2, '0')) as Hex
+}
+
 const JB721_PAY_ID = '0x5962def1' // computeMetadataId('pay', '0xf4a5887170e4d7efb1c874ad88fc82ebf076b5ab')
 
 const hookData = encodeAbiParameters(

@@ -16,10 +16,10 @@ metadata:
 Source: `https://github.com/Bananapus/juice-sdk-v4` (`packages/core`). ESM + CJS, `sideEffects: false`. Peer: `viem ^2.12.0`. Every builder returns a plain `{ chainId, address, abi, functionName, args[, value] }` object that feeds `publicClient.simulateContract` and `walletClient.writeContract` unchanged.
 
 ```bash
-npm i @bananapus/nana-sdk-core@2.3.2 viem@2.55.19
+npm i @bananapus/nana-sdk-core@3.5.2 viem@2.55.19
 ```
 
-juicebox.money and revnet.money declare `"^2.3.2"` and lock `2.3.2`; juicebox.money pins `viem` `2.55.19`, revnet.money `2.55.8`. juicescan does not depend on the package; it references it in generated build prompts only.
+The pay examples below need 3.5.2. juicebox.money and revnet.money pin exact SDK versions and `viem` `2.55.19`. juicescan does not depend on the package; it references it in generated build prompts only.
 
 ## Develop with the hosted MCP
 
@@ -131,7 +131,7 @@ if (prepared.quoteFailed) warn(PAY_QUOTE_FAILED_MESSAGE)   // offer to quote aga
 const request = buildPayTx({ ...pay, minReturnedTokens: prepared.minReturnedTokens, metadata: prepared.metadata })
 ```
 
-Send `prepareUserPay`'s `minReturnedTokens` and `metadata` together. Without its quote, buyback hook 1.4 routes by its TWAP floor, which reaches zero on large buys against a thin pool (the payment mints even when the pool pays more), and the router uses its sigmoid slippage floor; both leave room to sandwich. A hand-rolled `preview × 99 / 100` or `slippageFloor(preview)` has the same gap: the preview with empty metadata is the mint path. `quoteFailed: true` means the pool price could not be read after one retry, so the minimum is only the mint rate. If the payment reverts, `decodePayFailure(error)` says why; to let the payer accept less, prepare again with `slippageBps: payRetrySlippageBps(failure, slippageBps)`, since lowering `minReturnedTokens` alone leaves the hook's minimum in the metadata. `quoteFailed` and `PAY_QUOTE_FAILED_MESSAGE` need nana-sdk-core 3.5.0.
+Send `prepareUserPay`'s `minReturnedTokens` and `metadata` together. Without its quote, buyback hook 1.4 routes by its TWAP floor, which reaches zero on large buys against a thin pool (the payment mints even when the pool pays more), and the router uses its sigmoid slippage floor; both leave room to sandwich. A hand-rolled `preview × 99 / 100` or `slippageFloor(preview)` has the same gap: a preview with empty metadata routes by the TWAP floor, and any swap estimate in it leaves out pool fees and price impact. `quoteFailed: true` means the pool price could not be read after one retry, so the minimum is only the mint rate. If the payment reverts, `decodePayFailure(error)` says why; to let the payer accept less, prepare again with `slippageBps: payRetrySlippageBps(failure, slippageBps)` when that is not `null` (`null` means no looser retry applies), since lowering `minReturnedTokens` alone leaves the hook's minimum in the metadata.
 
 `isRouter: true` means the registry is where the payment goes, not that the token is payable — a cold-start project reverts `JBRouterTerminalRegistry_TerminalNotSet`. Both clients probe `jbRouterTerminalRegistryAbi.previewPayFor` and treat a revert or `ruleset.id == 0` as a dead route (see `jb-terminal-selection`).
 
