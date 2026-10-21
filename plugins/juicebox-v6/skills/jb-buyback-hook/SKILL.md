@@ -116,6 +116,8 @@ const payload = encodeAbiParameters(
 const metadata = createMetadata(['0xda79b72d'], [payload])
 ```
 
+For a person's payment, don't hand-build this: send `prepareUserPay`'s (`@bananapus/nana-sdk-core/v6`) `metadata` and `minReturnedTokens`. It quotes the pool (fee and impact included), sends the 1%-floored quote as `minimumSwapAmountOut`, and sets the matching terminal minimum. A zero `minimumSwapAmountOut` leaves routing to the TWAP floor, which reaches zero on large buys against a thin pool, so the payment mints even when the pool pays more.
+
 ### Route selection (`beforePayRecordedWith`, :1141-1301)
 
 1. `weightRatio = amount.currency == ruleset.baseCurrency ? 10**amount.decimals : PRICES.pricePerUnitOf(...)` (:1188-1195).

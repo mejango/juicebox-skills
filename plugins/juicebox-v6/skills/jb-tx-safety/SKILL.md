@@ -16,7 +16,7 @@ metadata:
 Source of truth: `juicebox-money/src/hooks/useSafeTx.ts`, `lib/transaction-review.ts`, `lib/gas.ts`,
 `components/project/{PayPanel,CashOutFlow,FundsTab,MoveFlow,AddLiquidityFlow}.tsx`;
 `revnet-money/src/hooks/useReviewedWriteContract.ts`; `juicescan/src/component-base.js` (`sendContractAndConfirm`), `src/gas.js`.
-`@bananapus/nana-sdk-core/v6` supplies `slippageFloor`, `resolveCashOutRoute`, `cashOutProtocolFee`, `buildCashOutTx`.
+`@bananapus/nana-sdk-core/v6` supplies `prepareUserPay`, `slippageFloor`, `resolveCashOutRoute`, `cashOutProtocolFee`, `buildCashOutTx`.
 
 ## Prepared transactions from the hosted MCP
 
@@ -77,7 +77,7 @@ A `min*` argument is an input to the simulation, so the simulation cannot produc
 
 | Operation | Floor argument | Source | Floor |
 |---|---|---|---|
-| `pay` (direct) | `minReturnedTokens` | `JBMultiTerminal.previewPayFor(...)` → `beneficiaryTokenCount` | `preview × 99 / 100`; verified 0 stays 0 |
+| `pay` (a person's) | `minReturnedTokens` + `metadata` | `prepareUserPay` quotes the buyback pool (fee and impact included) or the router's conversion | `prepared.minReturnedTokens` with `prepared.metadata`, which carries the hook's explicit minimum; never `preview × 99 / 100`, since empty metadata leaves routing to the hook's TWAP floor and the preview's swap estimate leaves out pool fees and price impact |
 | `pay` (swap route) | `minReturnedTokens` | swap quote `minimumTokenCount` | quote's own protected minimum |
 | `cashOutTokensOf` (treasury) | `minTokensReclaimed` | `previewCashOutFrom` → `reclaimAmount` net of REV/buyback hooks; then `net = reclaimAmount − cashOutProtocolFee` | `slippageFloor(net, bps)` = `net × (10000 − bps) / 10000`, min `1n`; default 100 bps |
 | `cashOutTokensOf` (buyback pool) | `minTokensReclaimed = 0`; floor lives in hook metadata `minimumSwapAmountOut` | `resolveCashOutRoute` | `slippageFloor(quote)` inside metadata |
@@ -203,7 +203,7 @@ export const cashOutNet = (reclaim, taxRate, feeless = false) => feeless || taxR
 
 | Mistake | Consequence | Fix |
 |---|---|---|
-| `minReturnedTokens: 0n` when the preview is null or pending | Floorless trade; sandwich leaves the user with ~0 while UI promised X | Block submit until a positive floor exists; only a verified 0 preview sends 0 |
+| `minReturnedTokens: 0n` or empty metadata on a person's pay, or a preview-derived floor | Buyback hook routes by its TWAP floor (zero on large buys against a thin pool) and the router by its slippage floor; sandwichable | Send `prepareUserPay`'s `minReturnedTokens` and `metadata`; block submit until it resolves; on `quoteFailed` show `PAY_QUOTE_FAILED_MESSAGE` and offer to quote again |
 | Floor from `currentReclaimableSurplusOf` (gross) | `JBMultiTerminal_UnderMin` — the check is against net of hooks and the 2.5% fee | `previewCashOutFrom` → subtract `cashOutProtocolFee` → `slippageFloor` |
 | Deriving a max/min from the simulation result | Circular; partial application lets allowance pass below what the send pulls | Reproduce the contract's own view arithmetic; simulation is the check |
 | Sending the eth_call gas cap as the wallet gas limit | Wallet demands `cap × maxFeePerGas`; funded accounts see "insufficient funds" | `gasWithinCap`: `min(2 × estimate, cap)` |

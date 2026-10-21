@@ -136,8 +136,9 @@ Verified against `nana-721-hook-v6`.
   </div>
 
   <script type="module">
-    import { createPublicClient, http, formatUnits, isAddress, createWalletClient, custom, encodeAbiParameters, keccak256, parseAbiItem } from 'https://esm.sh/viem@2.55.19';
+    import { createPublicClient, http, formatUnits, isAddress, createWalletClient, custom, parseAbiItem } from 'https://esm.sh/viem@2.55.19';
     import { CHAIN_CONFIGS, DEPLOY_BLOCKS, getContractAddress, loadABI, loadChainConfig, resolveTerminal, truncateAddress, waitForSuccess } from '/shared/wallet-utils.js';
+    import { prepareUserPay, PAY_QUOTE_FAILED_MESSAGE } from 'https://esm.sh/@bananapus/nana-sdk-core@3.5.2/v6';
 
     const NATIVE_TOKEN = '0x000000000000000000000000000000000000EEEe';
     const NATIVE_TOKEN_CURRENCY = 61166n; // uint32(uint160(NATIVE_TOKEN))
@@ -473,25 +474,8 @@ Verified against `nana-721-hook-v6`.
       container.innerHTML = html + '</div>';
     }
 
-    // ---- Minting: pay the terminal with JBMetadataResolver-formatted metadata ----
-    // metadata id = bytes4(bytes20(METADATA_ID_TARGET) ^ bytes20(keccak256("pay"))).
+    // ---- Minting: pay the terminal with prepareUserPay's metadata (tiers plus the buyback quote) ----
     // METADATA_ID_TARGET is the 721 IMPLEMENTATION address (shared by all clones) — NOT the clone.
-    function tier721MetadataId(idTarget) {
-      const k = keccak256('0x706179'); // keccak256(utf8 "pay")
-      const a = idTarget.slice(2, 10).toLowerCase(), b = k.slice(2, 10);
-      let out = '';
-      for (let i = 0; i < 8; i += 2) {
-        out += (parseInt(a.substr(i, 2), 16) ^ parseInt(b.substr(i, 2), 16)).toString(16).padStart(2, '0');
-      }
-      return out;
-    }
-
-    // Envelope: [32B reserved][id (4B)][offset 0x02][27B pad][abi.encode(bool allowOverspending, uint16[] tierIds)]
-    function buildTierMintMetadata(idTarget, tierIds) {
-      const id = tier721MetadataId(idTarget);
-      const data = encodeAbiParameters([{ type: 'bool' }, { type: 'uint16[]' }], [true, tierIds]);
-      return '0x' + '00'.repeat(32) + id + '02' + '00'.repeat(27) + data.slice(2);
-    }
 
     // Convert a tier price (hook pricingContext currency/decimals) into wei of the paid token, rounded up.
     // pricePerUnitOf(projectId, payCurrency, pricingCurrency, payDecimals) = paid-token units per 1 pricing unit.
@@ -511,22 +495,22 @@ Verified against `nana-721-hook-v6`.
         const verifiedId = await verifyV6GalleryHook(publicClient, chainId, hookAddress);
         if (projectId === null || verifiedId !== projectId) throw new Error('Reload the selected V6 collection');
         if (await walletClient.getChainId() !== chainId) throw new Error('Switch the wallet to the selected project chain');
-        const metadata = buildTierMintMetadata(metadataIdTarget, [tierId]);
         // Resolve the terminal that accepts ETH for this project; throws (no mint) if none does.
         const { terminal, context } = await resolveTerminal(publicClient, projectId, NATIVE_TOKEN);
         const value = await tierPriceInPayToken(BigInt(priceWei), context);
 
-        // Simulate first: a sold-out tier, wrong envelope, or wrong price aborts before the wallet
-        // prompt, and the simulated token count sets a nonzero floor for the real call.
-        // allowOverspending is sent as true; set it to !flags.preventOverspending (JB721TiersHookStore.flagsOf)
+        // tiers.allowOverspending defaults to true; set it to !flags.preventOverspending (JB721TiersHookStore.flagsOf)
         // when the store disallows overspending, or rounding dust reverts the mint.
-        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: connectedAddress };
-        const { result: expectedTokens } = await publicClient.simulateContract({
-          ...call, args: [projectId, NATIVE_TOKEN, value, connectedAddress, 0n, '', metadata]
+        const { minReturnedTokens, metadata, quoteFailed } = await prepareUserPay(publicClient, {
+          chainId, terminal, projectId, token: NATIVE_TOKEN, amount: value, beneficiary: connectedAddress,
+          tiers: { metadataIdTarget, tierIdsToMint: [BigInt(tierId)] }
         });
-        const hash = await walletClient.writeContract({
-          ...call, args: [projectId, NATIVE_TOKEN, value, connectedAddress, expectedTokens * 95n / 100n, '', metadata]
-        });
+        if (quoteFailed && !confirm(PAY_QUOTE_FAILED_MESSAGE + ' Pay anyway? Cancel to quote again.')) return;
+        // Simulate first: a sold-out tier or wrong price aborts before the wallet prompt.
+        const call = { address: terminal, abi: TERMINAL_ABI, functionName: 'pay', value, account: connectedAddress,
+          args: [projectId, NATIVE_TOKEN, value, connectedAddress, minReturnedTokens, '', metadata] };
+        await publicClient.simulateContract(call);
+        const hash = await walletClient.writeContract(call);
         alert('Mint transaction sent: ' + hash);
         await waitForSuccess(publicClient, hash);
         alert('NFT minted!');
