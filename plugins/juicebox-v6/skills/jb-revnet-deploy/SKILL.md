@@ -53,7 +53,7 @@ Why the 4-arg overload is a footgun: it builds the store as `tiersConfig.currenc
 | `REVConfig` | Type | Notes |
 |---|---|---|
 | `description` | `REVDescription` | `{string name; string ticker; string uri; bytes32 salt}` — `uri` is the project metadata URI |
-| `baseCurrency` | `uint32` | `JBCurrencyIds`: ETH `1`, USD `2`. Never the token-keyed context currency. Issuance is priced in this |
+| `baseCurrency` | `uint32` | `JBCurrencyIds` (ETH `1`, USD `2`) or a token-derived currency such as `61166`. Issuance is priced in this |
 | `operator` | `address` | initial operator; `address(0)` launches with no operator, permanently |
 | `scopeCashOutsToLocalBalances` | `bool` | `false` = cash-outs price against cross-chain surplus + supply |
 | `stageConfigurations` | `REVStageConfig[]` | ≥ 1 (`REVDeployer_StagesRequired`) |
