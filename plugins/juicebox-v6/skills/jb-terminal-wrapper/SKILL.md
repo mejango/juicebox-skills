@@ -15,9 +15,11 @@ metadata:
 A wrapper is a custom `IJBTerminal` that accepts funds, applies its own logic, then forwards into a real terminal. The production examples are in `nana-router-terminal-v6`:
 
 - **`JBRouterTerminalRegistry`** (`0xe0427f250fdb0379c8e98e884ee4570521208cbc`) — pure forwarding wrapper. Accepts funds, resolves a per-project downstream terminal, approves it, forwards `pay`/`addToBalanceOf` unchanged, revokes leftover allowance.
-- **`JBRouterTerminal`** (`0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7`) — transforming wrapper. Accepts any token, swaps/cashes it into what the destination project accepts, then pays the destination terminal.
+- **`JBRouterTerminal`** (`0x62e2fe718ca3008a6a322deec9903286463f1add`) — transforming wrapper. Accepts any token, swaps/cashes it into what the destination project accepts, then pays the destination terminal.
 
-Wrappers can chain: caller → registry → router → `JBMultiTerminal`.
+- **`JBRouterTerminalGateway`** (`0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901`) — custody wrapper the registry defaults to. Takes the input, calls the router atomically, and when the route fails and the caller opted in, keeps the original token for a permissionless retry or refund.
+
+Wrappers can chain: caller → registry → gateway → router → `JBMultiTerminal`.
 
 ## Critical mental model: wrappers are additive
 

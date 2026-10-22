@@ -580,7 +580,7 @@ DIRECTORY.setTerminalsOf(projectId, terminals);             // SET_TERMINALS + r
 - "Create a project that mints 1000 tokens per ETH with 10% reserved" → `weight: 1000e18`, `reservedPercent: 1000`
 - "Set up a project with weekly payout cycles to 3 addresses" → `duration: 604800`, payout split group + fund access limits
 - "Deploy a project with a 3-day approval delay for ruleset changes" → `approvalHook: JBDeadline3Days`
-- "Create a project that accepts both ETH and USDC" → two `JBAccountingContext` entries with `baseCurrency: 2` (USD); no default ETH<->USDC feed exists, so any other base currency makes one of the two payments revert `JBPrices_PriceFeedNotFound`
+- "Create a project that accepts both ETH and USDC" → two `JBAccountingContext` entries with `baseCurrency` `1`, `2`, or `61166`; the project-0 `JBRatioPriceFeed` prices native/ETH <-> USDC, so both payments resolve under any of them
 
 ## Common mistakes
 

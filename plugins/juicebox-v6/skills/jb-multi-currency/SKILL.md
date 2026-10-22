@@ -123,7 +123,7 @@ All feeds implement one function: `currentUnitPrice(uint256 decimals) → uint25
 | `JBChainlinkV3PriceFeed` | Reads `FEED.latestRoundData()`. Reverts if the round is incomplete (`updatedAt == 0` or `answeredInRound < roundId`), the update is older than `THRESHOLD` seconds, or the price is `<= 0`. Rescales from the Chainlink feed's decimals to the requested `decimals` via `JBFixedPointNumber.adjustDecimals` |
 | `JBChainlinkV3SequencerPriceFeed` | Extends the above for L2s: first reads `SEQUENCER_FEED.latestRoundData()` and reverts if the round is uninitialized (`startedAt == 0`), the sequencer is down (`answer != 0`), or it came back up `GRACE_PERIOD_TIME` seconds ago or less (`block.timestamp <= startedAt + GRACE_PERIOD_TIME`). Deployed on OP/Base/Arb mainnets; the testnets use the plain feed |
 | `JBMatchingPriceFeed` | Always returns `10 ** decimals` (1:1). Registered for pairs where no conversion is needed, e.g. `(ETH, NATIVE_TOKEN_CURRENCY)` |
-| `JBRatioPriceFeed` | Composes two feeds: `NUMERATOR.currentUnitPrice / DENOMINATOR.currentUnitPrice`. Prices a pair neither leg covers directly, e.g. USDC/ETH from USD/USDC and USD/ETH (`src/periphery/JBRatioPriceFeed.sol`) |
+| `JBRatioPriceFeed` | Composes two feeds: `NUMERATOR.currentUnitPrice / DENOMINATOR.currentUnitPrice`. Prices a pair neither leg covers directly, e.g. USDC/ETH from USD/USDC and USD/ETH (`src/periphery/JBRatioPriceFeed.sol`). Registered as the project-0 default for USDC per native and per ETH on every chain (addresses in `shared/chain-config.json`) |
 
 Deployed staleness thresholds (from `nana-core-v6/script/DeployPeriphery.s.sol`): ETH/USD
 adapters use `THRESHOLD = 3600` seconds; USDC/USD adapters use `THRESHOLD = 86400` seconds.

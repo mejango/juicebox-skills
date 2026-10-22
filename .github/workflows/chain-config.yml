@@ -1,0 +1,19 @@
+name: chain-config
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: Bananapus/deploy-all-v6
+          path: deploy-all-v6
+          sparse-checkout: deployments
+      - run: python3 plugins/juicebox-v6/scripts/gen-chain-config.py deploy-all-v6/deployments --check

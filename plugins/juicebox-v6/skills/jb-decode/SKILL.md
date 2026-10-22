@@ -26,7 +26,8 @@ Core contracts share the same address on every chain (CREATE2). Match the transa
 | `0x6017d1fba9dc279bfa0b03fd931c22e242ab3691` | JBProjects |
 | `0xf92ac1ab5a00033e35a3975739124f61928c36b0` | JBPermissions |
 | `0x1f80d8f057ee36b4c2656d107e4e4558b71ba7d9` | JBTokens |
-| `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` | JBBuybackHook |
+| `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91` | JBBuybackHook |
+| `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` | JBBuybackHook 1.1.1 (still used by some projects) |
 | `0xb552eb94284f94b833837d4b2cbb237128415d4e` | REVDeployer |
 
 Verified ABIs for every core contract are in `shared/abis/*.json`.
@@ -217,7 +218,7 @@ bytes4 id = bytes4(bytes20(target) ^ bytes20(keccak256(bytes(purpose))));
 
 | Hook | purpose | target | Entry payload |
 |---|---|---|---|
-| JBBuybackHook (pay) | `"pay"` | buyback hook address | `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` (three words, `@bananapus/buyback-hook-v6` 1.4.0) — `minimumSwapAmountOut == 0` means "no explicit quote", hook falls back to its TWAP oracle; `skipSplits` is the payer's opt-out of split normalization. The hook at `0x77bee1ad…4948` was built before the third word existed and ignores it (static `abi.decode` tolerates trailing words), so always encode three words |
+| JBBuybackHook (pay) | `"pay"` | buyback hook address | `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` (three words, `@bananapus/buyback-hook-v6` 1.4.0) — `minimumSwapAmountOut == 0` means "no explicit quote", hook falls back to its TWAP oracle; `skipSplits` is the payer's opt-out of split normalization. The 1.1.1 hook at `0x77bee1ad…4948` (still used by some projects) was built before the third word existed and ignores it (static `abi.decode` tolerates trailing words), so always encode three words |
 | JBBuybackHook (cash out) | `"cashOut"` | buyback hook address | `abi.encode(uint256 minimumSwapAmountOut, bool skip)` |
 | JB721TiersHook (pay) | `"pay"` | hook's `METADATA_ID_TARGET()` | `abi.encode(bool allowOverspending, uint16[] tierIdsToMint)` |
 | JB721TiersHook (cash out) | `"cashOut"` | hook's `METADATA_ID_TARGET()` | `abi.encode(uint256[] tokenIdsToBurn)` |

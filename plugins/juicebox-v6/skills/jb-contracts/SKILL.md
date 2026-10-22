@@ -58,7 +58,8 @@ Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`
 
 | Contract | Address | Role |
 |---|---|---|
-| JBRouterTerminal | `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7` | Universal terminal: accepts any token and converts to the destination project's accepted token via direct forwarding, Uniswap V3/V4 swaps, or recursive cash-outs. Absent on OP Sepolia |
+| JBRouterTerminal | `0x62e2fe718ca3008a6a322deec9903286463f1add` | Universal terminal: accepts any token and converts to the destination project's accepted token via direct forwarding, Uniswap V3/V4 swaps, or recursive cash-outs. Absent on OP Sepolia |
+| JBRouterTerminalGateway | `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` | The registry's default router terminal: forwards each call atomically into JBRouterTerminal; when the route fails and the caller opted in, it keeps the input token for a permissionless retry or refund. Absent on OP Sepolia |
 | JBRouterTerminalRegistry | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` | Per-project router-terminal selection with owner-managed default; choices lockable |
 | JBAddressRegistry | `0x581bfd1ead279e0a27b736e49494db3a7d85993c` | Records who deployed a contract (create or create2); used to verify hooks come from trusted deployers |
 | JBProjectHandles | `0x726f4a3dfd2fb8297f8ab98d215b42a92d8eefe8` | Bidirectionally-verified ENS handles for projects (ENS text record `juicebox` = `chainId:projectId`) |
@@ -84,7 +85,7 @@ Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`
 
 | Contract | Address | Role |
 |---|---|---|
-| JBBuybackHook | `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` | Buys project tokens from a Uniswap V4 pool when cheaper than minting; sells on cash-out when the pool beats the bonding curve; TWAP-guarded. Absent on OP Sepolia |
+| JBBuybackHook | `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91` | Buys project tokens from a Uniswap V4 pool when cheaper than minting; sells on cash-out when the pool beats the bonding curve; TWAP-guarded. Absent on OP Sepolia |
 | JBBuybackHookRegistry | `0x72f55a54cd53410a5ff175508a5a384227081788` | Maps projects to their buyback hook; terminal data hook that forwards pay/cash-out calls; default-hook cohorts by project creation time |
 
 ### Uniswap V4 (JBUniswapV4Hook is per-chain; rest chain-same)
@@ -181,6 +182,19 @@ Chainlink feeds are per-chain. Two families: `JBChainlinkV3PriceFeed__*` (stalen
 | Base Sepolia | `0xeeb6784193659320ec5361821217fcf9bb53fb28` | `0x5696a3785b721757a3343dbfcf6e2433837512c4` |
 | Arbitrum Sepolia | `0x68b4e18b141553801b2632f244ae7e64e9f11d56` | `0x77c8b5431764499f64f281ebbccf5f7e7604548f` |
 
+`JBRatioPriceFeed` (USDC per native: the ETH/USD feed over the USDC/USD feed) is per-chain and is the project-0 default for USDC priced per native token and per ETH:
+
+| Chain | JBRatioPriceFeed |
+|---|---|
+| Ethereum | `0x3fa39399bbc752418ee7e16addeb0b95d6386943` |
+| Optimism | `0xedb20e9963b22bcd3b0652b246aac2c222510d36` |
+| Base | `0x3c2f3742785b0dec9bbb401de6615b70f740e4ca` |
+| Arbitrum | `0xa588449291852a49962276d75a25d51d8e285469` |
+| Sepolia | `0xbfcd029ee4e8a550409e65b5e2eca4f21de30c94` |
+| Optimism Sepolia | `0x866aea0a4dba3d191790b68d564e96f1dd4d1f49` |
+| Base Sepolia | `0x552da193c58a71d8ad9f354f7d09b29f79c12422` |
+| Arbitrum Sepolia | `0xda4bbf677ba6f1f70054bd2bd6240d839141027d` |
+
 ## Project-instance contracts
 
 Live clone instances for well-known projects. Each has one address across all mainnets and a different address across all testnets:
@@ -199,7 +213,7 @@ Live clone instances for well-known projects. Each has one address across all ma
 
 ## Chain gaps
 
-- **Optimism Sepolia** lacks all Uniswap V4-dependent contracts: `JBUniswapV4Hook`, `JBUniswapV4LPSplitHook`, `JBUniswapV4LPSplitHookDeployer`, `JBP6FeeLPSplitHook`, `JBBuybackHook`, and also `JBRouterTerminal`. It still has `JBBuybackHookRegistry`, `JBRouterTerminalRegistry`, and `JBUniswapV4LPSplitHookMath`.
+- **Optimism Sepolia** lacks all Uniswap V4-dependent contracts: `JBUniswapV4Hook`, `JBUniswapV4LPSplitHook`, `JBUniswapV4LPSplitHookDeployer`, `JBP6FeeLPSplitHook`, `JBBuybackHook`, and also `JBRouterTerminal` and `JBRouterTerminalGateway`. It still has `JBBuybackHookRegistry`, `JBRouterTerminalRegistry`, and `JBUniswapV4LPSplitHookMath`.
 - **JBERC20__ProjectART** exists only on Base and Base Sepolia.
 - Native suckers exist only on the chain pairs they bridge (see table above). CCIP suckers exist on each chain only for its actual peers.
 

@@ -107,7 +107,7 @@ uint256 weightRatio = amount.currency == ruleset.baseCurrency()
 tokenCount = mulDiv(amount.value, weight, weightRatio); // weight is 18-decimal fixed point
 ```
 
-Payout limits and surplus allowances (`JBTerminalStore.recordPayoutFor` / `recordUsedAllowanceOf`): a limit denominated in `currency` converts to the terminal token via `pricePerUnitOf(projectId, currency, accountingContext.currency, 18)` at 18-decimal fidelity. If the limit currency equals the accounting-context currency exactly, no feed is consulted. A conversion that rounds to zero returns zero paid out without consuming the limit. Conversion only succeeds when a project-level or project-0 feed exists for the pair; there is no default ETH/native <-> USDC feed (see below).
+Payout limits and surplus allowances (`JBTerminalStore.recordPayoutFor` / `recordUsedAllowanceOf`): a limit denominated in `currency` converts to the terminal token via `pricePerUnitOf(projectId, currency, accountingContext.currency, 18)` at 18-decimal fidelity. If the limit currency equals the accounting-context currency exactly, no feed is consulted. A conversion that rounds to zero returns zero paid out without consuming the limit. Conversion only succeeds when a project-level or project-0 feed exists for the pair; native/ETH <-> USDC resolves through the default `JBRatioPriceFeed` (see below).
 
 Decimals rules:
 
@@ -141,10 +141,12 @@ Default (project 0) feed registrations on every chain:
 | USD (2) | ETH (1) | ETH/USD Chainlink adapter |
 | ETH (1) | `NATIVE_TOKEN_CURRENCY` (61166) | `JBMatchingPriceFeed` (1:1) |
 | USD (2) | `uint32(uint160(USDC))` (per chain) | USDC/USD Chainlink adapter |
+| `uint32(uint160(USDC))` | `NATIVE_TOKEN_CURRENCY` (61166) | `JBRatioPriceFeed` (USDC per native: ETH/USD over USDC/USD; per-chain address in `shared/chain-config.json`) |
+| `uint32(uint160(USDC))` | ETH (1) | Same `JBRatioPriceFeed` |
 
 Inverse directions (e.g. pricing in 61166 per unit of USD) derive automatically from these at read time.
 
-There is no default feed between `NATIVE_TOKEN_CURRENCY` (61166) / ETH (1) and USDC. Every registered pair has USD on one side, and `JBPrices` resolves only direct or inverse pairs (no two-hop routing). Consequences for a project that accepts both native ETH and USDC: `baseCurrency = 2` (USD) is the only base currency for which both payments resolve; with `baseCurrency = 1` or `61166` a USDC payment reverts `JBPrices_PriceFeedNotFound`, and an ETH-denominated payout limit on a USDC terminal reverts the same way. A project may add its own feed under its `projectId` (`ADD_PRICE_FEED`, ID 20), but revnets cannot.
+Native/ETH <-> USDC resolves through `JBRatioPriceFeed`, so a project that accepts both native ETH and the chain's canonical USDC can use base `1`, `2`, or `61166`. `JBPrices` still resolves only direct or inverse pairs (no two-hop routing): any other pair without a registered feed, including ETH against a different stablecoin, reverts `JBPrices_PriceFeedNotFound`. A project may add its own feed under its `projectId` (`ADD_PRICE_FEED`, ID 20), but revnets cannot.
 
 ## Example: USD-based omnichain project accepting native ETH and USDC
 

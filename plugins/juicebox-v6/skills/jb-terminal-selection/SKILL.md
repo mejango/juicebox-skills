@@ -23,7 +23,8 @@ metadata:
 | `JBDirectory` | `0x5aff29060e023e6fb87be5596652b33c65af535b` | Registry of each project's terminals; resolves `primaryTerminalOf` |
 | `JBMultiTerminal` | `0x130f5dd2bd8805443cf41755253d778a75a67f53` | Holds project balances; accepts only tokens with a registered accounting context |
 | `JBRouterTerminalRegistry` | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` | Forwarding terminal projects register in `JBDirectory`; forwards `pay`/`addToBalanceOf` to the project's resolved router terminal |
-| `JBRouterTerminal` | `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7` | Universal router: accepts any token and converts it (direct forward, Uniswap V3/V4 swap, recursive JB cash-outs, or combinations) into a token the destination project accepts. Not deployed on Optimism Sepolia — resolve the effective router via `registry.terminalOf(projectId)` |
+| `JBRouterTerminal` | `0x62e2fe718ca3008a6a322deec9903286463f1add` | Universal router: accepts any token and converts it (direct forward, Uniswap V3/V4 swap, recursive JB cash-outs, or combinations) into a token the destination project accepts. Not deployed on Optimism Sepolia — resolve the effective router via `registry.terminalOf(projectId)` |
+| `JBRouterTerminalGateway` | `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` | The registry's default (and project #1's) router terminal: forwards into `JBRouterTerminal` atomically and forwards metadata unchanged, so router `pay`/`cashOut` entries stay keyed to `JBRouterTerminal`. Not deployed on Optimism Sepolia |
 
 The native token is the sentinel `0x000000000000000000000000000000000000EEEe` (`JBConstants.NATIVE_TOKEN`), never `address(0)`.
 
@@ -113,14 +114,14 @@ function pay(
 
 `JBRouterTerminal` prices swaps from manipulation-resistant sources (V3 TWAP, canonical-hook V4 oracle) with a dynamic slippage model. Front-ends should still supply an explicit quote via a `pay` metadata entry (see `jb-permit2-metadata` for the encoding format). For a person's payment, `prepareUserPay` (`@bananapus/nana-sdk-core/v6`) quotes the conversion and the destination's buyback pool and returns the `metadata` and `minReturnedTokens` to send:
 
-- Entry ID: `bytes4(bytes20(routerTerminal) ^ bytes20(keccak256("pay")))` = `0xa27bedbd` for `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7`.
+- Entry ID: `bytes4(bytes20(routerTerminal) ^ bytes20(keccak256("pay")))` = `0xcf25a8f1` for `0x62e2fe718ca3008a6a322deec9903286463f1add`.
 - Payload: `abi.encode(address quotedTokenOut, uint256 quotedMinAmountOut)`. A zero `quotedMinAmountOut` is treated as "not provided" and falls back to automatic quoting.
 
-If the destination project runs `JBBuybackHook`, its own `pay` entry (`0xda79b72d`) is a separate 3-word payload: `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — `skipSplits = true` opts the swapped tokens out of the reserved split (see `jb-permit2-metadata`).
+If the destination project runs `JBBuybackHook`, its own `pay` entry (`0x1fe58cda`) is a separate 3-word payload: `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — `skipSplits = true` opts the swapped tokens out of the reserved split (see `jb-permit2-metadata`).
 
 `addToBalanceOf` through the router has no `minReturnedTokens` backstop, so a swap leg with no manipulation-resistant TWAP **requires** a `pay` quote — otherwise it reverts with `JBRouterTerminal_ManipulationResistantQuoteRequired`.
 
-Router cash-out legs call the downstream `cashOutTokensOf` with `minTokensReclaimed: 0` and enforce the caller's floor (the `cashOut` metadata entry `0x890df4c9`, payload `(uint256 minTokensReclaimed)`) against the measured balance delta, reverting `JBRouterTerminal_SlippageExceeded` — always supply that entry; the downstream terminal's own min check is not your guard.
+Router cash-out legs call the downstream `cashOutTokensOf` with `minTokensReclaimed: 0` and enforce the caller's floor (the `cashOut` metadata entry `0xe453b185`, payload `(uint256 minTokensReclaimed)`) against the measured balance delta, reverting `JBRouterTerminal_SlippageExceeded` — always supply that entry; the downstream terminal's own min check is not your guard.
 
 ## Permit2 integration
 
@@ -134,7 +135,8 @@ metadataId = bytes4(bytes20(calledTerminal) ^ bytes20(keccak256("permit2")))
 |-----------------|---------------------|
 | `JBMultiTerminal` | `0xd260d5c9` |
 | `JBRouterTerminalRegistry` | `0x212df73e` |
-| `JBRouterTerminal` | `0xced33326` |
+| `JBRouterTerminal` | `0xa38d766a` |
+| `JBRouterTerminalGateway` | `0x8b3926ee` |
 
 See `jb-permit2-metadata` for the full encoding.
 
