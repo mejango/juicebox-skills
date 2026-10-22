@@ -87,7 +87,7 @@ Views (from `shared/abis/JBPrices.json`):
 
 ## Deployed protocol-default feeds (project 0)
 
-Four pairs are registered on project 0 on every chain:
+Six pairs are registered on project 0 on every chain:
 
 | pricingCurrency | unitCurrency | Feed | Meaning |
 |-----------------|--------------|------|---------|
@@ -95,9 +95,11 @@ Four pairs are registered on project 0 on every chain:
 | `USD` (2) | `ETH` (1) | same Chainlink ETH/USD adapter | USD price of 1 ETH (valid because all 8 chains are ETH-native) |
 | `ETH` (1) | `NATIVE_TOKEN_CURRENCY` (61166) | `JBMatchingPriceFeed` | 1:1 — the native token *is* ETH |
 | `USD` (2) | `uint32(uint160(USDC))` | Chainlink USDC/USD adapter | USD price of 1 USDC |
+| `uint32(uint160(USDC))` | `NATIVE_TOKEN_CURRENCY` (61166) | `JBRatioPriceFeed` (ETH/USD over USDC/USD) | USDC price of 1 native token |
+| `uint32(uint160(USDC))` | `ETH` (1) | same `JBRatioPriceFeed` | USDC price of 1 ETH |
 
-Only the USD→X directions (plus ETH→native) are registered; the opposite directions
-(e.g. native priced in USDC) resolve through the inverse-derivation step at read time.
+Only these directions are registered; the opposite directions (e.g. the native-token price of 1 USD
+or of 1 USDC) resolve through the inverse-derivation step at read time.
 
 Feed adapter addresses per chain (`shared/chain-config.json`):
 

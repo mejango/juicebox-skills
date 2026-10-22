@@ -222,7 +222,7 @@ No new stage can ever be queued: `QUEUE_RULESETS` is not in the operator set, `R
 
 - Using the 4-arg `deployFor` with `baseCurrency = 2`: store prices are encoded at 18 decimals against a 6-decimal currency. Use the 6-arg overload with `tiersConfig.decimals` matching the pricing currency.
 - `extraMetadata = 0`: `deploySuckersFor` reverts forever on that stage; every revnet without bit 2 is permanently single-set. Set `4` (or OR `1 << 2`) on every stage.
-- Passing the token-keyed context currency (`61166`) as `baseCurrency`, or `1`/`2` as an accounting-context `currency`. Base is `JBCurrencyIds` (1/2); context currency is `uint32(uint160(token))`.
+- Passing `1`/`2` as an accounting-context `currency`. Context currency is always `uint32(uint160(token))`; `baseCurrency` may be a `JBCurrencyIds` value (1/2) or a token-derived currency such as `61166`.
 - `cashOutTaxRate = 10_000` reverts; the cap is `9_999`.
 - Stage-0 `startsAtOrAfter = 0` on chain A and `0` again on chain B: the effective start differs, the hash differs, the ERC-20 and suckers land at different addresses. Bake one explicit timestamp into every chain's calldata.
 - Dropping another chain's `autoIssuances` rows from a chain's calldata "because they don't mint here": they are hashed on every chain.
