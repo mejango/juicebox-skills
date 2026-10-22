@@ -36,12 +36,13 @@ Deployed on 8 chains: Ethereum (1), Optimism (10), Base (8453), Arbitrum (42161)
 | JBERC20 (token implementation) | `0x6db9cf17222d8de2012fe13b9fa5bb7981fa0b17` |
 | ERC2771Forwarder | `0x3ba60b60933916a7c87d0860dcee62a0ce34e3e2` |
 | JBDeadline3Hours / 1Day / 3Days / 7Days | `0xd25264015483caa5c34643942d41f94bed5f1e92` / `0x3a15ac0bcf4f7dd48359a36b3e293254cf26d4ca` / `0xcda708c98fbdd15a7ff7f0c5c50f9371ca52c78f` / `0x540923f7b6166bf9713490719a2210aeebc9fca2` |
-| JBBuybackHook | `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` (not on OP Sepolia) |
+| JBBuybackHook | `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91` (not on OP Sepolia) |
 | JBBuybackHookRegistry | `0x72f55a54cd53410a5ff175508a5a384227081788` |
 | JB721TiersHook (implementation) | `0xf4a5887170e4d7efb1c874ad88fc82ebf076b5ab` |
 | JB721TiersHookDeployer | `0xb7b8ec35e2dd84afff04ee769c6189e7a4d44a78` |
 | JB721TiersHookStore | `0x69913acf79dbba170d9efafe605ee62b42164f9c` |
-| JBRouterTerminal | `0x0fbcbb3d10c8f524840d74ef81c1a9f161c418d7` (not on OP Sepolia) |
+| JBRouterTerminal | `0x62e2fe718ca3008a6a322deec9903286463f1add` (not on OP Sepolia) |
+| JBRouterTerminalGateway | `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` (not on OP Sepolia) |
 | JBRouterTerminalRegistry | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` |
 | JBProjectPayer (implementation) | `0x0de147532f522fe9f4559bd7f34774786424176e` |
 

@@ -49,13 +49,16 @@ Precomputed IDs for the canonical deployments (same addresses on all chains):
 |---|---|---|---|
 | `JBMultiTerminal` `0x130f5dd2…7f53` | `permit2` | `0xd260d5c9` | `JBSingleAllowance` tuple |
 | `JBRouterTerminalRegistry` `0xe0427f25…8cbc` | `permit2` | `0x212df73e` | `JBSingleAllowance` tuple |
-| `JBRouterTerminal` `0x0fbcbb3d…18d7` | `permit2` | `0xced33326` | `JBSingleAllowance` tuple |
-| `JBRouterTerminal` | `pay` | `0xa27bedbd` | `(address quotedTokenOut, uint256 quotedMinAmountOut)` swap quote |
-| `JBRouterTerminal` | `cashOut` | `0x890df4c9` | `(uint256 minTokensReclaimed)` reclaim floor |
+| `JBRouterTerminal` `0x62e2fe71…1add` | `permit2` | `0xa38d766a` | `JBSingleAllowance` tuple |
+| `JBRouterTerminalGateway` `0x4a56aef5…d901` | `permit2` | `0x8b3926ee` | `JBSingleAllowance` tuple |
+| `JBRouterTerminal` | `pay` | `0xcf25a8f1` | `(address quotedTokenOut, uint256 quotedMinAmountOut)` swap quote |
+| `JBRouterTerminal` | `cashOut` | `0xe453b185` | `(uint256 minTokensReclaimed)` reclaim floor |
 | `JB721TiersHook` implementation `0xf4a58871…b5ab` | `pay` | `0x5962def1` | `(bool allowOverspending, uint16[] tierIds)` |
 | `JB721TiersHook` implementation | `cashOut` | `0x7214c785` | `(uint256[] tokenIds)` NFTs to burn |
-| `JBBuybackHook` `0x77bee1ad…4948` | `pay` | `0xda79b72d` | `(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — 96 bytes; a 2-word payload makes `abi.decode` revert. `skipSplits = true` opts the swapped tokens out of the project's reserved split; `minimumSwapAmountOut = 0` means "no user quote" (TWAP floor applies) |
-| `JBBuybackHook` | `cashOut` | `0xf10fae59` | `(uint256 minimumSwapAmountOut, bool skip)` |
+| `JBBuybackHook` `0xb222da5a…4b91` | `pay` | `0x1fe58cda` | `(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — 96 bytes; a 2-word payload makes `abi.decode` revert. `skipSplits = true` opts the swapped tokens out of the project's reserved split; `minimumSwapAmountOut = 0` means "no user quote" (TWAP floor applies) |
+| `JBBuybackHook` | `cashOut` | `0x349395ae` | `(uint256 minimumSwapAmountOut, bool skip)` |
+| `JBBuybackHookRegistry` `0x72f55a54…1788` | `pay` / `cashOut` | `0xdf320cd4` / `0xf44415a0` | Same payloads as the hook rows; the registry rekeys them to the project's resolved hook |
+| `JBBuybackHook` 1.1.1 `0x77bee1ad…4948` (still used by some projects) | `pay` / `cashOut` | `0xda79b72d` / `0xf10fae59` | Same payloads; ignores `skipSplits` |
 
 ```typescript
 import { keccak256, toBytes, type Address } from 'viem'

@@ -57,7 +57,7 @@ ABIs: `shared/abis/*.json`.
 
 **Two currency vocabularies (do not mix):**
 - **Accounting-context currency** (`JBAccountingContext.currency`, surplus/limit `currency` params tied to a token): `uint32(uint160(tokenAddress))`. Native = `61166`.
-- **Base currency / price-feed IDs** (`JBRulesetMetadata.baseCurrency`, `JBPrices` pairs): `JBCurrencyIds.ETH = 1`, `JBCurrencyIds.USD = 2`.
+- **Base currency / price-feed IDs** (`JBRulesetMetadata.baseCurrency`, `JBPrices` pairs): `JBCurrencyIds.ETH = 1`, `JBCurrencyIds.USD = 2`, or a token-derived `uint32(uint160(token))` (native `61166`, USDC).
 
 ## Quick Reference — Contract Functions
 
@@ -431,7 +431,7 @@ async function getProjectInfo(projectId: bigint) {
 
 ## Common mistakes
 
-- **Mixing currency vocabularies.** Surplus/limit `currency` params that pair with a token use `uint32(uint160(token))` (native = `61166`); `JBRulesetMetadata.baseCurrency` and `JBPrices` pairs use `JBCurrencyIds` (ETH=1, USD=2). Passing `1` where `61166` is expected returns 0 or reverts on a missing price feed.
+- **Mixing currency vocabularies.** Surplus/limit `currency` params that pair with a token use `uint32(uint160(token))` (native = `61166`); `JBRulesetMetadata.baseCurrency` and `JBPrices` pairs also accept `JBCurrencyIds` (ETH=1, USD=2). Passing `1` where `61166` is expected returns 0 or reverts on a missing price feed.
 - **Assuming 18 decimals.** A USDC-accounted project's amounts are 6-decimal. Read `accountingContextsOf(projectId)` for `(token, decimals, currency)` before formatting or constructing amounts.
 - **Looking for `usedPayoutLimitOf` on JBFundAccessLimits.** Configured limits live on `JBFundAccessLimits`; used amounts live on `JBTerminalStore` — and used payout limits key on `rulesetCycleNumber`, used surplus allowances on `rulesetId`.
 - **Wrong split group for payouts.** Payout split groups are `uint256(uint160(token))`, not `0` — group `1` is reserved tokens only.

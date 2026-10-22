@@ -20,7 +20,7 @@ Source: `nana-buyback-hook-v6/src` (package `@bananapus/buyback-hook-v6` 1.4.0).
 | Contract | Address (all chains) | Role |
 |---|---|---|
 | `JBBuybackHookRegistry` | `0x72f55a54cd53410a5ff175508a5a384227081788` | Ruleset `dataHook`. Resolves the project's hook, rekeys the payer's `pay`/`cashOut` metadata, forwards `beforePayRecordedWith` / `beforeCashOutRecordedWith` |
-| `JBBuybackHook` | `0x77bee1ad2ac0ace98a9b5b58d75685c8b4d94948` | Data hook + pay hook + cash-out hook. Swaps against a Uniswap V4 pool when it beats issuance / bonding-curve reclaim |
+| `JBBuybackHook` | `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91` | Data hook + pay hook + cash-out hook. Swaps against a Uniswap V4 pool when it beats issuance / bonding-curve reclaim |
 
 Never resolve a project's hook from the static address. Read `JBDirectory.controllerOf(pid)` → `currentRulesetOf(pid).metadata.dataHook`; if it is the registry (or `REVOwner`, which forwards to it) call `registry.hookOf(pid)`. `hookOf` returns a default for projects that never route through the registry, so it is only meaningful once the ruleset's data hook is known to be the registry. Addresses live in `shared/chain-config.json`.
 
@@ -91,7 +91,7 @@ Cold start (`twapLiquidity == 0`): the pay side (`allowColdStartSpotFallback = t
 
 ### Metadata entry
 
-Key: `JBMetadataResolver.getId("pay", hook)` = `0xda79b72d` for `0x77bee1ad…4948` (or `0xdf320cd4` keyed to the registry). Payload (:1157):
+Key: `JBMetadataResolver.getId("pay", hook)` = `0x1fe58cda` for `0xb222da5a…4b91` (or `0xdf320cd4` keyed to the registry; `0xda79b72d` for the 1.1.1 hook `0x77bee1ad…4948` some projects still use). Payload (:1157):
 
 ```solidity
 abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits) // 96 bytes
@@ -113,7 +113,7 @@ const payload = encodeAbiParameters(
   [{ type: 'uint256' }, { type: 'uint256' }, { type: 'bool' }],
   [0n /* full amount */, minimumSwapAmountOut, true /* skipSplits */]
 )
-const metadata = createMetadata(['0xda79b72d'], [payload])
+const metadata = createMetadata(['0x1fe58cda'], [payload])
 ```
 
 For a person's payment, don't hand-build this: send `prepareUserPay`'s (`@bananapus/nana-sdk-core/v6`) `metadata` and `minReturnedTokens`. It quotes the pool (fee and impact included), sends the 1%-floored quote as `minimumSwapAmountOut`, and sets the matching terminal minimum. A zero `minimumSwapAmountOut` leaves routing to the TWAP floor, which reaches zero on large buys against a thin pool, so the payment mints even when the pool pays more.
@@ -169,7 +169,7 @@ Without `skipSplits`, paying through the hook costs the payer the reserved cut o
 
 ### Metadata entry
 
-Key: `getId("cashOut", hook)` = `0xf10fae59` for `0x77bee1ad…4948` (`0xf44415a0` keyed to the registry). Payload (:972):
+Key: `getId("cashOut", hook)` = `0x349395ae` for `0xb222da5a…4b91` (`0xf44415a0` keyed to the registry; `0xf10fae59` for the 1.1.1 hook `0x77bee1ad…4948`). Payload (:972):
 
 ```solidity
 abi.encode(uint256 minimumSwapAmountOut, bool skip) // 64 bytes

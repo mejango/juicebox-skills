@@ -53,7 +53,7 @@ Why the 4-arg overload is a footgun: it builds the store as `tiersConfig.currenc
 | `REVConfig` | Type | Notes |
 |---|---|---|
 | `description` | `REVDescription` | `{string name; string ticker; string uri; bytes32 salt}` — `uri` is the project metadata URI |
-| `baseCurrency` | `uint32` | `JBCurrencyIds`: ETH `1`, USD `2`. Never the token-keyed context currency. Issuance is priced in this |
+| `baseCurrency` | `uint32` | `JBCurrencyIds` (ETH `1`, USD `2`) or a token-derived currency such as `61166`. Issuance is priced in this |
 | `operator` | `address` | initial operator; `address(0)` launches with no operator, permanently |
 | `scopeCashOutsToLocalBalances` | `bool` | `false` = cash-outs price against cross-chain surplus + supply |
 | `stageConfigurations` | `REVStageConfig[]` | ≥ 1 (`REVDeployer_StagesRequired`) |
@@ -102,7 +102,7 @@ Deploying onto a chain after stage 0 has already started (`startsAtOrAfter < blo
 
 ## Feed reachability
 
-`JBTerminalStore` converts every accepting context's `currency` into `baseCurrency` at pay time, and converts between contexts during cash-outs and surplus reads, via `JBPrices.pricePerUnitOf`. Revnets can never register project-level feeds, so a combination with no protocol default feed is bricked at runtime, not at deploy. Before launch, probe `JBPrices.pricePerUnitOf(projectId = 0, pricingCurrency, unitCurrency, decimals)` for each pair `(context.currency, baseCurrency)` and each pair of contexts; a revert means the feed is missing — do not launch. Supported today: ETH-only with base `1`; ETH-only, USDC-only, or ETH+USDC with base `2`. `baseCurrency = 2` is the only base that works for a mixed ETH+USDC treasury. `deployFor` itself does not exercise the feed except to seed buyback pools, and it swallows that failure, so a passing deploy simulation proves nothing about pricing.
+`JBTerminalStore` converts every accepting context's `currency` into `baseCurrency` at pay time, and converts between contexts during cash-outs and surplus reads, via `JBPrices.pricePerUnitOf`. Revnets can never register project-level feeds, so a combination with no protocol default feed is bricked at runtime, not at deploy. Before launch, probe `JBPrices.pricePerUnitOf(projectId = 0, pricingCurrency, unitCurrency, decimals)` for each pair `(context.currency, baseCurrency)` and each pair of contexts; a revert means the feed is missing — do not launch. Supported today: ETH-only, USDC-only, or ETH+USDC (the chain's canonical USDC) with base `1`, `2`, or `61166`; native/ETH <-> USDC resolves through the project-0 `JBRatioPriceFeed`. `deployFor` itself does not exercise the feed except to seed buyback pools, and it swallows that failure, so a passing deploy simulation proves nothing about pricing.
 
 Store decimals follow the **pricing currency**, not the treasury token: base `1` → `18`; base `2` → `6`; a custom ERC-20 base → that token's decimals.
 
@@ -222,14 +222,14 @@ No new stage can ever be queued: `QUEUE_RULESETS` is not in the operator set, `R
 
 - Using the 4-arg `deployFor` with `baseCurrency = 2`: store prices are encoded at 18 decimals against a 6-decimal currency. Use the 6-arg overload with `tiersConfig.decimals` matching the pricing currency.
 - `extraMetadata = 0`: `deploySuckersFor` reverts forever on that stage; every revnet without bit 2 is permanently single-set. Set `4` (or OR `1 << 2`) on every stage.
-- Passing the token-keyed context currency (`61166`) as `baseCurrency`, or `1`/`2` as an accounting-context `currency`. Base is `JBCurrencyIds` (1/2); context currency is `uint32(uint160(token))`.
+- Passing `1`/`2` as an accounting-context `currency`. Context currency is always `uint32(uint160(token))`; `baseCurrency` may be a `JBCurrencyIds` value (1/2) or a token-derived currency such as `61166`.
 - `cashOutTaxRate = 10_000` reverts; the cap is `9_999`.
 - Stage-0 `startsAtOrAfter = 0` on chain A and `0` again on chain B: the effective start differs, the hash differs, the ERC-20 and suckers land at different addresses. Bake one explicit timestamp into every chain's calldata.
 - Dropping another chain's `autoIssuances` rows from a chain's calldata "because they don't mint here": they are hashed on every chain.
 - Different senders per chain (EOA on one, Safe on another): every salt folds `msg.sender`.
 - `splitPercent > 0` with empty `splits` reverts; splits summing below `1_000_000_000` leave residue on `REVOwner` that anyone can burn with `burnHeldTokensOf`.
 - Setting `operator = address(0)` or calling `setOperatorOf(id, address(0))`: there is no recovery path; splits, buyback, sucker expansion, and the store are frozen.
-- ETH+USDC treasury with `baseCurrency = 1`: no USDC→ETH default feed; USDC pays and mixed cash-outs revert on-chain. Use base `2`, and probe `JBPrices` with project id `0` before launch.
+- ETH plus a stablecoin other than the chain's canonical USDC: no default feed for that pair; its pays and mixed cash-outs revert on-chain. Probe `JBPrices` with project id `0` before launch.
 - Treating a passing deploy simulation as proof the feed exists: pool seeding failures are swallowed; pricing runs at pay time.
 - Expecting cash-outs on a late-added chain immediately: `cashOutDelayOf` gates them for 7 days; bridge tokens in via suckers first.
 - Sending `msg.value` with a non-zero `revnetId`: `REVDeployer_ProjectCreationFeeNotNeeded`.
