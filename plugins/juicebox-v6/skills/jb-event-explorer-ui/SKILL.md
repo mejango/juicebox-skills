@@ -69,7 +69,7 @@ event SendReservedTokensToSplits(uint256 indexed rulesetId, uint256 indexed rule
 ├─────────────────────────────────────────────────────────┤
 │  ┌─ Pay ─────────────────────────────── 2 min ago ───┐  │
 │  │ 0xabc...def paid 1.5 ETH → Project 42             │  │
-│  │ Tokens: 1,500 · Memo: "Supporting the project"    │  │
+│  │ Tokens: 1,500, Memo: "Supporting the project"     │  │
 │  └───────────────────────────────────────────────────┘  │
 │  ┌─ CashOut ─────────────────────────── 15 min ago ──┐  │
 │  │ 0x123...456 cashed out 500 tokens for 0.4 ETH     │  │
@@ -452,7 +452,7 @@ event SendReservedTokensToSplits(uint256 indexed rulesetId, uint256 indexed rule
           return {
             title: `Project ${args.projectId}`,
             // Token counts are 18-decimal fixed point (JBTokens); `amount` is in the accounting context's decimals.
-            description: `${truncateAddress(args.payer)} paid ${formatEth(args.amount)} → ${formatEth(args.newlyIssuedTokenCount)} tokens${args.memo ? ` · "${args.memo}"` : ''}`
+            description: `${truncateAddress(args.payer)} paid ${formatEth(args.amount)} → ${formatEth(args.newlyIssuedTokenCount)} tokens${args.memo ? `, "${args.memo}"` : ''}`
           };
 
         case 'CashOutTokens':
@@ -476,7 +476,7 @@ event SendReservedTokensToSplits(uint256 indexed rulesetId, uint256 indexed rule
         case 'LaunchProject':
           return {
             title: `Project ${args.projectId}`,
-            description: `New project launched${args.memo ? ` · "${args.memo}"` : ''}`
+            description: `New project launched${args.memo ? `, "${args.memo}"` : ''}`
           };
 
         case 'QueueRulesets':

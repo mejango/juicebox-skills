@@ -36,13 +36,13 @@ Deployed on 8 chains: Ethereum (1), Optimism (10), Base (8453), Arbitrum (42161)
 | JBERC20 (token implementation) | `0x6db9cf17222d8de2012fe13b9fa5bb7981fa0b17` |
 | ERC2771Forwarder | `0x3ba60b60933916a7c87d0860dcee62a0ce34e3e2` |
 | JBDeadline3Hours / 1Day / 3Days / 7Days | `0xd25264015483caa5c34643942d41f94bed5f1e92` / `0x3a15ac0bcf4f7dd48359a36b3e293254cf26d4ca` / `0xcda708c98fbdd15a7ff7f0c5c50f9371ca52c78f` / `0x540923f7b6166bf9713490719a2210aeebc9fca2` |
-| JBBuybackHook | `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91` (not on OP Sepolia) |
+| JBBuybackHook | `0x80717f09461a3fb08364fe8c5259220f7d06e0af` (not on OP Sepolia) |
 | JBBuybackHookRegistry | `0x72f55a54cd53410a5ff175508a5a384227081788` |
 | JB721TiersHook (implementation) | `0xf4a5887170e4d7efb1c874ad88fc82ebf076b5ab` |
 | JB721TiersHookDeployer | `0xb7b8ec35e2dd84afff04ee769c6189e7a4d44a78` |
 | JB721TiersHookStore | `0x69913acf79dbba170d9efafe605ee62b42164f9c` |
-| JBRouterTerminal | `0x62e2fe718ca3008a6a322deec9903286463f1add` (not on OP Sepolia) |
-| JBRouterTerminalGateway | `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` (not on OP Sepolia) |
+| JBRouterTerminal | `0xa0b7b55e87c781f47bda8d40f8381cb746eb0e37` (not on OP Sepolia) |
+| JBRouterTerminalGateway | `0xe2c259b2fcfd2d57ebcda9b3d2d10bdb1b2cd977` (not on OP Sepolia) |
 | JBRouterTerminalRegistry | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` |
 | JBProjectPayer (implementation) | `0x0de147532f522fe9f4559bd7f34774786424176e` |
 
@@ -625,7 +625,7 @@ The `bytes metadata` argument of `pay`/`cashOutTokensOf` is a multiplexed contai
 
 ## Buyback hook (`JBBuybackHook`, Uniswap V4)
 
-One canonical hook serves all projects. It is the project's ruleset `dataHook` with `useDataHookForPay` (and optionally `useDataHookForCashOut`); `JBBuybackHookRegistry` manages which hook a project uses (`SET_BUYBACK_HOOK` permission; choice can be permanently locked).
+Several hook versions are live: 2.0.0 `0x80717f…` for projects created after the 2026-11 rollout and project 1; 1.4.0 `0xb222…` and 1.1.1 `0x77be…` for older ones. Resolve per project via `JBBuybackHookRegistry.hookOf`. A 2.0.0 pool's `poolKey.hooks` must be the chain's `JBUniswapV4Hook` 2.0.0 (`JBBuybackHook_PoolHookMismatch`). The hook is the project's ruleset `dataHook` with `useDataHookForPay` (and optionally `useDataHookForCashOut`); `JBBuybackHookRegistry` manages which hook a project uses (`SET_BUYBACK_HOOK` permission; choice can be permanently locked).
 
 ### Configuration
 
@@ -645,7 +645,7 @@ Three words (96 bytes); `abi.decode` reverts on a 64-byte blob.
 
 - `amountToSwapWith == 0` → use the full payment. `amountToSwapWith > totalPaid` reverts.
 - `skipSplits = true` → swapped tokens are transferred to the beneficiary as-is (no burn-and-remint through the reserved split). The mint-vs-swap comparison and `minimumSwapAmountOut` are then measured against the beneficiary's share of a direct mint, not the full issuance.
-- `minimumSwapAmountOut != 0` → treated as an explicit user quote (hard settlement floor). `0` → the hook derives a minimum from the pool TWAP (sigmoid slippage tolerance: `minSlippage = max(poolFee + 1%, 2%)`, saturating toward `8_800/10_000` = 88% max as estimated price impact grows; cold-start spot fallback uses a 3% tolerance with bounded impact).
+- `minimumSwapAmountOut != 0` → treated as an explicit user quote (hard settlement floor). `0` → the hook derives a minimum from the pool TWAP (sigmoid slippage tolerance: `minSlippage = max(poolFee + 1%, 2%)`, saturating toward `8_800/10_000` = 88% max as estimated price impact grows; cold-start spot fallback uses a 3% tolerance with bounded impact). On 2.0.0, when that sigmoid floor does not beat issuance, the floor is the expected output less 2% (the whole settlement for pays larger than the pool can absorb above issuance).
 - Route decision: `tokenCountWithoutHook = mulDiv(amountToSwapWith, weight, weightRatio)` (identical math to the terminal). If the pool has no live liquidity or minting meets/exceeds the minimum → **noop spec** (mint path; spec still returned with diagnostic metadata: twapTick, liquidity, poolId, raw quote — this is the public preview API). Otherwise returns `weight = 0` and a hook spec forwarding `amountToSwapWith` to itself.
 - With no configured pool or no liquidity, an explicit minimum that direct minting can't satisfy reverts `JBBuybackHook_SpecifiedSlippageExceeded` rather than silently under-delivering.
 
@@ -654,7 +654,7 @@ Three words (96 bytes); `abi.decode` reverts on a 64-byte blob.
 - Swap runs via `poolManager.unlock` with a price limit derived from the issuance rate — the pool fills only while it beats minting; unconsumed input stays for minting. The whole swap is in try/catch: **swap failure falls back to minting** and never reverts the payment (unless an explicit user minimum then can't be met).
 - Project tokens received from the swap are **burned and re-minted through the controller** so the reserved percent applies to swapped tokens too, unless the payer set `skipSplits`.
 - Leftover terminal tokens (partial fill) are returned to the project via `addToBalanceOf` and minted at the issuance rate; fee-on-transfer deltas are measured on both hops.
-- Same-terminal split pays that forward a net-of-fee amount scale the TWAP-derived floors proportionally; explicit user minima never scale.
+- Same-terminal split pays that forward a net-of-fee amount scale the TWAP-derived floors proportionally, and on 2.0.0 never route on the expected-output floor (they mint unless the sigmoid route wins); explicit user minima never scale.
 
 ### Cash-out-side routing (`beforeCashOutRecordedWith` / `afterCashOutRecordedWith`)
 
@@ -666,7 +666,7 @@ abi.encode(uint256 minimumSwapAmountOut, bool skip)
 
 - `skip = true` forces the terminal bonding-curve path (the slippage floor still applies to the direct reclaim — an unmeetable floor reverts).
 - Fallback to the terminal path when: `skip`, no pool set, no project token, or `cashOutCount == 0`.
-- Otherwise the hook compares the AMM quote against the **net** direct reclaim (accounting for the 2.5% fee semantics incl. `feeFreeSurplusOf` at zero tax) and additionally requires the direct path be locally settleable by the selected terminal. If the AMM wins, it returns `cashOutTaxRate = MAX_CASH_OUT_TAX_RATE` and `surplus = 0` so the terminal reclaims nothing directly, and the hook sells the burned tokens through the pool itself.
+- Otherwise the hook compares the AMM quote against the **net** direct reclaim (accounting for the 2.5% fee semantics incl. `feeFreeSurplusOf` at zero tax) and additionally requires the direct path be locally settleable by the selected terminal. If the AMM wins, it returns `cashOutTaxRate = MAX_CASH_OUT_TAX_RATE` and `surplus = 0` so the terminal reclaims nothing directly, and the hook sells the burned tokens through the pool itself. On 2.0.0 a no-quote cash-out may route on the expected-output floor; the sale stops at the marginal net-reclaim rate and returns unsold tokens to the holder.
 
 ## 721 tiers hook (`JB721TiersHook`)
 

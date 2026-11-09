@@ -49,14 +49,16 @@ Precomputed IDs for the canonical deployments (same addresses on all chains):
 |---|---|---|---|
 | `JBMultiTerminal` `0x130f5dd2…7f53` | `permit2` | `0xd260d5c9` | `JBSingleAllowance` tuple |
 | `JBRouterTerminalRegistry` `0xe0427f25…8cbc` | `permit2` | `0x212df73e` | `JBSingleAllowance` tuple |
-| `JBRouterTerminal` `0x62e2fe71…1add` | `permit2` | `0xa38d766a` | `JBSingleAllowance` tuple |
-| `JBRouterTerminalGateway` `0x4a56aef5…d901` | `permit2` | `0x8b3926ee` | `JBSingleAllowance` tuple |
-| `JBRouterTerminal` | `pay` | `0xcf25a8f1` | `(address quotedTokenOut, uint256 quotedMinAmountOut)` swap quote |
-| `JBRouterTerminal` | `cashOut` | `0xe453b185` | `(uint256 minTokensReclaimed)` reclaim floor |
+| `JBRouterTerminal` `0xa0b7b55e…0e37` | `permit2` | `0x61d83d45` | `JBSingleAllowance` tuple |
+| `JBRouterTerminalGateway` `0xe2c259b2…d977` | `permit2` | `0x23add1a9` | `JBSingleAllowance` tuple |
+| `JBRouterTerminal` | `pay` | `0x0d70e3de` | `(address quotedTokenOut, uint256 quotedMinAmountOut)` swap quote |
+| `JBRouterTerminal` | `cashOut` | `0x2606faaa` | `(uint256 minTokensReclaimed)` reclaim floor |
+| 1.3.0 `JBRouterTerminal` `0x62e2fe71…1add` / gateway `0x4a56aef5…d901` (older project cohorts) | `permit2` / `pay` / `cashOut` | router `0xa38d766a` / `0xcf25a8f1` / `0xe453b185`, gateway `permit2` `0x8b3926ee` | Same payloads |
 | `JB721TiersHook` implementation `0xf4a58871…b5ab` | `pay` | `0x5962def1` | `(bool allowOverspending, uint16[] tierIds)` |
 | `JB721TiersHook` implementation | `cashOut` | `0x7214c785` | `(uint256[] tokenIds)` NFTs to burn |
-| `JBBuybackHook` `0xb222da5a…4b91` | `pay` | `0x1fe58cda` | `(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — 96 bytes; a 2-word payload makes `abi.decode` revert. `skipSplits = true` opts the swapped tokens out of the project's reserved split; `minimumSwapAmountOut = 0` means "no user quote" (TWAP floor applies) |
-| `JBBuybackHook` | `cashOut` | `0x349395ae` | `(uint256 minimumSwapAmountOut, bool skip)` |
+| `JBBuybackHook` `0x80717f09…e0af` | `pay` | `0x2db62989` | `(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — 96 bytes; a 2-word payload makes `abi.decode` revert. `skipSplits = true` opts the swapped tokens out of the project's reserved split; `minimumSwapAmountOut = 0` means "no user quote" (hook-derived floor applies) |
+| `JBBuybackHook` | `cashOut` | `0x06c030fd` | `(uint256 minimumSwapAmountOut, bool skip)` |
+| `JBBuybackHook` 1.4.0 `0xb222da5a…4b91` (older projects not yet migrated) | `pay` / `cashOut` | `0x1fe58cda` / `0x349395ae` | Same payloads |
 | `JBBuybackHookRegistry` `0x72f55a54…1788` | `pay` / `cashOut` | `0xdf320cd4` / `0xf44415a0` | Same payloads as the hook rows; the registry rekeys them to the project's resolved hook |
 | `JBBuybackHook` 1.1.1 `0x77bee1ad…4948` (still used by some projects) | `pay` / `cashOut` | `0xda79b72d` / `0xf10fae59` | Same payloads; ignores `skipSplits` |
 

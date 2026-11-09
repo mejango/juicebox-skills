@@ -46,7 +46,7 @@ All addresses are identical on every chain; read them from `shared/chain-config.
 | `REVOwner` `0x2ba4705ad0332cdfb299b452068438bcba3faaf3` | address match (also ERC-165 `IJBRulesetDataHook` + `IJBCashOutHook`) | `tiered721HookOf(revnetId) → IJB721TiersHook` (zero if none); `BUYBACK_HOOK()` = `JBBuybackHookRegistry` | 721 hook first (its split amount), then `registry.hookOf(id)` with the remainder; specs merged `[721, buyback]` | Buyback hook only (via registry) plus REVOwner's own fee spec; loans/suckers/cash-out delay applied first. 721 hook never prices cash-outs on a revnet |
 | `JBOmnichainDeployer` `0xb853758a70a6b4216c09f1d071ea2344aba0a34f` | address match (ERC-165 `IJBOmnichainDeployer`, `IJBRulesetDataHook`) | `tiered721HookOf(projectId, rulesetId) → (hook, useDataHookForCashOut)`; `extraDataHookOf(projectId, rulesetId) → (dataHook, useDataHookForPay, useDataHookForCashOut)` | 721 hook always (when set), then extra hook if its stored `useDataHookForPay`; weight from the extra hook | 721 hook if its stored `useDataHookForCashOut`; otherwise extra hook if its stored `useDataHookForCashOut`. Never both |
 | `JBBuybackHookRegistry` `0x72f55a54cd53410a5ff175508a5a384227081788` | address match (ERC-165 `IJBBuybackHookRegistry`) | `hookOf(projectId)`: per-project `setHookFor` pin → `defaultHook` if `projectId > defaultHookProjectIdThreshold` → historical default segment → `address(0)` | resolved buyback hook | resolved buyback hook (registry forwards both) |
-| a `JBBuybackHook` (default `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91`; any allowed hook) | ERC-165 `IJBBuybackHook` `0x16f0f2dd`, or `registry.isHookAllowed(addr)` | nothing | itself — swaps when the pool beats issuance | itself — routes cash-outs through the pool unless the `cashOut` metadata entry sets `skip`, no pool, or no project token |
+| a `JBBuybackHook` (default `0x80717f09461a3fb08364fe8c5259220f7d06e0af`; any allowed hook) | ERC-165 `IJBBuybackHook` `0x16f0f2dd` (true on 1.1.1, 1.4.0 and 2.0.0). `registry.isHookAllowed` is false for the retired 1.4.0 `0xb222…` and 1.1.1 `0x77be…`, so it cannot recognize them | nothing | itself — swaps when the pool beats issuance | itself — routes cash-outs through the pool unless the `cashOut` metadata entry sets `skip`, no pool, or no project token |
 | a `JB721TiersHook` clone | ERC-165 `IJB721TiersHook` `0xc74ac2fc`; `JBAddressRegistry.deployerOf(addr) == JB721TiersHookDeployer` | nothing | itself — mints tiers, weight from `pricingContext` | itself, only if the ruleset bit `useDataHookForCashOut` is set |
 | `CTDeployer`, `DefifaHook`, unknown | fallthrough | project-specific | treat as opaque custom hook: no buyback pool, no shop unless the address itself answers `STORE()` | same |
 | `address(0)` or both flags false | — | — | none | none |
@@ -93,7 +93,7 @@ const ABI = parseAbi([
   'function tiered721HookOf(uint256,uint256) view returns (address hook, bool useDataHookForCashOut)',
   'function extraDataHookOf(uint256,uint256) view returns ((address dataHook,bool useDataHookForPay,bool useDataHookForCashOut))',
   'function hookOf(uint256) view returns (address)',
-  'function isHookAllowed(address) view returns (bool)',
+  'function supportsInterface(bytes4) view returns (bool)',
   'function deployerOf(address) view returns (address)',
 ])
 
@@ -114,7 +114,9 @@ export async function resolveDataHooks(client: PublicClient, chainId: number, pr
       const r = (await read(c.JBBuybackHookRegistry, 'hookOf', [projectId])) as Address
       return r === zeroAddress ? null : r
     }
-    return eq(h, c.JBBuybackHook) || (await read(c.JBBuybackHookRegistry, 'isHookAllowed', [h])) ? h : null
+    // ERC-165 covers every buyback version (1.1.1, 1.4.0, 2.0.0); the registry allowlist no longer lists retired hooks.
+    const isBuyback = eq(h, c.JBBuybackHook) || (await read(h, 'supportsInterface', ['0x16f0f2dd']).catch(() => false))
+    return isBuyback ? h : null
   }
   const is721 = async (h: Address) => eq((await read(c.JBAddressRegistry, 'deployerOf', [h])) as Address, c.JB721TiersHookDeployer)
 
