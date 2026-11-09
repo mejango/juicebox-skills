@@ -380,7 +380,7 @@ struct DefifaTierCashOutWeight {
 
 ### Governance
 
-Each game names a referee (any address: person, multisig or contract). The referee calls `DefifaGovernor.submitScorecardFor(gameId, tierWeights)`; a new submission replaces the pending one and restarts the timelock. After the timelock anyone calls `ratifyScorecardFrom(gameId, tierWeights)`, which sets the tiers' cash-out weights on the hook and moves the game to `COMPLETE`. The governor counts no votes. The sample `DefifaVotingReferee` runs a holder vote: `attestToScorecardFrom(uint256 gameId, uint256 scorecardId) → uint256 weight` with BWA power, then forwards the first scorecard that reaches `quorum(gameId)` after the grace period.
+Each game names a referee (any address: person, multisig or contract). The referee calls `DefifaGovernor.submitScorecardFor(gameId, tierWeights)`; a new submission replaces the pending one and restarts the timelock. After the timelock anyone calls `ratifyScorecardFrom(gameId, tierWeights)`, which sets the tiers' cash-out weights on the hook and moves the game to `COMPLETE`. The governor counts no votes. The sample `DefifaVotingReferee` runs a holder vote: `attestToScorecardFrom(uint256 gameId, uint256 scorecardId) → uint256 weight` with BWA power, and anyone calls `forwardScorecardFor` once a scorecard reaches its own threshold, `quorumOf(gameId, scorecardId)` (fixed at submission from its concentration; `quorum(gameId)` is only the baseline), after the grace period. The first scorecard forwarded wins.
 
 ### Fits / doesn't fit
 

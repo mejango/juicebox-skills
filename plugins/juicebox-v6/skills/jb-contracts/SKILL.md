@@ -172,7 +172,7 @@ Two game types side by side: ERC-721 (`DefifaHook`, one NFT per position) and ER
 | Defifa1155Deployer | `0x7a62383b50aaa8b212bd965c426490625068ba80` | Same `DefifaDeployer` code wired to `Defifa1155Hook` and `Defifa1155Governor` |
 | Defifa1155Hook | `0x9214c2a673c6fc1a82a6ccc8d0b9f5dc2d11d4c3` | ERC-1155 game-piece hook implementation, cloned per game: one token ID per tier, so large entries mint in one transfer |
 | Defifa1155Governor | `0x53eede0488861cb6c7c643cd77d7f92f4ede2879` | Same `DefifaGovernor` code for ERC-1155 games |
-| DefifaVotingReferee | `0xf6552cc178042e9ed13c768929983e7d93254640` | Sample referee for both game types: anyone submits, holders attest with BWA power (`attestToScorecardFrom`), the first scorecard at quorum (50% to 75%) after the grace period is forwarded to the governor |
+| DefifaVotingReferee | `0xf6552cc178042e9ed13c768929983e7d93254640` | Sample referee for both game types: anyone submits, holders attest with BWA power (`attestToScorecardFrom`), once a scorecard reaches its submission-time quorum (`quorumOf`, 50% to 75%) after the grace period, anyone forwards it to the governor (`forwardScorecardFor`); the first forwarded wins |
 | DefifaTiersHookStore | `0xf65dd3adbac3d776cfa025458cac730aa52adb7d` | `JB721TiersHookStore` plus count-based records (`recordMintCounts`, `recordBurnCounts`, count `recordTransferForTier`); shared, required by the ERC-1155 hook |
 | DefifaTokenUriResolver | `0xe876dfd954f827fde02d7211717a350478b3861e` | Onchain SVG game-card metadata, shared by both game types |
 | DefifaHookLib | `0x71590c5e91b4bbed7c6996fdf446b817d2f3c82f` | Linked library: validation and weight rules shared by both hooks |

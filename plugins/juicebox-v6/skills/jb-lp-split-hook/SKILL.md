@@ -151,14 +151,14 @@ Reading unclaimed fees off-chain, per position (ask and bid): Uniswap `StateView
 
 Position ranges come from `positionManager.getPoolAndPositionInfo(tokenId)`; the hook stores no range.
 
-Detect the hook by behavior, not address: read the reserved splits (`JBSplits.splitsOf(projectId, rulesetId, 1)`) and treat any `hook` that answers `accumulatedProjectTokens` and `hasDeployedPool` as an LP split hook. Tell 1.5.0 from older by the `askTokenIdOf` selector (`0x1777af12`) in its bytecode or a successful `askTokenIdOf` call.
+Detect the hook by behavior, not address: read the reserved splits (`JBSplits.splitsOf(projectId, rulesetId, 1)`) and treat any `hook` that answers `accumulatedProjectTokens` and `hasDeployedPool` as an LP split hook. Tell 1.5.0 from older with a successful `askTokenIdOf(projectId, terminalToken)` call (selector `0x1777af12`). Clones are minimal proxies, so their own bytecode holds no implementation selectors.
 
 ## Production call patterns
 
 ```ts
-// Pick the generation from bytecode, then simulate before sending.
-const code = await client.getCode({ address: hook });
-const isV150 = code?.includes(toFunctionSelector("askTokenIdOf(uint256,address)").slice(2));
+// Pick the generation by probing a 1.5.0-only view (clones are proxies), then simulate before sending.
+const isV150 = await client.readContract({ address: hook, abi: lpSplitHookAbi, functionName: "askTokenIdOf", args: [projectId, terminalToken] })
+  .then(() => true, () => false);
 const { request } = await client.simulateContract(isV150
   ? { address: hook, abi: lpSplitHookAbi, functionName: "deployPool", args: [projectId] }
   : { address: hook, abi: legacyAbi, functionName: "deployPool", args: [projectId, 0n] });

@@ -85,7 +85,7 @@ At registration (`initializePoolFor` / `setPoolFor`), a window of exactly `MAX_T
 
 Returns zero (→ mint / direct reclaim) when: no pool set; `poolManager.getLiquidity(poolId) == 0` at the current tick; oracle `observe` fails. The sigmoid floor is `amountOut = raw − raw × tolerance / 10_000` with `tolerance = max(200, poolFeeBps + 100) + (8800 − min) × impact / (impact + 5e16)` (JBSwapLib.sol:198-218); it is 0 at estimated impact ≥ 1e18 or tolerance ≥ 8,800 bps. When that floor does not beat the direct route (issuance for a pay, net reclaim for a cash-out), the floor becomes the expected full-input output less 2% (`JBSwapLib.getExpectedAmountOut`, `_EXPECTED_OUT_SLIPPAGE = 200`, :157); a pay larger than the pool can take above the issuance rate is floored at its expected settlement instead (`getExpectedSettlement`: issuance for the leftover input plus 98% of the swap leg), and `floorCoversSettlement` is set. The swap routes only if that floor beats the direct route. So a thin pool that beats issuance now swaps; on 1.4.0 the same pay minted.
 
-Cold start (`twapLiquidity == 0`): the pay side (`payRoute = !hasUserSpecifiedQuote`, :1262) may quote from the oracle mean tick or slot0 with a haircut of `300 bps + lpFee + impact`, capped at 5% impact (`_getQuote`). The cash-out side never uses spot (:1079, :1766).
+Cold start (`twapLiquidity == 0`): the pay side (`payRoute = !hasUserSpecifiedQuote`, :1262) may quote from the oracle mean tick or slot0 with a haircut of `300 bps + lpFee + impact`, capped at 5% impact (`_getQuote`). The cash-out side never uses spot (:1041, :1766).
 
 ## Pay side
 
@@ -100,8 +100,8 @@ abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSpli
 | Word | Meaning |
 |---|---|
 | `amountToSwapWith` | Terminal-token amount routed to the pool. `0` → the full payment (:1204). `> context.amount.value` reverts `JBBuybackHook_InsufficientPayAmount` (:1201). Remainder mints at the ruleset weight |
-| `minimumSwapAmountOut` | `0` → no user quote; the TWAP oracle derives the floor. Non-zero → `hasUserSpecifiedQuote`, TWAP skipped for the floor, value is a hard settlement guarantee (:1197, :597-606) |
-| `skipSplits` | `true` → swap output is transferred to the beneficiary as-is (:616-618), not burned and reminted through the reserved split; route comparison and the swap's price limit use the beneficiary share of a direct mint, `mulDiv(count, 10_000 − reservedPercent, 10_000)` (:1227-1230, :1587-1599); an explicit minimum settles against `swapOut + beneficiaryShare(leftoverMint)` (:601-604). Leftover mint always goes through the split |
+| `minimumSwapAmountOut` | `0` → no user quote; the TWAP oracle derives the floor. Non-zero → `hasUserSpecifiedQuote`, TWAP skipped for the floor, value is a hard settlement guarantee (:1197, :584-594) |
+| `skipSplits` | `true` → swap output is transferred to the beneficiary as-is (:604-607), not burned and reminted through the reserved split; route comparison and the swap's price limit use the beneficiary share of a direct mint, `mulDiv(count, 10_000 − reservedPercent, 10_000)` (:1227-1230, :1587-1599); an explicit minimum settles against `swapOut + beneficiaryShare(leftoverMint)` (:587-593). Leftover mint always goes through the split |
 
 Always encode all three words. The 1.4.0 and 2.0.0 sources decode three; a hook built from the earlier two-word source decodes `(uint256, uint256)` and `abi.decode` ignores trailing bytes, so a 96-byte payload works on both. A 64-byte payload reverts on 1.4.0 and 2.0.0.
 
@@ -120,11 +120,11 @@ For a person's payment, don't hand-build this: send `prepareUserPay`'s (`@banana
 
 ### Route selection (`beforePayRecordedWith`, :1166-1341)
 
-1. `weightRatio = amount.currency == ruleset.baseCurrency ? 10**amount.decimals : PRICES.pricePerUnitOf(...)` (:1225-1232).
+1. `weightRatio = amount.currency == ruleset.baseCurrency ? 10**amount.decimals : PRICES.pricePerUnitOf(...)` (:1213-1220).
 2. `tokenCountWithoutHook = amountToSwapWith × weight / weightRatio`, reduced to the beneficiary share if `skipSplits` (:1226-1230).
 3. Quote: user minimum → `poolHasLiquidity` check + diagnostics-only `_getQuote`; no user minimum → `_getQuote` derives `minimumSwapAmountOut` (:1244-1270). With no user minimum, a same-terminal split pay (`payer == terminal`) on the expected-output floor gets minimum 0 and mints unless the sigmoid route wins (:1269).
 4. No pool set: if `hasUserSpecifiedQuote`, revert unless `tokenCountWithoutHook >= minimumSwapAmountOut`; otherwise return `(weight, [])` (:1335-1340).
-5. Pool set: `noop = !poolHasLiquidity || tokenCountWithoutHook >= minimumSwapAmountOut` (:1303). A cold-start quote is used for routing only; the executed floor collapses to `tokenCountWithoutHook` (:1305-1309). One spec is always returned; if `!noop` the weight is `0` and `amount = amountToSwapWith` (:1306-1334).
+5. Pool set: `noop = !poolHasLiquidity || tokenCountWithoutHook >= minimumSwapAmountOut` (:1291). A cold-start quote is used for routing only; the executed floor collapses to `tokenCountWithoutHook` (:1293-1296). One spec is always returned; if `!noop` the weight is `0` and `amount = amountToSwapWith` (:1306-1334).
 
 ### Hook-spec metadata (18 words, :1311-1330)
 
@@ -155,16 +155,16 @@ A preview calls `terminal.previewPayFor(projectId, token, amount, beneficiary, m
 
 ### Execution (`afterPayRecordedWith`, :422-626)
 
-- If the terminal forwarded less than `quotedAmountToSwapWith` (same-terminal split fee), the price limit and any derived floor scale down; explicit minima do not (:491-505).
+- If the terminal forwarded less than `quotedAmountToSwapWith` (same-terminal split fee), the price limit and any derived floor scale down; explicit minima do not (:479-493).
 - Swap price limit = issuance rate (`tokenCountWithoutHook / amountIn`): the pool fills only while it beats minting; unconsumed input is returned to the terminal with `addToBalanceOf` and minted at the weight (:532-592).
-- Derived floor is enforced inside `unlockCallback`: a sigmoid floor pro-rated by consumed input, an expected-output floor (`floorCoversSettlement`) against swap output plus unconsumed input at the issuance rate; a miss reverts `JBBuybackHook_DerivedFloorNotMet`, caught by `_swapExactInput`, and the whole payment mints (:886-899, :1570-1574). It never reverts a pay.
-- Explicit minimum: `_requireMinimum(swapOut + leftoverMint[BeneficiaryShare], minimumSwapAmountOut)` reverts `JBBuybackHook_SpecifiedSlippageExceeded(amount, minimum)` (selector `0xe2d708a9`) (:597-606).
-- Settlement: with `skipSplits == false` the hook `burnTokensOf` the swap output and mints `swapOut + leftover` to the beneficiary with `useReservedPercent: true` (:607-625). Net effect: beneficiary receives `swapOut × (10_000 − reservedPercent) / 10_000`, the remainder becomes pending reserved tokens. An activity feed shows a `Swap` event followed by a smaller mint in one tx.
+- Derived floor is enforced inside `unlockCallback`: a sigmoid floor pro-rated by consumed input, an expected-output floor (`floorCoversSettlement`) against swap output plus unconsumed input at the issuance rate; a miss reverts `JBBuybackHook_DerivedFloorNotMet`, caught by `_swapExactInput`, and the whole payment mints (:886-899, :1558-1562). It never reverts a pay.
+- Explicit minimum: `_requireMinimum(swapOut + leftoverMint[BeneficiaryShare], minimumSwapAmountOut)` reverts `JBBuybackHook_SpecifiedSlippageExceeded(amount, minimum)` (selector `0xe2d708a9`) (:584-594).
+- Settlement: with `skipSplits == false` the hook `burnTokensOf` the swap output and mints `swapOut + leftover` to the beneficiary with `useReservedPercent: true` (:608-625). Net effect: beneficiary receives `swapOut × (10_000 − reservedPercent) / 10_000`, the remainder becomes pending reserved tokens. An activity feed shows a `Swap` event followed by a smaller mint in one tx.
 - A swap-routed pay that emits `Mint` without `Swap` is the fallback path.
 
 ### Why frontends compare pay-with-quote against a direct AMM swap
 
-Without `skipSplits`, paying through the hook costs the payer the reserved cut on swap output; a direct Universal Router swap on the same pool pays the full output. `chooseBestPayRoute` (juice-sdk `v6/pay.ts:123-160`) takes `previewPayFor`'s `beneficiaryTokenCount` and a V4 `quoteExactInputSingle`; the direct swap wins only when `quote × (10_000 − slippageBps) / 10_000 > beneficiaryTokenCount`. `quoteDirectPaySwap` (`v6/directPay.ts:203-298`) returns `null` otherwise, and `juicebox-money` `PayPanel.tsx` gates the route on a fresh, non-placeholder quote in plain `pay` mode with an empty NFT cart (`direct-pay-swap.ts:41-59`). With `skipSplits = true` the pay route delivers the swap output un-cut, so the pay path with a quote is equivalent to the direct swap plus the issuance-rate fallback.
+Without `skipSplits`, paying through the hook costs the payer the reserved cut on swap output; a direct Universal Router swap on the same pool pays the full output. `chooseBestPayRoute` (juice-sdk `v6/pay.ts:120-152`) takes `previewPayFor`'s `beneficiaryTokenCount` and a V4 `quoteExactInputSingle`; the direct swap wins only when `quote × (10_000 − slippageBps) / 10_000 > beneficiaryTokenCount`. `quoteDirectPaySwap` (`v6/directPay.ts:195-290`) returns `null` otherwise, and `juicebox-money` `PayPanel.tsx` gates the route on a fresh, non-placeholder quote in plain `pay` mode with an empty NFT cart (`direct-pay-swap.ts:41-59`). With `skipSplits = true` the pay route delivers the swap output un-cut, so the pay path with a quote is equivalent to the direct swap plus the issuance-rate fallback.
 
 ## Cash-out side
 
@@ -185,10 +185,10 @@ abi.encode(uint256 minimumSwapAmountOut, bool skip) // 64 bytes
 
 1. `skip || !poolIsSet || projectToken == 0 || cashOutCount == 0` → direct path, no spec (floor checked if given).
 2. `directCashOutAmount = JBCashOuts.cashOutFrom(surplus, cashOutCount, totalSupply, cashOutTaxRate)`; `netDirectCashOutAmount` subtracts the terminal fee exactly as `JBMultiTerminal` does: none if `beneficiaryIsFeeless`; 2.5% of gross if `cashOutTaxRate != 0`; 2.5% of `min(gross, feeFreeSurplusOf)` if the tax is zero (:1921-1943).
-3. `marketCanSettle = poolHasLiquidity && minimumSwapAmountOut > sellLimitAmountOut` (:1087). With no caller minimum, a floor at or below net reclaim is replaced by the expected-output floor; `sellLimitAmountOut` is then the net reclaim of `2 × count` divided by 2 (the marginal reclaim rate), or `type(uint256).max` when `2 × count > totalSupply` or spot is already past the limit, which forces a reclaim (:1040-1075).
-4. If the AMM does not beat direct, direct must be locally settleable: `terminal.currentSurplusOf([surplus.token]) >= directCashOutAmount` (:1107-1110, :1637-1669).
-5. `noop = !marketCanSettle || (directPathCanSettle && minimumSwapAmountOut <= netDirectCashOutAmount)` (:1114).
-6. Swap route: returns `(MAX_CASH_OUT_TAX_RATE, cashOutCount, totalSupply, 0, specs)` (:1147) so the terminal reclaims nothing itself. `previewCashOutFrom` then shows `reclaimAmount ≈ 0` and a 100% tax; read the amount from the spec.
+3. `marketCanSettle = poolHasLiquidity && minimumSwapAmountOut > sellLimitAmountOut` (:1087). With no caller minimum, a floor at or below net reclaim is replaced by the expected-output floor; `sellLimitAmountOut` is then `netAfterTerminalFee(grossReclaim(2 × count) / 2)` (the marginal reclaim rate, halved before the fee), or, when net direct reclaim is nonzero, `type(uint256).max` if `2 × count > totalSupply` or spot is already past the limit, which forces a reclaim (:1055-1075).
+4. If the AMM does not beat direct, direct must be locally settleable: `terminal.currentSurplusOf([surplus.token]) >= directCashOutAmount` (:1095-1097, :1637-1669).
+5. `noop = !marketCanSettle || (directPathCanSettle && minimumSwapAmountOut <= netDirectCashOutAmount)` (:1102).
+6. Swap route: returns `(MAX_CASH_OUT_TAX_RATE, cashOutCount, totalSupply, 0, specs)` (:1135) so the terminal reclaims nothing itself. `previewCashOutFrom` then shows `reclaimAmount ≈ 0` and a 100% tax; read the amount from the spec.
 
 Spec metadata (9 words, :1111-1120), returned for `noop` either way. `afterCashOutRecordedWith` decodes all nine words strictly; the 2- and 8-word fallbacks are gone:
 
