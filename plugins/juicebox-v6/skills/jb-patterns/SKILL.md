@@ -334,7 +334,7 @@ Note: `tiersOf(...)` returns `JB721Tier` structs whose stored `flags` (`JB721Tie
 
 **Use case**: Games where outcomes determine payout distribution (prediction markets, fantasy sports, tournaments).
 
-**Solution**: Defifa — a 721-hook extension with phase logic, first-owner tracking, and governance-set cash-out weights. All four contracts are deployed on every supported chain (addresses in `shared/chain-config.json`): `DefifaDeployer`, `DefifaHook`, `DefifaGovernor`, `DefifaTokenUriResolver`.
+**Solution**: Defifa — a 721-hook extension (plus an ERC-1155 variant) with phase logic, first-owner tracking (721 only), and referee-set cash-out weights. Deployed on every supported chain (addresses in `shared/chain-config.json`): `DefifaDeployer`/`DefifaHook`/`DefifaGovernor` (ERC-721), `Defifa1155Deployer`/`Defifa1155Hook`/`Defifa1155Governor` (ERC-1155), and the shared `DefifaTiersHookStore`, `DefifaTokenUriResolver`, `DefifaVotingReferee`.
 
 ### Why a resolver isn't enough
 
@@ -358,7 +358,7 @@ enum DefifaGamePhase {
 }
 ```
 
-Scorecard governance lifecycle (`DefifaScorecardState`): `PENDING → ACTIVE → DEFEATED | SUCCEEDED → QUEUED → RATIFIED`.
+Scorecard state (`DefifaScorecardState`): in the governor `QUEUED → SUCCEEDED → RATIFIED` (`DEFEATED` if replaced or another is ratified); in `DefifaVotingReferee` `PENDING → ACTIVE → SUCCEEDED → RATIFIED | DEFEATED`.
 
 ### Dynamic cash-out weights
 
@@ -380,7 +380,7 @@ struct DefifaTierCashOutWeight {
 
 ### Governance
 
-`DefifaGovernor`: NFT holders attest to scorecards with tier-weighted voting power — `attestToScorecardFrom(uint256 gameId, uint256 scorecardId) → uint256 weight`. A scorecard that reaches `quorum(gameId)` and passes its timelock can be ratified, which sets the tiers' cash-out weights on the hook and moves the game to `COMPLETE`.
+Each game names a referee (any address: person, multisig or contract). The referee calls `DefifaGovernor.submitScorecardFor(gameId, tierWeights)`; a new submission replaces the pending one and restarts the timelock. After the timelock anyone calls `ratifyScorecardFrom(gameId, tierWeights)`, which sets the tiers' cash-out weights on the hook and moves the game to `COMPLETE`. The governor counts no votes. The sample `DefifaVotingReferee` runs a holder vote: `attestToScorecardFrom(uint256 gameId, uint256 scorecardId) → uint256 weight` with BWA power, then forwards the first scorecard that reaches `quorum(gameId)` after the grace period.
 
 ### Fits / doesn't fit
 
@@ -1051,7 +1051,7 @@ Need extended pay functionality on a locked project/revnet?
 - **Vesting + NFT**: any project combining Patterns 1 + 2 (see `jb-project` skill for deployment scripts)
 - **Autonomous tokenized treasury**: revnet (`revnet-core-v6`, `REVDeployer`)
 - **Custom NFT content**: `banny-retail-v6` — `Banny721TokenUriResolver`, composable on-chain SVG NFTs
-- **Prediction games**: `defifa` — `DefifaDeployer` / `DefifaHook` / `DefifaGovernor` / `DefifaTokenUriResolver`, all deployed (chain-config.json)
+- **Prediction games**: `defifa` — `DefifaDeployer`/`DefifaHook`/`DefifaGovernor` (ERC-721), `Defifa1155Deployer`/`Defifa1155Hook`/`Defifa1155Governor` (ERC-1155), and the shared `DefifaTiersHookStore`, `DefifaTokenUriResolver`, `DefifaVotingReferee`, all deployed (chain-config.json)
 - **Terminal wrapper**: `nana-router-terminal-v6` — `JBRouterTerminal` + `JBRouterTerminalRegistry`
 
 ## Related skills

@@ -1,68 +1,73 @@
 ---
 name: jb-lp-split-hook
 description: |
-  Juicebox V6 Uniswap V4 LP split hook (univ4-lp-split-hook-v6). Use when: (1) wiring a reserved-token
-  split to `JBUniswapV4LPSplitHook` / `JBP6FeeLPSplitHook`, (2) encoding `deployHookFor`, `deployPool`,
-  `addLiquidity`, `rebalanceLiquidity`, `collectAndRouteLPFees`, `claimFeeTokensFor`, (3) reading hook
-  ledgers (`accumulatedProjectTokens`, `tokenIdOf`, `poolKeyOf`, `claimableFeeTokens`), (4) debugging
-  `NoDeployableLiquidityAtSpot`, `PriceDeviationTooHigh`, `TwapUnavailable`, `UnderMin`,
-  `AccumulationBelowThreshold`, (5) reasoning about the floor/ceiling tick corridor, single-sided asks,
-  the fee-project cut, or Permit2 approvals, (6) choosing the right `deployPool` selector for a given
-  deployed hook, (7) indexing LP positions via bendystraw `buybackPoolPositions`.
+  Juicebox V6 Uniswap V4 LP split hook (univ4-lp-split-hook-v6, 1.5.0). Use when: (1) wiring a reserved-token or
+  payout split to `JBUniswapV4LPSplitHook` / `JBP6FeeLPSplitHook`, (2) encoding `deployHookFor`, `deployPool`,
+  `addLiquidity`, `collectAndRouteLPFees`, `claimFeeTokensFor`, (3) reading hook ledgers (`accumulatedProjectTokens`,
+  `accumulatedTerminalTokens`, `askTokenIdOf`, `bidTokenIdOf`, `poolKeyOf`, `claimableFeeTokens`), (4) debugging
+  `EmptyCorridor`, `NoDeployableLiquidityAtSpot`, `PriceDeviationTooHigh`, `TwapUnavailable`, `InvalidSplitGroup`,
+  `LiquidityAutomationFailed`, (5) reasoning about the floor/ceiling tick corridor, the ask and bid positions,
+  recycles, the fee-project cut, or Permit2 approvals, (6) telling a 1.5.0 instance from an older one before encoding,
+  (7) indexing LP positions via bendystraw `buybackPoolPositions`.
 metadata:
   version: "6.0.0"
 ---
 
 # Uniswap V4 LP Split Hook
 
-`JBUniswapV4LPSplitHook` is an `IJBSplitHook` placed on a project's **reserved-token split** (`groupId == 1`). It accumulates reserved project tokens, seeds one Uniswap V4 pool per project (project token ↔ one terminal token), holds the LP NFT, and routes LP trading fees back into protocol-owned liquidity with a cut paid to a fee project. The hook never burns.
+`JBUniswapV4LPSplitHook` (1.5.0) is an `IJBSplitHook`. On a project's **reserved-token split** (`groupId == 1`) it accumulates reserved project tokens; on a **payout split** it accumulates terminal tokens. It seeds one Uniswap V4 pool per project (project token and one terminal token) and holds at most **two single-sided positions** there: an **ask** of project tokens from just past the spot up to the issuance ceiling (`askTokenIdOf`) and a **bid** of terminal tokens from just past the spot down to the cash-out floor (`bidTokenIdOf`). Every recycle routes both positions' LP fees, burns both, and re-mints both from everything the hook holds for the project. The hook never cashes out and never burns reserved tokens; it burns only the project-token side of collected LP fees.
 
 ## Contracts and addresses
 
-All addresses from `shared/chain-config.json`. Same address on every chain that has a deployment.
+All addresses from `shared/chain-config.json` (deploy-all `deployments/<chain>/`). Same address on every chain that has a deployment, except `JBUniswapV4Hook`.
 
 | Key | Role | Address |
 |-----|------|---------|
-| `JBUniswapV4LPSplitHook` | Implementation (clones delegate to it). `feeProjectId` on the impl is irrelevant; never wire splits to it | `0xfcdbabd7b8de07c6e4ca7d79790e235848edc251` |
-| `JBUniswapV4LPSplitHookDeployer` | Clone factory (`deployHookFor`), registers clones in `JBAddressRegistry` | `0xee49b9c6938c31c223e49272bb0a3810bc39f3da` |
-| `JBUniswapV4LPSplitHookMath` | Linked external library: corridor/tick math, rate lookups | `0x734bfc66606dfe7943bcf541cf5dcbc5312e695b` |
-| `JBP6FeeLPSplitHook` | The shared clone projects wire into splits. `feeProjectId = 1`, `feePercent = 2000` (20%), `buybackHook = JBBuybackHookRegistry`, salt `"_BAN_LP_SPLIT_HOOK_V6_"` deployed by the Safe `0x4dc161eF837fF1C4485b08DDFcDB182F2157bE18` | `0xe9493bc776699714a89aa982cf828d843f040d2a` |
+| `JBUniswapV4LPSplitHook` | 1.5.0 implementation (clones delegate to it). Never wire splits to it | `0x5b54156b4a68ba5f9fa7706b913045e597e45e74` |
+| `JBUniswapV4LPSplitHookDeployer` | Clone factory (`deployHookFor`) around the 1.5.0 impl, configured with the 2.0.0 `JBUniswapV4Hook` as oracle; registers clones in `JBAddressRegistry` | `0xad2ed0024647ccc2eda4e42dc616d6fe886ed028` |
+| `JBUniswapV4LPSplitHookMath` | Linked external library: corridor/tick math, rate lookups, per-tick liquidity cap | `0x03fa7fbf4bacc4495f44fec35fbcc00e63f790ad` |
+| `JBP6FeeLPSplitHook` | The shared clone projects wire into splits. `feeProjectId = 1`, `feePercent = 1000` (10%), `buybackHook = JBBuybackHookRegistry`, salt `"_BAN_LP_SPLIT_HOOK_V6_"` deployed by the Safe `0x4dc161eF837fF1C4485b08DDFcDB182F2157bE18` | `0xef8993f50363461007bed2f54e98bbef9854148a` |
 | `Permit2` | Canonical Uniswap Permit2 | `0x000000000022d473030f116ddee9f6b43ac78ba3` |
-| `JBUniswapV4Hook` | The oracle hook (`IGeomeanOracle`) every LP pool is keyed with; chain-specific | per chain |
+| `JBUniswapV4Hook` | The oracle hook (`IGeomeanOracle`) the instance keys every pool with; chain-specific (2.0.0) | per chain |
 
-Chains with the hook, deployer, and `JBP6FeeLPSplitHook`: 1, 10, 8453, 42161, 11155111, 84532, 421614. **OP Sepolia (11155420) has only `JBUniswapV4LPSplitHookMath`** — a reserved split pointing at `0xe949…` there hits an address with no code, `supportsInterface` fails, and the controller's split-hook call reverts (caught per split by `JBController`; the split's tokens are burned as unconsumed allowance).
+Superseded clones (still live, still hold their projects' inventory):
 
-Constructor immutables (identical on all chains): `DIRECTORY = JBDirectory`, `PERMISSIONS = JBPermissions`, `TOKENS = JBTokens`, `PERMIT2`, `SUCKER_REGISTRY = JBSuckerRegistry`. `PROJECTS = DIRECTORY.PROJECTS()`.
+| Address | Version | Notes |
+|---------|---------|-------|
+| `0xaadf5369dd199794074b3f701ad2fe9bdbaf733d` | 1.5.0 | Same impl, via the first 1.5.0 deployer `0x41d276821a62f6be2de2a9f675de3fd430bfe18e`, keyed on the outgoing `JBUniswapV4Hook`. Same ABI and fee config as `0xef89...` |
+| `0xe9493bc776699714a89aa982cf828d843f040d2a` | 1.3.0 | `feePercent = 2000` |
+| `0xae6705c33c8b46f56878a1d4f1ce4d75fcfb6f62` | 1.1.1 | |
+| `0x22988374af49507fec1ee78811fbc47d10d5e639` | 1.0.0 | BAN's reserved split still points here |
 
-## Two generations, two selector sets
+Clones older than 1.5.0 keep their own ABI: `deployPool(uint256,uint256)` (`0x74a2fa6d`), `addLiquidity(uint256,address,uint256)` (`0x9aa5d462`), `tokenIdOf`, `rebalanceLiquidity`, no `askTokenIdOf`/`bidTokenIdOf`. Do not encode 1.5.0 calls against them.
 
-The on-chain bytecode (deployed 2026-07-16 from the 1.3.0 fix script) and the current `main` / npm `1.4.0` source differ in signature. Check the target with `getCode` and look for the selector before encoding; revnet.money does exactly this (`deployPoolArity` in `owners/market/lib.ts`).
+Chains with the hook, deployer, and `JBP6FeeLPSplitHook`: 1, 10, 8453, 42161, 11155111, 84532, 421614. **OP Sepolia (11155420) has only the 1.0.0-era `JBUniswapV4LPSplitHookMath` (`0xef2242dc7e8a082ce00c943548e414598896c4f4`)**. A reserved split pointing at `0xef89...` there hits an address with no code and the controller's split-hook call fails (caught per split by `JBController`; the split's tokens are burned as unconsumed allowance).
 
-| Function | Deployed at `0xfcdb…` / `0xe949…` | Source `main` (npm 1.4.0, not yet deployed) |
-|----------|-----------------------------------|--------------------------------------------|
-| `deployPool` | `deployPool(uint256 projectId, uint256 minCashOutReturn)` → `0x74a2fa6d` | `deployPool(uint256 projectId)` → `0x9af2297c` |
-| `addLiquidity` | `addLiquidity(uint256 projectId, address terminalToken, uint256 minCashOutReturn)` → `0x9aa5d462` | `addLiquidity(uint256 projectId, address terminalToken)` → `0xc95f9d0e` |
-| `rebalanceLiquidity` | `rebalanceLiquidity(uint256 projectId, address terminalToken, uint256 decreaseAmount0Min, uint256 decreaseAmount1Min)` → `0xce974d15` | `rebalanceLiquidity(uint256 projectId, address terminalToken)` → `0x470c6271` |
-| `collectAndRouteLPFees` | `(uint256 projectId, address terminalToken)` → `0x978db958` | same |
-| `claimFeeTokensFor` | `(uint256 projectId, address beneficiary)` → `0xcd0802e5` | same |
+Constructor immutables (identical on all chains): `DIRECTORY = JBDirectory`, `PERMISSIONS = JBPermissions`, `TOKENS = JBTokens`, `PERMIT2`, `SUCKER_REGISTRY = JBSuckerRegistry`. `PROJECTS = DIRECTORY.PROJECTS()`. `poolManager`, `positionManager`, `oracleHook`, `buybackHook`, `feeProjectId`, `feePercent` are per-clone storage set once by `initialize`.
 
-Behavioral differences:
+## Selectors (1.5.0)
 
-| Topic | Deployed | Source `main` |
-|-------|----------|---------------|
-| Pool funding | Cashes out a computed fraction of accumulated tokens through the project's own terminal (`cashOutTokensOf`, forced direct via buyback-hook metadata) to mint a two-sided position. `minCashOutReturn == 0` → hook derives its own floor: `97%` of `cashOutAmount * cashOutRate` (minus the 2.5% fee if `cashOutTaxRate != 0`). A caller value only raises the floor. Floor breach reverts `JBMultiTerminal_UnderMin(value, min)` | No cash-out. Mints a single-sided ask of the accumulated tokens from spot to the issuance ceiling; a bid leg only appears from terminal tokens the hook already holds (collected fees, burn recoveries) |
-| Auth on `deployPool`/`addLiquidity` | `SET_BUYBACK_POOL` from the project owner until `ruleset.weight * 10 <= initialWeightOf[projectId]` (weight decayed 10x since first accumulation), then permissionless | Permissionless from the start; guarded only by corridor geometry and the TWAP check |
-| `processSplitWith` with no ERC-20 | Reverts `InvalidProjectId` (credits rejected; the controller swallows the revert and the credits stay with the hook) | Accepts credits into `accumulatedProjectCredits` after verifying `TOKENS.creditBalanceOf(hook)` covers the ledger, then returns |
-| Post-intake automation | None; someone must call `deployPool`/`addLiquidity` | Best-effort self-call (`executeAutomationFor`) when `gasleft() >= 564_000`; failure emits `LiquidityAutomationFailed(projectId, bytes4 selector, caller)` and the ledger is untouched |
-| Re-range on `addLiquidity` | Tops up the live position unless the corridor drifted `>= 400` ticks, then burns and re-mints | Always burns and re-mints one consolidated position on the fresh corridor |
+| Function | Selector |
+|----------|----------|
+| `deployPool(uint256 projectId)` | `0x9af2297c` |
+| `addLiquidity(uint256 projectId, address terminalToken)` | `0xc95f9d0e` |
+| `collectAndRouteLPFees(uint256 projectId, address terminalToken)` | `0x978db958` |
+| `claimFeeTokensFor(uint256 projectId, address beneficiary)` | `0xcd0802e5` |
+| `askTokenIdOf(uint256,address)` / `bidTokenIdOf(uint256,address)` | `0x1777af12` / `0xc7686cc5` |
 
-Everything below describes both unless marked.
+`executeAutomationFor(uint256)`, `sendToTerminal(address,uint256,address,uint256,bool)` and `burnFeeRemainder(uint256,address,uint256)` are self-call targets: any caller other than the hook reverts `JBUniswapV4LPSplitHook_Unauthorized`.
 
 ## processSplitWith (intake)
 
-Checks, in order: `msg.value == 0` → `UnexpectedMsgValue`; `context.split.hook == this` → `NotHookSpecifiedInContext`; `DIRECTORY.controllerOf(projectId) == msg.sender` → `SplitSenderNotValidControllerOrTerminal`; `groupId == 1` → `TerminalTokensNotAllowed`. `context.token` is ignored — the project token is resolved from `JBTokens.tokenOf(projectId)`.
+First check: `context.split.hook == this`, else `NotHookSpecifiedInContext`. Then by group:
 
-ERC-20 path: `safeTransferFrom(controller, hook, context.amount)` against the controller's allowance, then `accumulatedProjectTokens[projectId] += balanceDelta`. `initialWeightOf[projectId]` is snapshotted at the first accumulation (deployed) or first deploy/add (`main`). Payout splits (`groupId != 1`) always revert — this hook is reserved-token only.
+**Reserved tokens (`groupId == 1`).** `msg.value == 0` else `UnexpectedMsgValue`; `DIRECTORY.controllerOf(projectId)` must exist (`InvalidProjectId`) and equal `msg.sender` (`SplitSenderNotValidControllerOrTerminal`). `context.token` is ignored; the project token is `JBTokens.tokenOf(projectId)`.
+- No ERC-20 yet: Core already moved the credits to the hook. The hook requires `TOKENS.creditBalanceOf(hook)` to cover `accumulatedProjectCredits + amount + owed fee credits` (`InsufficientBalance`), adds to `accumulatedProjectCredits`, and returns. Credits are claimed into the ERC-20 at the next deploy or recycle.
+- ERC-20: `safeTransferFrom(controller, hook, amount)`, `accumulatedProjectTokens += balanceDelta`. Then, if `accumulatedProjectTokens >= 1e15`, the inline automation attempt runs.
+
+**Payout (`groupId != 1`).** Requires `groupId == uint256(uint160(context.token))` (`InvalidSplitGroup(groupId, token)`), `msg.sender` a terminal of the project (`isTerminalOf`), the pool already deployed (`InvalidStageForAction`), and `context.token == deployedTerminalTokenOf[projectId]` (`InvalidTerminalToken`). Native: `msg.value == amount`. ERC-20: `msg.value == 0`, pulled with `safeTransferFrom`. `accumulatedTerminalTokens[projectId][token] += received`, emits `PayoutAccepted(projectId, terminalToken, amount, caller)`, then the automation attempt runs at any size. Any rejection reverts and Core returns the payout to the project's balance. Core charges its normal fee on the payout unless the project is feeless.
+
+**Inline automation.** Runs only with `gasleft() >= 2_000_000 + 64_000`; the self-call `executeAutomationFor(projectId)` is forwarded at most 2,000,000 gas and deploys the pool if none exists, else recycles. Failure emits `LiquidityAutomationFailed(projectId, bytes4 reasonSelector, caller)`; the intake stays ledgered and anyone can retry with `deployPool`/`addLiquidity` (not gas-capped). A full recycle costs about 1.28M gas with one terminal plus about 30k per extra terminal.
 
 ## deployHookFor
 
@@ -71,87 +76,110 @@ function deployHookFor(uint256 feeProjectId, uint256 feePercent, IJBBuybackHookR
     external returns (IJBUniswapV4LPSplitHook hook);
 ```
 
-- `salt == bytes32(0)` → `LibClone.clone` (plain CREATE, address depends on the deployer's nonce). Otherwise `cloneDeterministic` with effective salt `keccak256(abi.encode(msg.sender, salt))`. The same `(impl, deployer, msg.sender, salt)` gives the same address on every chain; a different sender gives a different address.
-- The clone is initialized atomically: `initialize(feeProjectId, feePercent, poolManager, positionManager, oracleHook, buybackHook)`. Reverts: `feePercent > 10_000` → `InvalidFeePercent`; `feePercent > 0 && feeProjectId == 0` → `FeePercentWithoutFeeProject`; `feeProjectId != 0` with no controller → `InvalidProjectId`; deployer not yet configured (`poolManager == 0`) → `JBUniswapV4LPSplitHookDeployer_NotConfigured`.
-- Emits `HookDeployed(feeProjectId indexed, feePercent, hook, caller)` and registers the clone in `JBAddressRegistry` (`deployerOf(clone) == deployer`).
-- `feeProjectId`, `feePercent`, `poolManager`, `positionManager`, `oracleHook`, `buybackHook` are write-once. Clones are immutable: fixing the impl requires a fresh clone and re-pointing splits (this is why `JBP6FeeLPSplitHook` is `0xe949…`, not the impl).
+- `salt == bytes32(0)`: `LibClone.clone` (plain CREATE, address depends on the deployer's nonce). Otherwise `cloneDeterministic` with effective salt `keccak256(abi.encode(msg.sender, salt))`. The same `(impl, deployer, msg.sender, salt)` gives the same address on every chain; a different sender gives a different address.
+- The clone is initialized atomically: `initialize(feeProjectId, feePercent, poolManager, positionManager, oracleHook, buybackHook)`. Reverts: `feePercent > 10_000` (`InvalidFeePercent`); `feePercent > 0 && feeProjectId == 0` (`FeePercentWithoutFeeProject`); `feeProjectId != 0` with no controller (`InvalidProjectId`); deployer not yet configured (`JBUniswapV4LPSplitHookDeployer_NotConfigured`).
+- Emits `HookDeployed(feeProjectId indexed, feePercent, hook, caller)` and registers the clone in `JBAddressRegistry`.
+- Clone config is write-once and clones are immutable: a new implementation or a new oracle hook means a fresh clone and re-pointed splits (this is why `JBP6FeeLPSplitHook` moved from `0xaadf...` to `0xef89...`).
 
 Predict the address: `LibClone.predictDeterministicAddress(impl, keccak256(abi.encode(sender, salt)), deployer)`.
 
-## Pool and position geometry
+## deployPool and addLiquidity
 
-Pool key: `currency0/1` = sorted (project token, terminal currency), `fee = 10_000` (1%), `tickSpacing = 200`, `hooks = oracleHook`. Native terminal token `0x…EEEe` maps to `Currency(address(0))`. One pool per project: `deployPool` picks the terminal token by `JBUniswapV4LPSplitHookMath.findHighestValueTerminalTokenOf` (highest ETH-denominated balance across `IJBMultiTerminal`s; non-multiterminals such as the router registry are skipped) and reverts `OnlyOneTerminalTokenSupported` on a second token.
+`deployPool(projectId)`: permissionless, `nonReentrant`. Picks the terminal token with `JBUniswapV4LPSplitHookMath.findHighestValueTerminalTokenOf` (highest ETH-denominated balance across terminals; terminals without `STORE()` are skipped) and locks it in `deployedTerminalTokenOf`. Reverts: second call on the same token `PoolAlreadyDeployed`, on a different token `OnlyOneTerminalTokenSupported`; no ERC-20 `InvalidProjectId`; nothing accumulated (tokens and credits both 0) `NoTokensAccumulated`; no primary terminal for the token `InvalidTerminalToken`; empty corridor `EmptyCorridor`. A hook-initialized pool seeds one spacing inside the floor bound (clamped one spacing short of the ceiling) and skips the TWAP check. An already-initialized pool (e.g. the buyback pool) keeps its price; a spot at or beyond the cash-out floor side reverts `ExistingPoolPriceOutOfBounds` (the ceiling side is accepted), and the TWAP check runs. Emits `ProjectDeployed(projectId, terminalToken, poolId, caller)`.
 
-Corridor (`calculateTickBounds`):
+`addLiquidity(projectId, terminalToken)`: permissionless, `nonReentrant`, any time, with or without new tokens. Requires `isPoolDeployed(projectId, terminalToken)` (`InvalidStageForAction`) and the TWAP check, then recycles. Emits `LiquidityAdded(projectId indexed, terminalToken indexed, askTokenId, bidTokenId, caller)`.
 
-| Case | tickLower / tickUpper |
-|------|-----------------------|
-| `cashOutRate > 0` | floor = cash-out rate (surplus / total supply incl. reserved and, unless `scopeCashOutsToLocalBalances`, remote sucker surplus/supply through the bonding curve), ceiling = issuance rate net of `reservedPercent`. Sorted, then aligned **inward** (lower up, upper down). If it collapses, ±1 spacing around the current bonding-curve price; still collapsed → `JBUniswapV4LPSplitHookMath_InvalidTickBounds` |
-| `cashOutRate == 0`, `issuanceRate > 0` (typical for 6-decimal USDC with large supply) | Ceiling pinned on the issuance tick; the other bound 2 spacings inward (no floor exists) |
-| both `0` | Full range |
+`initialWeightOf[projectId]` records the first nonzero ruleset weight a deploy or recycle sees. It gates nothing.
 
-Initial price (`computeInitialSqrtPrice`): one spacing inside the floor bound, clamped one spacing short of the ceiling, so nearly the whole ask spans the corridor. If the pool already exists (e.g. the buyback pool), its price is kept; a spot at or beyond the floor reverts `ExistingPoolPriceOutOfBounds`, and the TWAP check runs.
+## Recycle
 
-Single-sided add (`_adaptiveRange`, `main`): the ask leg runs from spot to the ceiling using the whole project balance; the bid leg is solved from the terminal balance downward and clamped at the floor. Spot at or above the ceiling with no terminal tokens → `NoDeployableLiquidityAtSpot(spotTick, ceilingTick, projectAmount, terminalAmount)`. A spot inside the top spacing below the ceiling can align the bid bound onto the ceiling → `ZeroLiquidity`; see the ceiling-brick note in Common mistakes.
+1. Retire the ask and bid: route each position's fees, burn it (95% principal floor at the live price, contract-derived), credit recovered principal to the ledgers.
+2. Claim every hook-held credit for the project (except owed fee credits) into the ERC-20 and `accumulatedProjectTokens`.
+3. Price the corridor (after fee routing, so the raised floor counts).
+4. Empty corridor: keep everything ledgered. Succeeds if something was retired, else reverts `EmptyCorridor`.
+5. Mint the token0 range from `max(spotCeil, corridorLower)` to `corridorUpper` and the token1 range from `corridorLower` to `min(spotFloor, corridorUpper)`, both single-sided. `spotCeil`/`spotFloor` are widened to also clear the aligned TWAP tick, so the ask never sells below the TWAP and the bid never buys above it. Each mint is capped by `cappedSingleSidedLiquidity` (pool per-tick capacity). A side with an empty range or zero liquidity is skipped and stays ledgered.
+6. Neither side minted: revert `NoDeployableLiquidityAtSpot(spotTick, ceilingTick, projectAmount, terminalAmount)` and keep the old positions.
+7. Unconsumed amounts return to the ledgers, measured from balances (`TransferNotExact` if a mint debited more than offered).
 
-TWAP guard (`_requireSpotNearTwap`): `oracleHook.observe(key, [1800, 0])`; `|spotTick - twapTick| > 200` → `PriceDeviationTooHigh(spot, twap, 200)`; oracle revert or short array → `TwapUnavailable`. Runs on `addLiquidity`, `rebalanceLiquidity`, and `deployPool` against a pre-initialized pool. A fresh pool the hook initializes itself skips it. There is no zero-min swap floor anywhere in this hook: the only Uniswap minimums it passes are `0` on the fee-collect decrease (nothing is swapped), and (deployed) the caller-supplied `decreaseAmount{0,1}Min` on rebalance burns.
+## Pool and corridor geometry
 
-Thresholds: `addLiquidity` requires `accumulatedProjectTokens >= 1e15` (`AccumulationBelowThreshold`); `rebalanceLiquidity` requires the fresh corridor to differ from `rangedCorridor{Lower,Upper}Of` by more than one spacing on at least one bound (`DriftBelowThreshold`). Burn slippage on re-mint is 95% of the principal read.
+Pool key: `currency0/1` = sorted (project token, terminal currency), `fee = 10_000` (1%), `tickSpacing = 200`, `hooks = oracleHook`. Native terminal token `0x...EEEe` maps to `Currency(address(0))`.
+
+Corridor (`calculateTickBounds`), returns sorted `(lower, upper)`; `(0, 0)` means empty:
+
+| Case | Bounds |
+|------|--------|
+| Cash-out preview `> 0` | Floor = upper bound on the 1-token cash-out value (preview + 2), ceiling = net issuance rate rounded toward a lower project price. Both rounded **inward** to spacing. Empty when cash-out value reaches the issuance price or no aligned spacing fits |
+| Preview `== 0`, issuance on | Ceiling on the aligned issuance tick, other bound 2 spacings away, then the floor side lifted to the cash-out bound (can empty it) |
+| Preview `== 0`, no issuance (weight 0 or 100% reserved) | Usable full range, floor side lifted to the cash-out bound |
+
+Cash-out preview: surplus summed across all local terminals (`JBSurplus.currentSurplusOf`) over `totalTokenSupplyWithReservedTokensOf`, plus sucker remote surplus/supply unless `scopeCashOutsToLocalBalances`. Failing surplus or price reads revert the recycle (no zero-floor fallback).
+
+TWAP guard (`_requireSpotNearTwap`): `oracleHook.observe(key, [1800, 0])`; `|spotTick - twapTick| > 200` reverts `PriceDeviationTooHigh(spot, twap, 200)`; oracle revert or short array reverts `TwapUnavailable`. Runs on `addLiquidity` and on `deployPool` against a pre-initialized pool. There is no swap anywhere in the hook.
 
 ## Permit2
 
-Minting goes through `IPositionManager.modifyLiquidities`. For each ERC-20 side the hook does `forceApprove(PERMIT2, amount)` then `PERMIT2.approve(token, positionManager, uint160(amount), uint48(block.timestamp + 60))`; amounts above `uint160` revert `Permit2AmountOverflow`. Approvals are cleared after the mint. Native ETH is passed as `msg.value` on `modifyLiquidities`. Nothing external needs to approve the hook.
+Minting goes through `IPositionManager.modifyLiquidities` (`MINT_POSITION, SETTLE, SETTLE, SWEEP, SWEEP`). For each ERC-20 side the hook does `forceApprove(PERMIT2, amount)` then `PERMIT2.approve(token, positionManager, uint160(amount), uint48(block.timestamp + 60))`; amounts above `uint160` revert `Permit2AmountOverflow`. Approvals are cleared after the mint. Native ETH is passed as `msg.value`. Nothing external needs to approve the hook.
 
 ## Fees
 
-`collectAndRouteLPFees(projectId, terminalToken)` — permissionless. `DECREASE_LIQUIDITY(tokenId, 0, 0, 0)` + `TAKE_PAIR(c0, c1, hook)` (actions `0x0111`), then per side `_attemptFeeProjectCut`:
+`collectAndRouteLPFees(projectId, terminalToken)`: permissionless. Reverts `InvalidStageForAction` when neither position exists. For each live position: `DECREASE_LIQUIDITY(tokenId, 0, 0, 0)` + `TAKE_PAIR`, measured by balance delta. Positions are not moved. Per side:
 
-- `cut = amount * feePercent / 10_000`; paid with `JBMultiTerminal.pay(feeProjectId, feeToken, cut, beneficiary = hook, minReturnedTokens = 0, memo "LP Fee")` on `DIRECTORY.primaryTerminalOf(feeProjectId, feeToken)`. No terminal for that token → no cut, whole amount kept.
-- Fee-project tokens minted to the hook are credited to `claimableFeeTokens[projectId]` (`claimableFeeTokenOf[projectId]` records the ERC-20) or, if the fee project has no ERC-20, `claimableFeeCredits[projectId]`. The pay is `try/catch`; on failure the cut is 0.
-- Remainders never leave the hook: project-token fees go to `accumulatedProjectTokens`, terminal-token fees to `accumulatedTerminalTokens[projectId][terminalToken]`, both becoming future liquidity. Emits `LPFeesRouted(projectId, token, totalAmount, feeAmount, remainingAmount, feeTokensMinted, caller)`.
-- `claimFeeTokensFor(projectId, beneficiary)` requires `SET_BUYBACK_POOL` from the project owner; transfers the ERC-20 then attempts the credit claim (best-effort, restored on failure). Emits `FeeTokensClaimed`.
+- **Fee-project cut**: `cut = amount * feePercent / 10_000`, paid via `sendToTerminal(..., shouldPay: true)` = `pay(feeProjectId, token, cut, beneficiary = hook, minReturnedTokens = 0, memo "LP Fee")` on `DIRECTORY.primaryTerminalOf(feeProjectId, token)`. No terminal or a revert forgives the cut. Minted fee-project tokens go to `claimableFeeTokens[projectId]` (`claimableFeeTokenOf` records the ERC-20) or `claimableFeeCredits[projectId]`.
+- **Terminal-token remainder**: `addToBalanceOf(projectId, ..., shouldReturnHeldFees: false)` on the project's primary terminal. Raises surplus.
+- **Project-token remainder**: burned through the controller (`burnFeeRemainder`). Lowers supply. Reverts `FeeBurnNotExact` (forgiven) unless exactly `count` ERC-20 left and credits are unchanged.
+- A failed add or burn folds that remainder into `accumulatedTerminalTokens` / `accumulatedProjectTokens` (next recycle's liquidity). Sends that debit more than `amount` revert `TransferNotExact` and fall back the same way.
+- Emits `LPFeesRouted(projectId, token, totalAmount, feeAmount, remainingAmount, feeTokensMinted, caller)` per side.
 
-Reading unclaimed fees off-chain: Uniswap `StateView.getPositionInfo(poolId, positionKey)` with `positionKey = keccak256(abi.encodePacked(positionManager, tickLower, tickUpper, bytes32(tokenId)))` and `owed = ((feeGrowthInsideNow - last) mod 2^256) * liquidity >> 128`. Lifetime fees are only in the indexer (`feesClaimed0/1`).
+`claimFeeTokensFor(projectId, beneficiary)`: requires `SET_BUYBACK_POOL` from the project owner; transfers the ERC-20 claim (`TransferNotExact` if over-debited), then best-effort credit claim. Emits `FeeTokensClaimed`.
+
+Reading unclaimed fees off-chain, per position (ask and bid): Uniswap `StateView.getPositionInfo(poolId, positionKey)` with `positionKey = keccak256(abi.encodePacked(positionManager, tickLower, tickUpper, bytes32(tokenId)))` and `owed = ((feeGrowthInsideNow - last) mod 2^256) * liquidity >> 128`. Lifetime fees are only in the indexer (`feesClaimed0/1`).
 
 ## Reads
 
 | View | Meaning |
 |------|---------|
-| `accumulatedProjectTokens(projectId)` | Project tokens waiting to become liquidity |
-| `accumulatedTerminalTokens(projectId, terminalToken)` (`main`) / `accumulatedProjectCredits(projectId)` (`main`) | Bid-side ledger / credits pending tokenization |
-| `hasDeployedPool(projectId)`, `isPoolDeployed(projectId, terminalToken)`, `tokenIdOf(projectId, terminalToken)` | Stage; `tokenId != 0` means the position exists |
+| `accumulatedProjectTokens(projectId)` | Project tokens held outside positions, next ask |
+| `accumulatedTerminalTokens(projectId, terminalToken)` | Terminal tokens held outside positions, next bid |
+| `accumulatedProjectCredits(projectId)` | Credits accepted before the project had an ERC-20 |
+| `hasDeployedPool(projectId)`, `deployedTerminalTokenOf(projectId)`, `isPoolDeployed(projectId, terminalToken)` | Stage and locked pairing |
+| `askTokenIdOf(projectId, terminalToken)`, `bidTokenIdOf(projectId, terminalToken)` | Live position NFT ids, `0` when none |
 | `poolKeyOf(projectId, terminalToken)` | `PoolKey` (all-zero before deploy) |
-| `activeTickLowerOf/UpperOf(projectId, terminalToken)` | Live position range |
 | `claimableFeeTokens(projectId)`, `claimableFeeCredits(projectId)`, `claimableFeeTokenOf(projectId)` | Fee-project proceeds claimable by the project owner |
 | `feeProjectId()`, `feePercent()`, `buybackHook()`, `oracleHook()`, `poolManager()`, `positionManager()` | Clone config |
-| `initialWeightOf(projectId)` | Weight snapshot used by the deployed auth gate |
+| `initialWeightOf(projectId)` | First nonzero weight seen at deploy or recycle (informational) |
 
-Detect the hook by behavior, not address: read the reserved splits (`JBSplits.splitsOf(projectId, rulesetId, 1)`) and treat any `hook` that answers `accumulatedProjectTokens` and `hasDeployedPool` as an LP split hook (revnet.money `fetchSplitHookStates`).
+Position ranges come from `positionManager.getPoolAndPositionInfo(tokenId)`; the hook stores no range.
+
+Detect the hook by behavior, not address: read the reserved splits (`JBSplits.splitsOf(projectId, rulesetId, 1)`) and treat any `hook` that answers `accumulatedProjectTokens` and `hasDeployedPool` as an LP split hook. Tell 1.5.0 from older by the `askTokenIdOf` selector (`0x1777af12`) in its bytecode or a successful `askTokenIdOf` call.
 
 ## Production call patterns
 
 ```ts
-// Deploy: pick the selector from bytecode, then simulate before sending.
+// Pick the generation from bytecode, then simulate before sending.
 const code = await client.getCode({ address: hook });
-const single = code?.includes(toFunctionSelector("deployPool(uint256)").slice(2));
-const { request } = await client.simulateContract(single
-  ? { address: hook, abi: singleArgAbi, functionName: "deployPool", args: [projectId] }
-  : { address: hook, abi: lpSplitHookAbi, functionName: "deployPool", args: [projectId, 0n] });
-// 0n is safe on the deployed hook: it substitutes the 97%-of-rate floor.
+const isV150 = code?.includes(toFunctionSelector("askTokenIdOf(uint256,address)").slice(2));
+const { request } = await client.simulateContract(isV150
+  ? { address: hook, abi: lpSplitHookAbi, functionName: "deployPool", args: [projectId] }
+  : { address: hook, abi: legacyAbi, functionName: "deployPool", args: [projectId, 0n] });
 
-// Collect fees (anyone):
+// Recycle or collect fees (anyone):
+await client.simulateContract({ address: hook, abi: lpSplitHookAbi,
+  functionName: "addLiquidity", args: [projectId, terminalToken] });
 await client.simulateContract({ address: hook, abi: lpSplitHookAbi,
   functionName: "collectAndRouteLPFees", args: [projectId, terminalToken] });
 ```
 
-Wiring the split (reserved group):
+Wiring the split, reserved group (`groupId = 1`):
 
 ```solidity
 JBSplit({ percent: 200_000_000, projectId: 0, beneficiary: payable(address(0)),
-          preferAddToBalance: false, lockedUntil: 0, hook: IJBSplitHook(0xe9493bc776699714a89aa982cf828d843f040d2a) })
+          preferAddToBalance: false, lockedUntil: 0, hook: IJBSplitHook(0xef8993f50363461007bed2f54e98bbef9854148a) })
 ```
 
-Gate the deploy button on the deployed hook with `initialWeightOf(projectId) == 0 || ruleset.weight * 10 > initialWeight` → requires an operator with `SET_BUYBACK_POOL`.
+Funding the bid from payouts: the same split in the payout group for the pool's terminal token (`groupId = uint256(uint160(token))`, e.g. `uint256(uint160(0x000000000000000000000000000000000000EEEe))` for native), only after `deployPool`.
+
+Gate a deploy button on `!hasDeployedPool(projectId)`, a project ERC-20, and `accumulatedProjectTokens + accumulatedProjectCredits > 0`; no permission is needed.
 
 ## Indexing (bendystraw)
 
@@ -162,17 +190,18 @@ buybackPoolPositions(where: { chainId, poolId, burned: false }) {
 }
 ```
 
-Positions are recorded only for pools registered as buyback pools (the hook's pool is the project's buyback pool when it shares the `JBUniswapV4Hook`). The hook-owned position has `owner == hook`. Arg types are `Float!`/`BigInt!` per the bendystraw skill.
+Positions are recorded only for pools registered as buyback pools (the hook's pool is the project's buyback pool when it shares the `JBUniswapV4Hook`). A 1.5.0 hook owns up to two live positions (`owner == hook`); every recycle burns both and mints new ids, so match against `askTokenIdOf`/`bidTokenIdOf`. Arg types are `Float!`/`BigInt!` per the bendystraw skill.
 
 ## Common mistakes
 
-- **Calling `deployPool(uint256)` on the deployed hook (or vice versa).** Different arity is a different selector; the call reverts in simulation with no data. Sniff the bytecode first.
-- **Wiring the impl `0xfcdb…` or an old clone into a split.** Only `JBP6FeeLPSplitHook` (`0xe949…`) delegates to the fixed impl with the live fee config; earlier clones (`0xae67…`, `0x2298…`) delegate to buggy impls forever.
-- **Pointing a reserved split at the hook on OP Sepolia.** No deployment there; the split reverts and its tokens are burned.
-- **Putting the hook on a payout split.** `groupId != 1` reverts `TerminalTokensNotAllowed`; the terminal refunds the payout but nothing accumulates.
-- **Expecting a treasury deposit from fees.** Fee remainders stay in the hook as future liquidity; only the fee project's cut leaves, and the resulting fee-project tokens sit in `claimableFeeTokens` until the owner calls `claimFeeTokensFor`.
-- **Reading `context.token` to find the project token.** The hook resolves `JBTokens.tokenOf(projectId)`; on the deployed hook a project with no ERC-20 cannot accumulate at all.
-- **Assuming `addLiquidity` succeeds whenever tokens accumulated.** Below `1e15` wei of project tokens it reverts; with spot pinned in the top spacing under the issuance ceiling (where arbitrage leaves a live buyback pool) the single-sided solver yields an empty range (`ZeroLiquidity` / `NoDeployableLiquidityAtSpot`); a cold oracle reverts `TwapUnavailable`.
-- **Treating `rebalanceLiquidity` as a free re-center.** It reverts `DriftBelowThreshold` unless the corridor moved by more than one spacing, and it burns with a 95% principal floor.
+- **Encoding 1.5.0 calls against an older clone (or vice versa).** `deployPool(uint256)` vs `deployPool(uint256,uint256)` and `addLiquidity(uint256,address)` vs `addLiquidity(uint256,address,uint256)` are different selectors; the call reverts with no data. Sniff the bytecode first.
+- **Wiring the impl `0x5b54...`, or `0xaadf...`, into a new split.** Use `JBP6FeeLPSplitHook` `0xef89...`; `0xaadf...` keys pools on the outgoing V4 hook.
+- **Pointing a split at the hook on OP Sepolia.** No deployment there; the split fails and its tokens are burned.
+- **Sending a payout before `deployPool`, or in another token.** Reverts `InvalidStageForAction` / `InvalidTerminalToken`; Core returns the payout to the project's balance.
+- **Using a payout group other than the token's.** `groupId != uint256(uint160(token))` reverts `InvalidSplitGroup`.
+- **Reading `tokenIdOf`, `activeTickLowerOf`/`UpperOf`, or calling `rebalanceLiquidity` on 1.5.0.** Removed. Use `askTokenIdOf`/`bidTokenIdOf` and `addLiquidity`.
+- **Expecting fee remainders to stay in the hook.** Terminal-token remainders go to the project's balance and project-token remainders are burned; only failed routes fall back to the ledgers. The fee project's tokens sit in `claimableFeeTokens` until the owner calls `claimFeeTokensFor`.
+- **Reading `context.token` to find the project token.** The hook resolves `JBTokens.tokenOf(projectId)`.
+- **Assuming `addLiquidity` always mints.** An empty corridor holds (reverts `EmptyCorridor` if nothing was live); spot past both corridor ends with the wrong inventory reverts `NoDeployableLiquidityAtSpot`; a cold oracle reverts `TwapUnavailable`; spot more than 200 ticks off the 30-minute TWAP reverts `PriceDeviationTooHigh`.
+- **Treating `LiquidityAutomationFailed` as lost funds.** The intake is ledgered; call `deployPool` or `addLiquidity` with enough gas.
 - **Deriving `deployHookFor`'s address from the raw salt.** The clone salt is `keccak256(abi.encode(msg.sender, salt))`; a different caller lands on a different address.
-- **Hard-coding a cash-out `minCashOutReturn` from a quote.** On the deployed hook the internal 97%-of-rate floor already applies; a tighter caller floor only adds `UnderMin` reverts when the rate moves between quote and execution.

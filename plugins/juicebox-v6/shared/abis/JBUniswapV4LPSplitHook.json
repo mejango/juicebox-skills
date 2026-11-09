@@ -153,6 +153,25 @@
  },
  {
   "type": "function",
+  "name": "accumulatedProjectCredits",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "accumulatedProjectCredits",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
   "name": "accumulatedProjectTokens",
   "inputs": [
    {
@@ -172,7 +191,7 @@
  },
  {
   "type": "function",
-  "name": "activeTickLowerOf",
+  "name": "accumulatedTerminalTokens",
   "inputs": [
    {
     "name": "projectId",
@@ -187,33 +206,9 @@
   ],
   "outputs": [
    {
-    "name": "tickLower",
-    "type": "int24",
-    "internalType": "int24"
-   }
-  ],
-  "stateMutability": "view"
- },
- {
-  "type": "function",
-  "name": "activeTickUpperOf",
-  "inputs": [
-   {
-    "name": "projectId",
+    "name": "",
     "type": "uint256",
     "internalType": "uint256"
-   },
-   {
-    "name": "terminalToken",
-    "type": "address",
-    "internalType": "address"
-   }
-  ],
-  "outputs": [
-   {
-    "name": "tickUpper",
-    "type": "int24",
-    "internalType": "int24"
    }
   ],
   "stateMutability": "view"
@@ -231,9 +226,75 @@
     "name": "terminalToken",
     "type": "address",
     "internalType": "address"
+   }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "askTokenIdOf",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
    },
    {
-    "name": "minCashOutReturn",
+    "name": "terminalToken",
+    "type": "address",
+    "internalType": "address"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "tokenId",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "bidTokenIdOf",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "terminalToken",
+    "type": "address",
+    "internalType": "address"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "tokenId",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "burnFeeRemainder",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "projectToken",
+    "type": "address",
+    "internalType": "address"
+   },
+   {
+    "name": "count",
     "type": "uint256",
     "internalType": "uint256"
    }
@@ -355,9 +416,36 @@
     "name": "projectId",
     "type": "uint256",
     "internalType": "uint256"
-   },
+   }
+  ],
+  "outputs": [],
+  "stateMutability": "nonpayable"
+ },
+ {
+  "type": "function",
+  "name": "deployedTerminalTokenOf",
+  "inputs": [
    {
-    "name": "minCashOutReturn",
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "terminalToken",
+    "type": "address",
+    "internalType": "address"
+   }
+  ],
+  "stateMutability": "view"
+ },
+ {
+  "type": "function",
+  "name": "executeAutomationFor",
+  "inputs": [
+   {
+    "name": "projectId",
     "type": "uint256",
     "internalType": "uint256"
    }
@@ -704,30 +792,41 @@
  },
  {
   "type": "function",
-  "name": "rebalanceLiquidity",
+  "name": "sendToTerminal",
   "inputs": [
+   {
+    "name": "terminal",
+    "type": "address",
+    "internalType": "address"
+   },
    {
     "name": "projectId",
     "type": "uint256",
     "internalType": "uint256"
    },
    {
-    "name": "terminalToken",
+    "name": "token",
     "type": "address",
     "internalType": "address"
    },
    {
-    "name": "decreaseAmount0Min",
+    "name": "amount",
     "type": "uint256",
     "internalType": "uint256"
    },
    {
-    "name": "decreaseAmount1Min",
+    "name": "shouldPay",
+    "type": "bool",
+    "internalType": "bool"
+   }
+  ],
+  "outputs": [
+   {
+    "name": "beneficiaryTokenCount",
     "type": "uint256",
     "internalType": "uint256"
    }
   ],
-  "outputs": [],
   "stateMutability": "nonpayable"
  },
  {
@@ -742,36 +841,12 @@
   ],
   "outputs": [
    {
-    "name": "",
+    "name": "supported",
     "type": "bool",
     "internalType": "bool"
    }
   ],
   "stateMutability": "pure"
- },
- {
-  "type": "function",
-  "name": "tokenIdOf",
-  "inputs": [
-   {
-    "name": "projectId",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "terminalToken",
-    "type": "address",
-    "internalType": "address"
-   }
-  ],
-  "outputs": [
-   {
-    "name": "tokenId",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ],
-  "stateMutability": "view"
  },
  {
   "type": "event",
@@ -815,7 +890,7 @@
     "internalType": "uint256"
    },
    {
-    "name": "terminalToken",
+    "name": "token",
     "type": "address",
     "indexed": true,
     "internalType": "address"
@@ -870,16 +945,72 @@
     "internalType": "address"
    },
    {
-    "name": "tokenId",
+    "name": "askTokenId",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   },
+   {
+    "name": "bidTokenId",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
+   },
+   {
+    "name": "caller",
+    "type": "address",
+    "indexed": false,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "LiquidityAutomationFailed",
+  "inputs": [
+   {
+    "name": "projectId",
     "type": "uint256",
     "indexed": true,
     "internalType": "uint256"
    },
    {
-    "name": "isNewPosition",
-    "type": "bool",
+    "name": "reasonSelector",
+    "type": "bytes4",
     "indexed": false,
-    "internalType": "bool"
+    "internalType": "bytes4"
+   },
+   {
+    "name": "caller",
+    "type": "address",
+    "indexed": false,
+    "internalType": "address"
+   }
+  ],
+  "anonymous": false
+ },
+ {
+  "type": "event",
+  "name": "PayoutAccepted",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "indexed": true,
+    "internalType": "uint256"
+   },
+   {
+    "name": "terminalToken",
+    "type": "address",
+    "indexed": true,
+    "internalType": "address"
+   },
+   {
+    "name": "amount",
+    "type": "uint256",
+    "indexed": false,
+    "internalType": "uint256"
    },
    {
     "name": "caller",
@@ -923,49 +1054,6 @@
  },
  {
   "type": "error",
-  "name": "JBMetadataResolver_DataNotPadded",
-  "inputs": [
-   {
-    "name": "dataLength",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBMetadataResolver_MetadataTooLong",
-  "inputs": [
-   {
-    "name": "offset",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "maxOffset",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBMetadataResolver_MetadataTooShort",
-  "inputs": [
-   {
-    "name": "metadataLength",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "minMetadataLength",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
   "name": "JBPermissioned_Unauthorized",
   "inputs": [
    {
@@ -997,6 +1085,33 @@
  },
  {
   "type": "error",
+  "name": "JBUniswapV4LPSplitHook_AmountExceedsUint128",
+  "inputs": [
+   {
+    "name": "amount",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBUniswapV4LPSplitHook_EmptyCorridor",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "terminalToken",
+    "type": "address",
+    "internalType": "address"
+   }
+  ]
+ },
+ {
+  "type": "error",
   "name": "JBUniswapV4LPSplitHook_ExistingPoolPriceOutOfBounds",
   "inputs": [
    {
@@ -1013,6 +1128,22 @@
     "name": "upperBound",
     "type": "uint160",
     "internalType": "uint160"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBUniswapV4LPSplitHook_FeeBurnNotExact",
+  "inputs": [
+   {
+    "name": "projectId",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "count",
+    "type": "uint256",
+    "internalType": "uint256"
    }
   ]
  },
@@ -1045,17 +1176,6 @@
     "name": "required",
     "type": "uint256",
     "internalType": "uint256"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBUniswapV4LPSplitHook_InsufficientLiquidity",
-  "inputs": [
-   {
-    "name": "liquidity",
-    "type": "uint128",
-    "internalType": "uint128"
    }
   ]
  },
@@ -1098,6 +1218,22 @@
  },
  {
   "type": "error",
+  "name": "JBUniswapV4LPSplitHook_InvalidSplitGroup",
+  "inputs": [
+   {
+    "name": "groupId",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "token",
+    "type": "address",
+    "internalType": "address"
+   }
+  ]
+ },
+ {
+  "type": "error",
   "name": "JBUniswapV4LPSplitHook_InvalidStageForAction",
   "inputs": [
    {
@@ -1130,6 +1266,32 @@
     "name": "terminalToken",
     "type": "address",
     "internalType": "address"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBUniswapV4LPSplitHook_NoDeployableLiquidityAtSpot",
+  "inputs": [
+   {
+    "name": "spotTick",
+    "type": "int24",
+    "internalType": "int24"
+   },
+   {
+    "name": "ceilingTick",
+    "type": "int24",
+    "internalType": "int24"
+   },
+   {
+    "name": "projectAmount",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "terminalAmount",
+    "type": "uint256",
+    "internalType": "uint256"
    }
   ]
  },
@@ -1283,31 +1445,15 @@
  },
  {
   "type": "error",
-  "name": "JBUniswapV4LPSplitHook_TerminalNotFound",
+  "name": "JBUniswapV4LPSplitHook_TransferNotExact",
   "inputs": [
-   {
-    "name": "projectId",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
    {
     "name": "token",
     "type": "address",
     "internalType": "address"
-   }
-  ]
- },
- {
-  "type": "error",
-  "name": "JBUniswapV4LPSplitHook_TerminalTokensNotAllowed",
-  "inputs": [
-   {
-    "name": "groupId",
-    "type": "uint256",
-    "internalType": "uint256"
    },
    {
-    "name": "requiredGroupId",
+    "name": "amount",
     "type": "uint256",
     "internalType": "uint256"
    }
@@ -1331,6 +1477,11 @@
  },
  {
   "type": "error",
+  "name": "JBUniswapV4LPSplitHook_Unauthorized",
+  "inputs": []
+ },
+ {
+  "type": "error",
   "name": "JBUniswapV4LPSplitHook_UnclaimedFeeTokenChanged",
   "inputs": [
    {
@@ -1347,15 +1498,10 @@
  },
  {
   "type": "error",
-  "name": "JBUniswapV4LPSplitHook_ZeroLiquidity",
+  "name": "JBUniswapV4LPSplitHook_UnexpectedMsgValue",
   "inputs": [
    {
-    "name": "amount0",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "amount1",
+    "name": "value",
     "type": "uint256",
     "internalType": "uint256"
    }
@@ -1363,24 +1509,8 @@
  },
  {
   "type": "error",
-  "name": "PRBMath_MulDiv_Overflow",
-  "inputs": [
-   {
-    "name": "x",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "y",
-    "type": "uint256",
-    "internalType": "uint256"
-   },
-   {
-    "name": "denominator",
-    "type": "uint256",
-    "internalType": "uint256"
-   }
-  ]
+  "name": "Reentrancy",
+  "inputs": []
  },
  {
   "type": "error",

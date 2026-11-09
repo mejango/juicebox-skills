@@ -44,7 +44,7 @@ Both fee recipients are revnets: **NANA is project 1** (`JBConstants.FEE_BENEFIC
 
 | Action | Fee | Notes |
 |--------|-----|-------|
-| Revnet cash out (`cashOutTaxRate != 0`) | 2.5% of the **token count** cashed out | REV receives that share's bonding-curve reclaim; skipped at zero tax, for feeless beneficiaries (suckers, router terminal), or when REV has no terminal for the token |
+| Revnet cash out (`cashOutTaxRate != 0`) | 2.5% of the **token count** cashed out | REV receives that share's bonding-curve reclaim; skipped at zero tax, for feeless beneficiaries (suckers), or when REV has no terminal for the token |
 | Loan origination | 1% of borrowed amount (`REV_PREPAID_FEE_PERCENT = 10/1000`) | paid into REV; borrower's beneficiary receives REV tokens |
 | Loan prepaid source fee | 2.5%–50% (borrower's choice) | goes **back into the source revnet** via `pay` — treasury revenue that mints source-revnet tokens to the borrower's beneficiary |
 | Loan variable source fee | 0→100% of the un-prepaid remainder, linear after the prepaid window until year 10 | also treasury revenue to the source revnet |

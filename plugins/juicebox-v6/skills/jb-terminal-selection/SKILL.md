@@ -23,8 +23,8 @@ metadata:
 | `JBDirectory` | `0x5aff29060e023e6fb87be5596652b33c65af535b` | Registry of each project's terminals; resolves `primaryTerminalOf` |
 | `JBMultiTerminal` | `0x130f5dd2bd8805443cf41755253d778a75a67f53` | Holds project balances; accepts only tokens with a registered accounting context |
 | `JBRouterTerminalRegistry` | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` | Forwarding terminal projects register in `JBDirectory`; forwards `pay`/`addToBalanceOf` to the project's resolved router terminal |
-| `JBRouterTerminal` | `0x62e2fe718ca3008a6a322deec9903286463f1add` | Universal router: accepts any token and converts it (direct forward, Uniswap V3/V4 swap, recursive JB cash-outs, or combinations) into a token the destination project accepts. Not deployed on Optimism Sepolia — resolve the effective router via `registry.terminalOf(projectId)` |
-| `JBRouterTerminalGateway` | `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` | The registry's default (and project #1's) router terminal: forwards into `JBRouterTerminal` atomically and forwards metadata unchanged, so router `pay`/`cashOut` entries stay keyed to `JBRouterTerminal`. Not deployed on Optimism Sepolia |
+| `JBRouterTerminal` | `0xa0b7b55e87c781f47bda8d40f8381cb746eb0e37` | Universal router: accepts any token and converts it (direct forward, Uniswap V3/V4 swap, recursive JB cash-outs, or combinations) into a token the destination project accepts. Not deployed on Optimism Sepolia — resolve the effective router via `registry.terminalOf(projectId)` |
+| `JBRouterTerminalGateway` | `0xe2c259b2fcfd2d57ebcda9b3d2d10bdb1b2cd977` | The registry's default for projects created after the 2026-11 rollout, and project #1's (older projects may resolve to gateway `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` in front of router `0x62e2fe718ca3008a6a322deec9903286463f1add`; read `registry.terminalOf`): forwards into `JBRouterTerminal` atomically and forwards metadata unchanged, so router `pay`/`cashOut` entries stay keyed to `JBRouterTerminal`. Not deployed on Optimism Sepolia |
 
 The native token is the sentinel `0x000000000000000000000000000000000000EEEe` (`JBConstants.NATIVE_TOKEN`), never `address(0)`.
 
@@ -112,16 +112,16 @@ function pay(
 
 ## Router quote metadata
 
-`JBRouterTerminal` prices swaps from manipulation-resistant sources (V3 TWAP, canonical-hook V4 oracle) with a dynamic slippage model. Front-ends should still supply an explicit quote via a `pay` metadata entry (see `jb-permit2-metadata` for the encoding format). For a person's payment, `prepareUserPay` (`@bananapus/nana-sdk-core/v6`) quotes the conversion and the destination's buyback pool and returns the `metadata` and `minReturnedTokens` to send:
+`JBRouterTerminal` prices swaps from manipulation-resistant sources (V3 TWAP, the V4 oracle of its configured `univ4Hook`, which for `0xa0b7…` is JBUniswapV4Hook 2.0.0; it does not see pools on the 1.1.2 V4 hook) with a dynamic slippage model. Front-ends should still supply an explicit quote via a `pay` metadata entry (see `jb-permit2-metadata` for the encoding format). For a person's payment, `prepareUserPay` (`@bananapus/nana-sdk-core/v6`) quotes the conversion and the destination's buyback pool and returns the `metadata` and `minReturnedTokens` to send:
 
-- Entry ID: `bytes4(bytes20(routerTerminal) ^ bytes20(keccak256("pay")))` = `0xcf25a8f1` for `0x62e2fe718ca3008a6a322deec9903286463f1add`.
+- Entry ID: `bytes4(bytes20(routerTerminal) ^ bytes20(keccak256("pay")))` = `0x0d70e3de` for `0xa0b7b55e87c781f47bda8d40f8381cb746eb0e37` (`0xcf25a8f1` for the 1.3.0 router `0x62e2…1add`). Key it to the router behind the project's resolved gateway (`gateway.ROUTER()`).
 - Payload: `abi.encode(address quotedTokenOut, uint256 quotedMinAmountOut)`. A zero `quotedMinAmountOut` is treated as "not provided" and falls back to automatic quoting.
 
-If the destination project runs `JBBuybackHook`, its own `pay` entry (`0x1fe58cda`) is a separate 3-word payload: `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — `skipSplits = true` opts the swapped tokens out of the reserved split (see `jb-permit2-metadata`).
+If the destination project runs `JBBuybackHook`, its own `pay` entry (`0x2db62989` for hook `0x80717f…`, `0x1fe58cda` for 1.4.0 `0xb222…`, `0xdf320cd4` via the registry) is a separate 3-word payload: `abi.encode(uint256 amountToSwapWith, uint256 minimumSwapAmountOut, bool skipSplits)` — `skipSplits = true` opts the swapped tokens out of the reserved split (see `jb-permit2-metadata`).
 
 `addToBalanceOf` through the router has no `minReturnedTokens` backstop, so a swap leg with no manipulation-resistant TWAP **requires** a `pay` quote — otherwise it reverts with `JBRouterTerminal_ManipulationResistantQuoteRequired`.
 
-Router cash-out legs call the downstream `cashOutTokensOf` with `minTokensReclaimed: 0` and enforce the caller's floor (the `cashOut` metadata entry `0xe453b185`, payload `(uint256 minTokensReclaimed)`) against the measured balance delta, reverting `JBRouterTerminal_SlippageExceeded` — always supply that entry; the downstream terminal's own min check is not your guard.
+Router cash-out legs call the downstream `cashOutTokensOf` with `minTokensReclaimed: 0` and enforce the caller's floor (the `cashOut` metadata entry `0x2606faaa` (`0xe453b185` on the 1.3.0 router), payload `(uint256 minTokensReclaimed)`) against the measured balance delta, reverting `JBRouterTerminal_SlippageExceeded` — always supply that entry; the downstream terminal's own min check is not your guard.
 
 ## Permit2 integration
 
@@ -135,8 +135,9 @@ metadataId = bytes4(bytes20(calledTerminal) ^ bytes20(keccak256("permit2")))
 |-----------------|---------------------|
 | `JBMultiTerminal` | `0xd260d5c9` |
 | `JBRouterTerminalRegistry` | `0x212df73e` |
-| `JBRouterTerminal` | `0xa38d766a` |
-| `JBRouterTerminalGateway` | `0x8b3926ee` |
+| `JBRouterTerminal` | `0x61d83d45` |
+| `JBRouterTerminalGateway` | `0x23add1a9` |
+| 1.3.0 `JBRouterTerminal` `0x62e2…` / gateway `0x4a56…` | `0xa38d766a` / `0x8b3926ee` |
 
 See `jb-permit2-metadata` for the full encoding.
 

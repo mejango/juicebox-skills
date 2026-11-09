@@ -58,8 +58,8 @@ Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`
 
 | Contract | Address | Role |
 |---|---|---|
-| JBRouterTerminal | `0x62e2fe718ca3008a6a322deec9903286463f1add` | Universal terminal: accepts any token and converts to the destination project's accepted token via direct forwarding, Uniswap V3/V4 swaps, or recursive cash-outs. Absent on OP Sepolia |
-| JBRouterTerminalGateway | `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` | The registry's default router terminal: forwards each call atomically into JBRouterTerminal; when the route fails and the caller opted in, it keeps the input token for a permissionless retry or refund. Absent on OP Sepolia |
+| JBRouterTerminal | `0xa0b7b55e87c781f47bda8d40f8381cb746eb0e37` | Universal terminal: accepts any token and converts to the destination project's accepted token via direct forwarding, Uniswap V3/V4 swaps (V4: hookless pools and pools on this chain's JBUniswapV4Hook 2.0.0 only), or recursive cash-outs; bound to buyback hook `0x80717f…`. Absent on OP Sepolia |
+| JBRouterTerminalGateway | `0xe2c259b2fcfd2d57ebcda9b3d2d10bdb1b2cd977` | The registry's default router terminal for projects created after the 2026-11 rollout (older cohorts resolve to the 1.3.0 gateway `0x4a56aef5b6a5b9742abb02ca67c5a85ba183d901` in front of router `0x62e2fe718ca3008a6a322deec9903286463f1add`; call `registry.terminalOf`): forwards each call atomically into JBRouterTerminal; when the route fails and the caller opted in, it keeps the input token for a permissionless retry or refund. Absent on OP Sepolia |
 | JBRouterTerminalRegistry | `0xe0427f250fdb0379c8e98e884ee4570521208cbc` | Per-project router-terminal selection with owner-managed default; choices lockable |
 | JBAddressRegistry | `0x581bfd1ead279e0a27b736e49494db3a7d85993c` | Records who deployed a contract (create or create2); used to verify hooks come from trusted deployers |
 | JBProjectHandles | `0x726f4a3dfd2fb8297f8ab98d215b42a92d8eefe8` | Bidirectionally-verified ENS handles for projects (ENS text record `juicebox` = `chainId:projectId`) |
@@ -85,14 +85,27 @@ Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`
 
 | Contract | Address | Role |
 |---|---|---|
-| JBBuybackHook | `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91` | Buys project tokens from a Uniswap V4 pool when cheaper than minting; sells on cash-out when the pool beats the bonding curve; TWAP-guarded. Absent on OP Sepolia |
+| JBBuybackHook | `0x80717f09461a3fb08364fe8c5259220f7d06e0af` | Buys project tokens from a Uniswap V4 pool when cheaper than minting; sells on cash-out when the pool beats the bonding curve; TWAP-guarded; trades only pools keyed to this chain's JBUniswapV4Hook 2.0.0. The 1.4.0 hook `0xb222da5a71e8fb89a5a38b7c920eab5dfbc74b91` still serves unmigrated older projects (no longer allowed for new pins). Absent on OP Sepolia |
 | JBBuybackHookRegistry | `0x72f55a54cd53410a5ff175508a5a384227081788` | Maps projects to their buyback hook; terminal data hook that forwards pay/cash-out calls; default-hook cohorts by project creation time |
 
 ### Uniswap V4 (JBUniswapV4Hook is per-chain; rest chain-same)
 
-`JBUniswapV4Hook` — swap router hook that routes each swap to whichever venue (V4 pool or Juicebox project) yields more tokens, using a 30-minute TWAP. Its address differs on every chain (Uniswap V4 hook addresses encode permission flags, so each chain gets its own mined address):
+`JBUniswapV4Hook` 2.0.0 — fills buys from the pool while it beats issuance and mints the rest through the project's terminal; sells through the best of pool, cash-out, or a split, each quoted exactly; also the TWAP oracle the buyback hook reads. Quote through Uniswap's V4 Quoter (`estimateUniswapOutput` is gone). Its address differs on every chain (Uniswap V4 hook addresses encode permission flags, so each chain gets its own mined address):
 
 | Chain | JBUniswapV4Hook |
+|---|---|
+| Ethereum | `0x41a50be8b4b63e968ab83227bc73330c5d1215c8` |
+| Optimism | `0x850ec1a2adcb2126d823632e60441de2926fd5c8` |
+| Base | `0xb436cedbee8f191a3860719b4b0f474434f315c8` |
+| Arbitrum | `0xa7477af9d209daf3e34d376d500ec82539b755c8` |
+| Sepolia | `0x3f365e7c021c957747b870d8800547140d04d5c8` |
+| Base Sepolia | `0x2ca71b1ce365b571ce24cb57577a4a645dcc15c8` |
+| Arbitrum Sepolia | `0x23d9ab653d95aa60e660015d80c9a112374ed5c8` |
+| Optimism Sepolia | not deployed |
+
+Pools created before the 2026-11 rollout live on the 1.1.2 hook (`JBUniswapV4Hook_deprecated1` in deploy-all). A V4 pool's hook is fixed for life, and the current router and buyback hook do not see these pools:
+
+| Chain | Old 1.1.2 JBUniswapV4Hook |
 |---|---|
 | Ethereum | `0xd81ece6cf73b18a1b109e48c86ffdbd284f6d5c8` |
 | Optimism | `0xae18f78eadfa5addda9026e1ab835381cfdf55c8` |
@@ -101,14 +114,13 @@ Juicebox V6 has a single contract set: one `JBController`, one `JBMultiTerminal`
 | Sepolia | `0x7494930fbfa2fdd06549526c805d48b4f22a15c8` |
 | Base Sepolia | `0xf7ce556c8c10cff2c8da6ea521c6232598f7d5c8` |
 | Arbitrum Sepolia | `0xd27bd395dfb5741a7cc66df836e3039c563955c8` |
-| Optimism Sepolia | not deployed |
 
 | Contract | Address | Role |
 |---|---|---|
-| JBUniswapV4LPSplitHook | `0xfcdbabd7b8de07c6e4ca7d79790e235848edc251` | Split-hook implementation that turns reserved-token distributions into a Uniswap V4 LP position; cloned per project. Absent on OP Sepolia |
-| JBUniswapV4LPSplitHookDeployer | `0xee49b9c6938c31c223e49272bb0a3810bc39f3da` | Deploys LP split hook clones (optional CREATE2 salt). Absent on OP Sepolia |
-| JBUniswapV4LPSplitHookMath | `0x734bfc66606dfe7943bcf541cf5dcbc5312e695b` | Linked library: Juicebox-price → Uniswap-tick math kept outside the hook's bytecode; not standalone. On OP Sepolia (the only LP artifact there) it is `0xef2242dc7e8a082ce00c943548e414598896c4f4` |
-| JBP6FeeLPSplitHook | `0xe9493bc776699714a89aa982cf828d843f040d2a` | The shared LP split hook clone projects point reserved splits at (clone of the implementation above; `feeProjectId` 1, `feePercent` 2000 bps = 20%). Absent on OP Sepolia |
+| JBUniswapV4LPSplitHook | `0x5b54156b4a68ba5f9fa7706b913045e597e45e74` | Split-hook implementation that turns reserved-token distributions into a Uniswap V4 LP position; cloned per project. Absent on OP Sepolia |
+| JBUniswapV4LPSplitHookDeployer | `0xad2ed0024647ccc2eda4e42dc616d6fe886ed028` | Deploys LP split hook clones (optional CREATE2 salt). Absent on OP Sepolia |
+| JBUniswapV4LPSplitHookMath | `0x03fa7fbf4bacc4495f44fec35fbcc00e63f790ad` | Linked library: Juicebox-price → Uniswap-tick math kept outside the hook's bytecode; not standalone. On OP Sepolia (the only LP artifact there) it is `0xef2242dc7e8a082ce00c943548e414598896c4f4` |
+| JBP6FeeLPSplitHook | `0xef8993f50363461007bed2f54e98bbef9854148a` | The shared LP split hook clone projects point reserved splits at (1.5.0 clone of the implementation above; `feeProjectId` 1, `feePercent` 1000 bps = 10%). Older instances keep their own ABI: 1.3.0 `0xe9493bc776699714a89aa982cf828d843f040d2a` (20%), and 1.0.0 `0x22988374af49507fec1ee78811fbc47d10d5e639` that BAN's reserved split uses; see jb-lp-split-hook. Absent on OP Sepolia |
 
 ## Suckers (cross-chain bridging)
 
@@ -148,14 +160,27 @@ Roles: `JBOptimismSucker` bridges project tokens + terminal funds over an OP Sta
 | CTProjectOwner | `0x327a411a797ebdfba2ac7bf3cb3ee53143df812a` | Dead-end project owner: locks project ownership forever while keeping Croptop posting alive |
 | CTPublisher | `0xcbc84cf9b0293efe3ac7dd1bea128a404f2e6a1c` | Publishing engine: anyone posts NFTs to a project's 721 hook subject to owner-set criteria; 5% fee to the fee project |
 
-## Defifa
+## Defifa (2.0, chain-same, all 8 chains)
 
-`DefifaGovernor` (`0xa0cefa58fd913c1838c39b2c3d0b08eb7f5d6d53`, scorecard ratification via token-weighted attestation) and `DefifaTokenUriResolver` (`0x3c2263d4237f584506bba1b775d11a69555845de`, on-chain SVG token URIs) are chain-same on all 8 chains. The other two use one mainnet address and one testnet address:
+Two game types side by side: ERC-721 (`DefifaHook`, one NFT per position) and ERC-1155 (`Defifa1155Hook`, one balance per tier). Each type has its own deployer and governor; both share one tiers store, one token URI resolver and one voting referee. Phases: COUNTDOWN → MINT → REFUND → SCORING → COMPLETE, or NO_CONTEST (min participation not met or no scorecard ratified within `scorecardTimeout`; refunds at mint price).
 
-| Contract | Mainnets (1/10/8453/42161) | Testnets (all sepolias) | Role |
-|---|---|---|---|
-| DefifaDeployer | `0x375afb2a4b1cadae99f8863f96fc1aebcbaf8bde` | `0xbfa54a97099485c134f06c9a08a4909c26fd7318` | Deploys and manages Defifa prediction games (COUNTDOWN → MINT → REFUND → SCORING → COMPLETE) |
-| DefifaHook | `0xe2229dd6a7da99ebb8f7d749612edd1b2addafe1` | `0x3184783d0e3cbf5a821794b246c71a3d1a0cf312` | 721 hook implementation enforcing game phases; cloned per game |
+| Contract | Address | Role |
+|---|---|---|
+| DefifaDeployer | `0x32cd7d0c378a45a27cd7e361bce0ba882efe87a9` | Launches ERC-721 games (`launchGameWith`), clones `DefifaHook`, names each game's referee in the governor, fulfills post-game fee commitments |
+| DefifaHook | `0x65aa6c2105060515259a460a4fad2b3eb3577db8` | ERC-721 game-piece hook implementation, cloned per game: phases, delegation, `firstOwnerOf`, cash-out weights |
+| DefifaGovernor | `0xd8debb4e66c11cd72643e450b3beaced73ff7b78` | ERC-721 games: accepts scorecards only from each game's referee, holds the pending one through the timelock, then anyone ratifies. Counts no votes |
+| Defifa1155Deployer | `0x7a62383b50aaa8b212bd965c426490625068ba80` | Same `DefifaDeployer` code wired to `Defifa1155Hook` and `Defifa1155Governor` |
+| Defifa1155Hook | `0x9214c2a673c6fc1a82a6ccc8d0b9f5dc2d11d4c3` | ERC-1155 game-piece hook implementation, cloned per game: one token ID per tier, so large entries mint in one transfer |
+| Defifa1155Governor | `0x53eede0488861cb6c7c643cd77d7f92f4ede2879` | Same `DefifaGovernor` code for ERC-1155 games |
+| DefifaVotingReferee | `0xf6552cc178042e9ed13c768929983e7d93254640` | Sample referee for both game types: anyone submits, holders attest with BWA power (`attestToScorecardFrom`), the first scorecard at quorum (50% to 75%) after the grace period is forwarded to the governor |
+| DefifaTiersHookStore | `0xf65dd3adbac3d776cfa025458cac730aa52adb7d` | `JB721TiersHookStore` plus count-based records (`recordMintCounts`, `recordBurnCounts`, count `recordTransferForTier`); shared, required by the ERC-1155 hook |
+| DefifaTokenUriResolver | `0xe876dfd954f827fde02d7211717a350478b3861e` | Onchain SVG game-card metadata, shared by both game types |
+| DefifaHookLib | `0x71590c5e91b4bbed7c6996fdf446b817d2f3c82f` | Linked library: validation and weight rules shared by both hooks |
+| Defifa1155HookLib | `0xd4b4fd661538c235a0935d8135487ede98d52728` | Linked library: ERC-1155 ID and amount logic; calls `DefifaHookLib` |
+
+A game's referee is any address (person, multisig or contract); a game is as safe as its referee. Scorecard state: governor QUEUED → SUCCEEDED → RATIFIED (or DEFEATED if replaced); voting referee PENDING → ACTIVE → SUCCEEDED → RATIFIED | DEFEATED.
+
+Defifa 1 games keep their own contracts and ABI (`*_deprecated` in deploy-all): DefifaDeployer `0x375afb2a4b1cadae99f8863f96fc1aebcbaf8bde` (mainnets) / `0xbfa54a97099485c134f06c9a08a4909c26fd7318` (testnets), DefifaHook `0xe2229dd6a7da99ebb8f7d749612edd1b2addafe1` (mainnets) / `0x3184783d0e3cbf5a821794b246c71a3d1a0cf312` (testnets), and chain-same DefifaGovernor `0xa0cefa58fd913c1838c39b2c3d0b08eb7f5d6d53`, DefifaTokenUriResolver `0x3c2263d4237f584506bba1b775d11a69555845de`, DefifaHookLib `0xa095f42fb3ba805a7ac899988fc6d77afed09df5`.
 
 ## Price feeds and deadlines
 
@@ -231,11 +256,11 @@ Live clone instances for well-known projects. Each has one address across all ma
 
 - **Hand-typing addresses.** `shared/chain-config.json` is the only source. Docs pages, explorers, and remembered addresses drift.
 - **Assuming `JBUniswapV4Hook` is chain-same.** It is the only member of the shared suite with a different address on every chain (Uniswap V4 hook addresses encode permission flags). Always look it up per chain.
-- **Using a mainnet address on a testnet** for `DefifaDeployer`, `DefifaHook`, `JBERC20__Project*`, or `JB721TiersHook__Project*` — these all have separate mainnet/testnet addresses.
+- **Using a mainnet address on a testnet** for `JBERC20__Project*`, `JB721TiersHook__Project*`, or the Defifa 1 `DefifaDeployer`/`DefifaHook`. These have separate mainnet/testnet addresses. Defifa 2.0 contracts are the same on every chain.
 - **Expecting Uniswap-dependent contracts on OP Sepolia.** `JBUniswapV4Hook`, LP split hooks, `JBBuybackHook`, and `JBRouterTerminal` are not deployed there.
 - **Misreading CCIP sucker names.** The suffix names the *remote* chain: `JBCCIPSucker__ETH` on Optimism bridges Optimism↔Ethereum. Its address differs on each local chain.
-- **Calling implementations instead of instances.** `JBERC20`, `JB721TiersHook`, `JB721Checkpoints`, `JBProjectPayer`, `JBUniswapV4LPSplitHook`, and `DefifaHook` at the addresses above are implementations that get cloned. A live project's token is at `JBTokens.tokenOf(projectId)`, not at the `JBERC20` implementation address.
-- **Calling libraries as contracts.** `JBHeldFees`, `JBUniswapV4LPSplitHookMath`, `CCIPHelper`, `JBPayoutSplitGroupLib`, `JBSuckerLib`, `JBCCIPLib`, `JB721TiersHookLib`, and `DefifaHookLib` are DELEGATECALL-linked libraries, not standalone entry points.
+- **Calling implementations instead of instances.** `JBERC20`, `JB721TiersHook`, `JB721Checkpoints`, `JBProjectPayer`, `JBUniswapV4LPSplitHook`, `DefifaHook`, and `Defifa1155Hook` at the addresses above are implementations that get cloned. A live project's token is at `JBTokens.tokenOf(projectId)`, not at the `JBERC20` implementation address.
+- **Calling libraries as contracts.** `JBHeldFees`, `JBUniswapV4LPSplitHookMath`, `CCIPHelper`, `JBPayoutSplitGroupLib`, `JBSuckerLib`, `JBCCIPLib`, `JB721TiersHookLib`, `DefifaHookLib`, and `Defifa1155HookLib` are DELEGATECALL-linked libraries, not standalone entry points.
 - **Paying `JBMultiTerminal` without checking the directory.** Resolve `JBDirectory.primaryTerminalOf(projectId, token)` first — a project may route through `JBRouterTerminalRegistry` or accept different tokens per terminal.
 - **Using `address(0)` for native ETH.** The protocol's native-token sentinel is `0x…EEEe` (`JBConstants.NATIVE_TOKEN`).
 - **Sending the wrong creation fee.** `JBProjects.createFor` reverts unless `msg.value` equals `creationFee()` exactly — query it first.

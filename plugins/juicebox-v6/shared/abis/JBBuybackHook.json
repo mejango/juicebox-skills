@@ -1308,6 +1308,22 @@
  },
  {
   "type": "error",
+  "name": "JBBuybackHook_DerivedFloorNotMet",
+  "inputs": [
+   {
+    "name": "amount",
+    "type": "uint256",
+    "internalType": "uint256"
+   },
+   {
+    "name": "minimum",
+    "type": "uint256",
+    "internalType": "uint256"
+   }
+  ]
+ },
+ {
+  "type": "error",
   "name": "JBBuybackHook_InsufficientPayAmount",
   "inputs": [
    {
@@ -1351,6 +1367,17 @@
     "name": "poolId",
     "type": "bytes32",
     "internalType": "PoolId"
+   }
+  ]
+ },
+ {
+  "type": "error",
+  "name": "JBBuybackHook_PoolHookMismatch",
+  "inputs": [
+   {
+    "name": "hooks",
+    "type": "address",
+    "internalType": "address"
    }
   ]
  },
