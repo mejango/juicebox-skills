@@ -188,7 +188,7 @@ another protocol version. An unconfigured network remains unavailable.
 | Terminal Selection | `jb-terminal-selection` | Terminal resolution and the router terminal |
 | Terminal Wrapper | `jb-terminal-wrapper` | Extend terminal functionality |
 | Protocol Fees | `jb-protocol-fees` | Standard 2.5% fee, held fees, feeless addresses |
-| Fee Flows | `jb-fee-flows` | How fees route to the NANA fee project |
+| Fee Flows | `jb-fee-flows` | How fees route to the JBP6 fee project |
 | Fund Access Limits | `jb-fund-access-limits` | Payout limits and surplus allowances |
 | Cash Out Curve | `jb-cash-out-curve` | Bonding curve reclaim calculations |
 | Permit2 Metadata | `jb-permit2-metadata` | Gasless ERC20 payments and metadata encoding |

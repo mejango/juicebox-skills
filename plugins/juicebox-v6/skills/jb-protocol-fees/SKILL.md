@@ -15,7 +15,7 @@ metadata:
 
 | Fee | Rate | Defined in | Recipient |
 |-----|------|-----------|-----------|
-| Protocol fee | 2.5% (`STANDARD_FEE = 25` / `MAX_FEE = 1000`) | `JBConstants` (nana-core-v6) | Project #1 — NANA (`JBConstants.FEE_BENEFICIARY_PROJECT_ID = 1`) |
+| Protocol fee | 2.5% (`STANDARD_FEE = 25` / `MAX_FEE = 1000`) | `JBConstants` (nana-core-v6) | Project #1 — JBP6 (`JBConstants.FEE_BENEFICIARY_PROJECT_ID = 1`) |
 | Revnet cash-out fee | 2.5% of the **token count** being cashed out | `JBFees.standardFeeAmountFrom` used in `REVOwner.beforeCashOutRecordedWith` | REV revnet (`REVDeployer.FEE_REVNET_ID`, a constructor immutable; deployed value 3) |
 | REV loan fee | 1% of borrowed amount (`REV_PREPAID_FEE_PERCENT = 10` / 1000) | `REVLoans` | REV revnet (project #3) |
 | Loan prepaid source fee | 2.5%–50% of borrowed amount, borrower's choice (`MIN_PREPAID_FEE_PERCENT = 25`, `MAX_PREPAID_FEE_PERCENT = 500`, / 1000) | `REVLoans` | Source revnet (paid back into its treasury via `pay`) |
@@ -59,9 +59,9 @@ Feeless status lives in `JBFeelessAddresses` (`0x657d0e588fca6f8c49394c9ca8a1cf6
 
 ## What the fee buys
 
-The fee is paid into project #1's primary terminal for the token via `pay`; **NANA (project #1) tokens are minted to the pay beneficiary** per NANA's current ruleset. If the beneficiary is `address(0)`, the fee is added to project #1's balance without minting. Who that beneficiary is depends on the operation:
+The fee is paid into project #1's primary terminal for the token via `pay`; **JBP6 (project #1) tokens are minted to the pay beneficiary** per JBP6's current ruleset. If the beneficiary is `address(0)`, the fee is added to project #1's balance without minting. Who that beneficiary is depends on the operation:
 
-| Operation | NANA beneficiary |
+| Operation | JBP6 beneficiary |
 |-----------|------------------|
 | `sendPayoutsOf` | project owner |
 | `useAllowanceOf` | the explicit `feeBeneficiary` argument (REVLoans passes the borrower's `beneficiary`) |
@@ -89,7 +89,7 @@ Applied in `REVOwner.beforeCashOutRecordedWith` (the data hook every revnet uses
 
 1. Skipped entirely when `cashOutTaxRate == 0`, when REV has no terminal for the token, or when the beneficiary is feeless (suckers and the router terminal are feeless — cross-chain and routed flows pay no revnet fee).
 2. Otherwise 2.5% of the **cash-out token count** is carved out (`JBFees.standardFeeAmountFrom(cashOutCount)`); the fee revnet receives the bonding-curve reclaim of that token share via an `afterCashOutRecordedWith` hook payment into REV (project #3). The fee payer receives REV tokens.
-3. The remaining 97.5% of tokens cash out normally — and the terminal's 2.5% **protocol fee** applies on top of the outbound reclaim (recipient: NANA).
+3. The remaining 97.5% of tokens cash out normally — and the terminal's 2.5% **protocol fee** applies on top of the outbound reclaim (recipient: JBP6).
 
 Cash-outs from a revnet with non-zero tax therefore bear both fees: ~2.5% revnet fee (in token count) + 2.5% protocol fee (on the reclaimed funds).
 
@@ -97,7 +97,7 @@ Cash-outs from a revnet with non-zero tax therefore bear both fees: ~2.5% revnet
 
 At borrow time, from the gross borrowed amount:
 
-1. **Protocol fee (2.5%)** — the borrow pulls funds via `useAllowanceOf`, which deducts the standard fee (→ NANA; the borrower's beneficiary receives the minted NANA tokens).
+1. **Protocol fee (2.5%)** — the borrow pulls funds via `useAllowanceOf`, which deducts the standard fee (→ JBP6; the borrower's beneficiary receives the minted JBP6 tokens).
 2. **REV fee (1%)** — `feeAmountFrom(amount, 10)` paid into REV (project #3); beneficiary receives REV tokens. Skipped (kept by borrower) if REV has no terminal for the token.
 3. **Prepaid source fee (2.5%–50%, borrower's choice)** — paid back **into the source revnet** via `pay`; beneficiary receives source-revnet tokens.
 
@@ -116,7 +116,7 @@ At 10 years the loan expires (`REVLoans_LoanExpired`) and the collateral is liqu
 ## UI display patterns
 
 ```
-Payout:   100.00 → "97.50 after 2.5% protocol fee" (fee payer receives NANA tokens)
+Payout:   100.00 → "97.50 after 2.5% protocol fee" (fee payer receives JBP6 tokens)
 Cash out: quote via JBTerminalStore.previewCashOutFrom (runs data hooks; revnet fee included),
           then apply the 2.5% protocol fee to the returned reclaimAmount when cashOutTaxRate != 0
           (zero tax: fee on min(reclaimAmount, feeFreeSurplusOf(projectId, token))).
@@ -133,5 +133,5 @@ Custom UI fees are fine — apply them after protocol fees, route to your own ad
 3. **Assuming zero-tax cash-outs are always fee-free.** The `feeFreeSurplusOf` accumulator (funds credited back from forgiven/returned fees) is fee-eligible even at zero tax.
 4. **Assuming non-zero-tax cash-outs escape the protocol fee.** Any `cashOutTaxRate != 0` puts the full reclaim in fee scope unless the beneficiary is feeless.
 5. **Modeling the revnet cash-out fee as a value percentage.** It's 2.5% of the *token count*; the fee revnet gets that share's bonding-curve reclaim.
-6. **Forgetting the loan's protocol-fee leg.** Total at borrow ≈ 2.5% (NANA) + 1% (REV) + prepaid (source revnet, ≥2.5%).
+6. **Forgetting the loan's protocol-fee leg.** Total at borrow ≈ 2.5% (JBP6) + 1% (REV) + prepaid (source revnet, ≥2.5%).
 7. **Checking feeless status globally.** V6 feeless grants are per-project (`isFeelessFor(addr, projectId, caller)`); project 0 is the wildcard.
