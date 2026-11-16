@@ -226,7 +226,7 @@ Live clone instances for well-known projects. Each has one address across all ma
 
 | Contract | Mainnets | Testnets | What it is |
 |---|---|---|---|
-| JBERC20__ProjectNANA | `0x6b50843c88290c180df24c445e37b296d9760fa8` | `0x9c0948f4d1aebd02737a942607c7e4b44cb5312d` | NANA token (project #1, the protocol fee beneficiary) |
+| JBERC20__ProjectNANA | `0x6b50843c88290c180df24c445e37b296d9760fa8` | `0x9c0948f4d1aebd02737a942607c7e4b44cb5312d` | JBP6 token (project #1, the protocol fee beneficiary) |
 | JBERC20__ProjectREV | `0x3dd82a891c80db068e95708e83583d626e2c1fac` | `0x47e77032858c6b0201b2d53f19715a7a1372d400` | REV token |
 | JBERC20__ProjectBAN | `0xdb34ab144007b0a2a2a78a5af30d750407c68778` | `0x7b65cff06ff28bf6383a25375bb81500441cf93a` | BAN token |
 | JBERC20__ProjectCPN | `0x8a062be5d7fbb645c8cec216b2210c7b1bfeb3ed` | `0x8b122b7dd707f83b639a578bc0c81e75c55d34bd` | CPN token |
@@ -247,7 +247,7 @@ Live clone instances for well-known projects. Each has one address across all ma
 | Constant | Value |
 |---|---|
 | `JBConstants.NATIVE_TOKEN` | `0x000000000000000000000000000000000000EEEe` |
-| Protocol fee | 25/1000 = 2.5%, paid to project #1 (NANA) |
+| Protocol fee | 25/1000 = 2.5%, paid to project #1 (JBP6) |
 | Split share denominator | 1,000,000,000 |
 | `JBProjects.MAX_CREATION_FEE` | 0.001 ether; `createFor` is payable and `msg.value` must equal `creationFee()` exactly |
 | Permission IDs | `JBPermissionIds` library (nana-permission-ids), `uint8` values 1–39; ROOT = 1 grants everything for the scoped project |

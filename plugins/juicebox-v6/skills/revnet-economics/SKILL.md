@@ -89,7 +89,7 @@ Borrow when expected return on the borrowed capital exceeds `R > (1 − a) / a`,
 
 | Fee | Rate | Basis | Recipient |
 |-----|------|-------|-----------|
-| Protocol fee | 2.5% (`JBConstants.STANDARD_FEE = 25` / `MAX_FEE = 1000`) | funds leaving a treasury (loan draws via `useAllowanceOf`, payouts) | protocol fee project (NANA, project 1) |
+| Protocol fee | 2.5% (`JBConstants.STANDARD_FEE = 25` / `MAX_FEE = 1000`) | funds leaving a treasury (loan draws via `useAllowanceOf`, payouts) | protocol fee project (JBP6, project 1) |
 | Loan prepaid source fee | 2.5%–50%, borrower's choice (`prepaidFeePercent` 25–500 / 1000) | borrow amount | **paid** into the source revnet (`_tryPayFee`): mints revnet tokens to the loan `beneficiary` at the stage's issuance (reserved split applies); if the pay fails, the fee amount is transferred to `beneficiary` instead |
 | Loan $REV fee | 1% (`REV_PREPAID_FEE_PERCENT = 10` / 1000) | borrow amount | **paid** into the $REV revnet (`REVLoans.REV_ID`) with `beneficiary` as pay beneficiary; if $REV has no primary terminal for the token or the pay fails, the fee is 0 and the borrower keeps it |
 | Loan time-based source fee | ramps linearly from 0 (end of prepaid window) to 100% of the unprepaid portion at 10 years | unpaid principal | paid into the source revnet on repay, same `_tryPayFee` → transfer fallback |
